@@ -14,6 +14,30 @@ Versioning follows [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.P
 
 ---
 
+## [0.7.0] — 2026-03-07
+
+### Added
+- `database/migrations/2026_03_07_230000_add_video_type_to_posts_table.php` — adds `video_type` enum (reel/video/null) and changes `video_duration` from string to integer (seconds)
+- `app/Services/PexelsService.php` — `minDuration`/`maxDuration` filter params, returns `duration` integer from Pexels
+- `database/seeders/ContentSeeder.php` — redesigned: assigns reels (maxDuration=60) vs long videos (minDuration=60) per coach; 2 reels + 1-2 videos + 0-2 images per coach
+- `resources/js/Pages/Feed.tsx` — 3 tabs:
+  - "Pre teba" — mixed post feed (existing PostCard)
+  - "Reels" — TikTok-style scroll-snap vertical player, auto-play on scroll, coach overlay, like/comment/share sidebar
+  - "Videa" — YouTube-style horizontal video cards with thumbnail + duration + coach
+- `resources/js/Pages/Coaches/Show.tsx` — 4 content tabs:
+  - "Vsetko" — existing 3-col mixed grid
+  - "Reels" — 3-column 9:16 reel thumbnails, click opens VideoModal
+  - "Videa" — list cards with 16:9 thumbnail + duration + date
+  - "Fotky" — square photo grid
+
+### Changed
+- `posts.video_duration` — integer (seconds) instead of string (MM:SS)
+- `posts.video_type` — new column: `reel` | `video` | null
+- Feed.tsx Post interface: `video_type: 'reel' | 'video' | null`, `video_duration: number | null`
+- Show.tsx Post interface: renamed `media_path`→`media_url`, `thumbnail_path`→`thumbnail_url`; added `video_type`
+
+---
+
 ## [0.6.0] — 2026-03-07
 
 ### Added
