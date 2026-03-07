@@ -17,18 +17,38 @@ class FeedController extends Controller
     {
         $userId = $request->user()->id;
 
+        // Mixed feed — 20 most recent posts
         $posts = Post::with(['coach.user'])
             ->withCount('likes')
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();
 
+        // Reels — separate query, all free reels
+        $reelPosts = Post::with(['coach.user'])
+            ->withCount('likes')
+            ->where('video_type', 'reel')
+            ->where('is_exclusive', false)
+            ->orderByDesc('created_at')
+            ->limit(60)
+            ->get();
+
+        // Long videos — separate query
+        $videoPosts = Post::with(['coach.user'])
+            ->withCount('likes')
+            ->where('video_type', 'video')
+            ->orderByDesc('created_at')
+            ->limit(40)
+            ->get();
+
+        $allPosts = $posts->merge($reelPosts)->merge($videoPosts)->unique('id');
+
         $likedIds = PostLike::where('user_id', $userId)
-            ->whereIn('post_id', $posts->pluck('id'))
+            ->whereIn('post_id', $allPosts->pluck('id'))
             ->pluck('post_id')
             ->all();
 
-        $mappedPosts = $posts->map(fn ($post) => [
+        $mapPost = fn ($post) => [
             'id'             => $post->id,
             'title'          => $post->title,
             'content'        => $post->content,
@@ -52,7 +72,11 @@ class FeedController extends Controller
                     ? Storage::url($post->coach->avatar_path)
                     : null,
             ],
-        ]);
+        ];
+
+        $mappedPosts  = $posts->map($mapPost)->values();
+        $mappedReels  = $reelPosts->map($mapPost)->values();
+        $mappedVideos = $videoPosts->map($mapPost)->values();
 
         $coaches = Coach::with('user')
             ->orderByDesc('subscriber_count')
@@ -68,6 +92,8 @@ class FeedController extends Controller
 
         return Inertia::render('Feed', [
             'posts'   => $mappedPosts,
+            'reels'   => $mappedReels,
+            'videos'  => $mappedVideos,
             'coaches' => $coaches,
         ]);
     }

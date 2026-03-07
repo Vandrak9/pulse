@@ -322,8 +322,16 @@ class CoachSeeder extends Seeder
             'email_verified_at'  => now(),
         ]);
 
+        User::create([
+            'name'               => 'Dominik Haluza',
+            'email'              => 'dominik@haluza.sk',
+            'role'               => 'coach',
+            'password'           => Hash::make('password'),
+            'email_verified_at'  => now(),
+        ]);
+
         $count = count($coaches);
-        $this->command->info("Seeded {$count} coaches and 1 fan user.");
+        $this->command->info("Seeded {$count} coaches, 1 fan user, and extra accounts.");
     }
 
     private function downloadAvatar(string $url, string $path): ?string
@@ -356,6 +364,7 @@ class CoachSeeder extends Seeder
             'eva.kovacova@pulse.sk',
             'michal.dubovsky@pulse.sk',
             'fan@pulse.sk',
+            'dominik@haluza.sk',
         ];
 
         foreach (User::whereIn('email', $emails)->get() as $user) {

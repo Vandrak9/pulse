@@ -35,6 +35,8 @@ interface Post {
 
 interface Props {
     posts: Post[];
+    reels: Post[];
+    videos: Post[];
     coaches: Coach[];
 }
 
@@ -59,19 +61,21 @@ function formatDuration(seconds: number): string {
 
 type Tab = 'feed' | 'reels' | 'videos';
 
-export default function Feed({ posts, coaches }: Props) {
+export default function Feed({ posts, reels, videos, coaches }: Props) {
     const [tab, setTab] = useState<Tab>('feed');
+
+    const allPosts = [...posts, ...reels, ...videos].filter(
+        (p, i, arr) => arr.findIndex((x) => x.id === p.id) === i,
+    );
+
     const [likedPosts, setLikedPosts] = useState<Set<number>>(
-        () => new Set(posts.filter((p) => p.is_liked).map((p) => p.id)),
+        () => new Set(allPosts.filter((p) => p.is_liked).map((p) => p.id)),
     );
     const [likeCounts, setLikeCounts] = useState<Record<number, number>>(
-        () => Object.fromEntries(posts.map((p) => [p.id, p.like_count])),
+        () => Object.fromEntries(allPosts.map((p) => [p.id, p.like_count])),
     );
     const [saved, setSaved] = useState<Set<number>>(new Set());
     const [activeVideo, setActiveVideo] = useState<Post | null>(null);
-
-    const reels = posts.filter((p) => p.video_type === 'reel');
-    const videos = posts.filter((p) => p.video_type === 'video');
 
     function toggleLike(postId: number) {
         const isLiked = likedPosts.has(postId);
