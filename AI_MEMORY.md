@@ -99,6 +99,7 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [ ] Stripe Connect onboarding flow for coaches
 - [x] Coach profile pages (public + dashboard) — **done 2026-03-07**
 - [x] Coaches/Index.tsx full redesign — warm hero, sticky category filter, redesigned cards — **done 2026-03-07**
+- [x] Coaches/Show.tsx full redesign — gradient hero cover, overlapping avatar, subscription box with benefits, blurred exclusive posts — **done 2026-03-07**
 - [ ] Subscription flow (subscribe to coach, manage plan)
 - [ ] Post creation with media upload
 - [ ] Paid private messaging between fans and coaches
@@ -125,3 +126,8 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [2026-03-07 19:14:51] e5b6696: feat: add CoachSeeder with Slovak fitness coaches and fan user
 - [2026-03-07 19:16:52] 2d6bfe8: feat: download real avatar photos in CoachSeeder
 - [2026-03-07 19:22:03] e56d2af: feat: redesign coaches index page
+- [2026-03-07 19:22:23] 93ba403: chore: update AI_MEMORY with coaches index redesign
+- [2026-03-07 19:31:12] 5d4ec29: feat: polish coaches index UI + fix category filter and coach visibility
+- [2026-03-07 19:34:28] 5293459: fix: realistic prices and category scroll hint
+- [2026-03-07 19:37:45] 0f725cf: feat: add coaches for Joga, Beh and Wellness categories
+- [2026-03-07 19:40:39] c7b6e37: feat: coach detail page redesign
