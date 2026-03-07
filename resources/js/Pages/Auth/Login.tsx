@@ -1,9 +1,3 @@
-import Checkbox from '@/Components/Checkbox';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 
@@ -22,89 +16,95 @@ export default function Login({
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-
-        post(route('login'), {
-            onFinish: () => reset('password'),
-        });
+        post(route('login'), { onFinish: () => reset('password') });
     };
 
+    const inputClass = 'w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition focus:ring-2';
+    const inputStyle = { borderColor: '#e8d9c4', color: '#2d2118', '--tw-ring-color': '#c4714a' } as React.CSSProperties;
+
     return (
-        <GuestLayout>
-            <Head title="Log in" />
+        <div className="flex min-h-screen flex-col items-center justify-center px-4" style={{ backgroundColor: '#faf6f0' }}>
+            <Head title="Vitaj späť — PULSE" />
 
-            {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
+            <Link href="/" className="mb-8 font-serif text-3xl font-bold tracking-tight" style={{ color: '#c4714a' }}>
+                PULSE
+            </Link>
 
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
+            <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm" style={{ border: '1px solid #e8d9c4' }}>
+                <h1 className="mb-6 font-serif text-2xl font-bold" style={{ color: '#2d2118' }}>
+                    Vitaj späť
+                </h1>
 
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        isFocused={true}
-                        onChange={(e) => setData('email', e.target.value)}
-                    />
+                {status && (
+                    <div className="mb-4 rounded-lg p-3 text-sm" style={{ backgroundColor: '#f0fdf4', color: '#166534' }}>
+                        {status}
+                    </div>
+                )}
 
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="current-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4 block">
-                    <label className="flex items-center">
-                        <Checkbox
-                            name="remember"
-                            checked={data.remember}
-                            onChange={(e) =>
-                                setData(
-                                    'remember',
-                                    (e.target.checked || false) as false,
-                                )
-                            }
+                <form onSubmit={submit} className="space-y-4">
+                    <div>
+                        <label className="mb-1 block text-sm font-medium" style={{ color: '#2d2118' }}>Email</label>
+                        <input
+                            type="email"
+                            value={data.email}
+                            autoComplete="username"
+                            autoFocus
+                            onChange={(e) => setData('email', e.target.value)}
+                            className={inputClass}
+                            style={inputStyle}
                         />
-                        <span className="ms-2 text-sm text-gray-600">
-                            Remember me
-                        </span>
-                    </label>
-                </div>
+                        {errors.email && <p className="mt-1 text-xs" style={{ color: '#c4714a' }}>{errors.email}</p>}
+                    </div>
 
-                <div className="mt-4 flex items-center justify-end">
-                    {canResetPassword && (
-                        <Link
-                            href={route('password.request')}
-                            className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                        >
-                            Forgot your password?
-                        </Link>
-                    )}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium" style={{ color: '#2d2118' }}>Heslo</label>
+                        <input
+                            type="password"
+                            value={data.password}
+                            autoComplete="current-password"
+                            onChange={(e) => setData('password', e.target.value)}
+                            className={inputClass}
+                            style={inputStyle}
+                        />
+                        {errors.password && <p className="mt-1 text-xs" style={{ color: '#c4714a' }}>{errors.password}</p>}
+                    </div>
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Log in
-                    </PrimaryButton>
-                </div>
-            </form>
-        </GuestLayout>
+                    <div className="flex items-center justify-between">
+                        <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: '#9a8a7a' }}>
+                            <input
+                                type="checkbox"
+                                checked={data.remember}
+                                onChange={(e) => setData('remember', (e.target.checked || false) as false)}
+                                className="rounded"
+                            />
+                            Zapamätať si ma
+                        </label>
+                        {canResetPassword && (
+                            <Link href={route('password.request')} className="text-xs hover:underline" style={{ color: '#c4714a' }}>
+                                Zabudol si heslo?
+                            </Link>
+                        )}
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={processing}
+                        className="w-full rounded-full py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
+                        style={{ backgroundColor: '#c4714a' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
+                    >
+                        Prihlásiť sa
+                    </button>
+                </form>
+            </div>
+
+            <p className="mt-6 text-sm" style={{ color: '#9a8a7a' }}>
+                Nemáš účet?{' '}
+                <Link href={route('register')} className="font-medium hover:underline" style={{ color: '#c4714a' }}>
+                    Registrovať sa
+                </Link>
+            </p>
+        </div>
     );
 }

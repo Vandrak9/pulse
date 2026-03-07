@@ -31,14 +31,16 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'role'     => 'required|in:fan,coach',
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'name'     => $request->name,
+            'email'    => $request->email,
+            'role'     => $request->role,
             'password' => Hash::make($request->password),
         ]);
 
@@ -46,6 +48,8 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return $request->role === 'coach'
+            ? redirect(route('dashboard.profile.edit'))
+            : redirect(route('coaches.index'));
     }
 }

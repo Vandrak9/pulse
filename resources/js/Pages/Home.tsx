@@ -106,8 +106,8 @@ export default function Home({ featured }: Props) {
                             </Link>
                         </div>
 
-                        {/* Horizontal scroll row */}
-                        <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
+                        {/* Horizontal scroll row — max 4 cards */}
+                        <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
                             {featured.map((coach) => (
                                 <FeaturedCoachCard key={coach.id} coach={coach} />
                             ))}
@@ -191,37 +191,46 @@ function FeaturedCoachCard({ coach }: { coach: Coach }) {
     return (
         <Link
             href={`/coaches/${coach.id}`}
-            className="group w-52 flex-shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm transition hover:shadow-md"
+            className="flex w-40 flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-4 pt-5 shadow-sm transition hover:shadow-md"
             style={{ border: '1px solid #e8d9c4' }}
         >
-            {/* Avatar area */}
-            <div className="flex h-32 items-center justify-center" style={{ backgroundColor: '#f0e8df' }}>
+            {/* Round avatar */}
+            <div
+                className="mb-2.5 h-20 w-20 flex-shrink-0 overflow-hidden rounded-full"
+                style={{ outline: '2px solid #e8d9c4', outlineOffset: '2px' }}
+            >
                 {coach.avatar_url ? (
                     <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
                 ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold text-white" style={{ backgroundColor: '#c4714a' }}>
+                    <div className="flex h-full w-full items-center justify-center text-xl font-bold text-white" style={{ backgroundColor: '#c4714a' }}>
                         {coach.name.charAt(0).toUpperCase()}
                     </div>
                 )}
             </div>
 
-            <div className="p-3">
-                <p className="truncate text-sm font-semibold" style={{ color: '#2d2118' }}>{coach.name}</p>
-                {coach.specialization && (
-                    <p className="mt-0.5 truncate text-xs" style={{ color: '#c4714a' }}>{coach.specialization}</p>
-                )}
-                <div className="mt-2 flex items-center justify-between">
-                    {rating && (
-                        <span className="flex items-center gap-0.5 text-xs">
-                            <span style={{ color: '#f5a623' }}>★</span>
-                            <span style={{ color: '#2d2118' }}>{rating.toFixed(1)}</span>
-                        </span>
-                    )}
-                    <span className="text-xs font-semibold" style={{ color: '#c4714a' }}>
-                        €{price.toFixed(2)}/mo
+            <p className="w-full truncate text-center text-xs font-semibold" style={{ color: '#2d2118' }}>{coach.name}</p>
+
+            {coach.specialization && (
+                <span className="mt-1 rounded-full px-2 py-0.5 text-center text-xs font-medium" style={{ backgroundColor: '#fce8de', color: '#c4714a' }}>
+                    {coach.specialization}
+                </span>
+            )}
+
+            <div className="mt-2 flex items-center gap-1.5">
+                {rating !== null && (
+                    <span className="flex items-center gap-0.5 text-xs">
+                        <span style={{ color: '#f5a623' }}>★</span>
+                        <span className="font-medium" style={{ color: '#2d2118' }}>{rating.toFixed(1)}</span>
                     </span>
-                </div>
+                )}
             </div>
+
+            <div className="my-2 w-full border-t" style={{ borderColor: '#f0e4d4' }} />
+
+            <p className="font-serif text-sm font-bold" style={{ color: '#c4714a' }}>
+                {price === 0 ? 'Zadarmo' : `€${price.toFixed(2)}`}
+                {price > 0 && <span className="ml-1 font-sans text-xs font-normal" style={{ color: '#9a8a7a' }}>/mes</span>}
+            </p>
         </Link>
     );
 }

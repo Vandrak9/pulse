@@ -100,6 +100,8 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [x] Coach profile pages (public + dashboard) — **done 2026-03-07**
 - [x] Coaches/Index.tsx full redesign — warm hero, sticky category filter, redesigned cards — **done 2026-03-07**
 - [x] Coaches/Show.tsx full redesign — gradient hero cover, overlapping avatar, subscription box with benefits, blurred exclusive posts — **done 2026-03-07**
+- [x] App layout + Home.tsx landing page — PulseLayout rewrite, bottom mobile tab bar — **done 2026-03-07**
+- [x] Auth pages — Login/Register custom PULSE styling, role selector (fan/coach), role-based redirect — **done 2026-03-07**
 - [ ] Subscription flow (subscribe to coach, manage plan)
 - [ ] Post creation with media upload
 - [ ] Paid private messaging between fans and coaches
@@ -135,3 +137,4 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [2026-03-07 19:49:26] 58af863: feat: pulse layout with nav, date formatting, and video/media content support
 - [2026-03-07 19:51:54] 03fe728: chore: add CHANGELOG.md with semantic versioning
 - [2026-03-07 20:01:42] 4f85cb9: feat: app layout, navigation and home page
+- [2026-03-07 20:04:22] 9da0bc5: chore: add v0.3.0 changelog entry for app layout and home page
