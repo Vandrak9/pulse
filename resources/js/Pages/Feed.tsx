@@ -1,3 +1,4 @@
+import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -21,6 +22,8 @@ interface Post {
     title: string;
     content: string;
     media_type: 'none' | 'image' | 'video';
+    media_url: string | null;
+    thumbnail_url: string | null;
     video_duration: string | null;
     is_exclusive: boolean;
     like_count: number;
@@ -47,20 +50,6 @@ function relativeTime(iso: string): string {
     return new Intl.DateTimeFormat('sk-SK', { day: 'numeric', month: 'long' }).format(new Date(iso));
 }
 
-function CoachAvatar({ name, avatarUrl, size = 40 }: { name: string; avatarUrl: string | null; size?: number }) {
-    const sz = `${size}px`;
-    return avatarUrl ? (
-        <img src={avatarUrl} alt={name} className="rounded-full object-cover" style={{ width: sz, height: sz }} />
-    ) : (
-        <div
-            className="flex flex-shrink-0 items-center justify-center rounded-full font-bold text-white"
-            style={{ width: sz, height: sz, backgroundColor: '#c4714a', fontSize: size * 0.35 }}
-        >
-            {name.charAt(0).toUpperCase()}
-        </div>
-    );
-}
-
 export default function Feed({ posts, coaches }: Props) {
     const [likedPosts, setLikedPosts] = useState<Set<number>>(
         () => new Set(posts.filter((p) => p.is_liked).map((p) => p.id)),
@@ -69,6 +58,7 @@ export default function Feed({ posts, coaches }: Props) {
         () => Object.fromEntries(posts.map((p) => [p.id, p.like_count])),
     );
     const [saved, setSaved] = useState<Set<number>>(new Set());
+    const [activeVideo, setActiveVideo] = useState<Post | null>(null);
 
     function toggleLike(postId: number) {
         const isLiked = likedPosts.has(postId);
@@ -95,6 +85,16 @@ export default function Feed({ posts, coaches }: Props) {
         <PulseLayout>
             <Head title="Feed — PULSE" />
 
+            {/* Video modal */}
+            {activeVideo && activeVideo.media_url && (
+                <VideoModal
+                    videoUrl={activeVideo.media_url}
+                    title={activeVideo.title}
+                    coachName={activeVideo.coach.name}
+                    onClose={() => setActiveVideo(null)}
+                />
+            )}
+
             <div className="min-h-screen pb-6" style={{ backgroundColor: '#faf6f0' }}>
 
                 {/* ── Stories row ── */}
@@ -105,7 +105,7 @@ export default function Feed({ posts, coaches }: Props) {
                             {/* Discover button */}
                             <Link href="/coaches" className="flex flex-col items-center gap-1">
                                 <div
-                                    className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed text-xl"
+                                    className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed text-2xl font-light"
                                     style={{ borderColor: '#c4714a', color: '#c4714a' }}
                                 >
                                     +
@@ -118,13 +118,23 @@ export default function Feed({ posts, coaches }: Props) {
                             {/* Coach stories */}
                             {coaches.map((coach) => (
                                 <Link key={coach.id} href={`/coaches/${coach.id}`} className="flex flex-col items-center gap-1">
-                                    {/* Terracotta ring = new content */}
                                     <div
-                                        className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full p-0.5"
+                                        className="h-14 w-14 flex-shrink-0 rounded-full p-0.5"
                                         style={{ background: 'linear-gradient(135deg, #c4714a, #f5a623)' }}
                                     >
                                         <div className="flex h-full w-full items-center justify-center rounded-full bg-white p-0.5">
-                                            <CoachAvatar name={coach.name} avatarUrl={coach.avatar_url} size={48} />
+                                            <div className="h-full w-full overflow-hidden rounded-full">
+                                                {coach.avatar_url ? (
+                                                    <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <div
+                                                        className="flex h-full w-full items-center justify-center text-lg font-bold text-white"
+                                                        style={{ backgroundColor: '#c4714a' }}
+                                                    >
+                                                        {coach.name.charAt(0)}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <span className="w-14 truncate text-center text-xs" style={{ color: '#2d2118' }}>
@@ -156,6 +166,7 @@ export default function Feed({ posts, coaches }: Props) {
                                     isSaved={saved.has(post.id)}
                                     onLike={() => toggleLike(post.id)}
                                     onSave={() => toggleSave(post.id)}
+                                    onPlay={() => setActiveVideo(post)}
                                 />
                             ))}
                         </div>
@@ -173,6 +184,7 @@ function PostCard({
     isSaved,
     onLike,
     onSave,
+    onPlay,
 }: {
     post: Post;
     isLiked: boolean;
@@ -180,6 +192,7 @@ function PostCard({
     isSaved: boolean;
     onLike: () => void;
     onSave: () => void;
+    onPlay: () => void;
 }) {
     const price = parseFloat(post.coach.monthly_price);
 
@@ -193,9 +206,7 @@ function PostCard({
                         style={{ background: 'linear-gradient(135deg, #c4714a, #f5a623)' }}
                     >
                         <div className="rounded-full bg-white p-0.5">
-                            <div
-                                className="h-9 w-9 overflow-hidden rounded-full"
-                            >
+                            <div className="h-9 w-9 overflow-hidden rounded-full">
                                 {post.coach.avatar_url ? (
                                     <img src={post.coach.avatar_url} alt={post.coach.name} className="h-full w-full object-cover" />
                                 ) : (
@@ -229,24 +240,31 @@ function PostCard({
 
             {/* Media area */}
             {post.media_type !== 'none' && (
-                <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+                <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
                     {post.is_exclusive ? (
+                        /* ── Exclusive lock ── */
                         <>
-                            {/* Blurred locked overlay */}
-                            <div
-                                className="flex h-full w-full items-center justify-center"
-                                style={{ backgroundColor: '#1a1008', backdropFilter: 'blur(12px)' }}
-                            >
-                                {post.media_type === 'video' && (
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                                        <svg className="h-16 w-16 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z" />
-                                        </svg>
-                                    </div>
+                            {/* Blurred background hint */}
+                            <div className="absolute inset-0" style={{ backgroundColor: '#1a0e06' }}>
+                                {(post.thumbnail_url || post.media_url) && post.media_type !== 'video' && (
+                                    <img
+                                        src={post.thumbnail_url ?? post.media_url ?? ''}
+                                        alt=""
+                                        className="h-full w-full object-cover opacity-20"
+                                        style={{ filter: 'blur(8px)', transform: 'scale(1.1)' }}
+                                    />
+                                )}
+                                {post.thumbnail_url && post.media_type === 'video' && (
+                                    <img
+                                        src={post.thumbnail_url}
+                                        alt=""
+                                        className="h-full w-full object-cover opacity-20"
+                                        style={{ filter: 'blur(8px)', transform: 'scale(1.1)' }}
+                                    />
                                 )}
                             </div>
                             {/* Lock overlay */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                                 <span className="text-4xl">🔒</span>
                                 <p className="text-sm font-semibold text-white">Exkluzívny obsah</p>
                                 <Link
@@ -258,42 +276,67 @@ function PostCard({
                                 </Link>
                             </div>
                         </>
-                    ) : (
-                        <>
-                            {post.media_type === 'video' ? (
-                                <div className="flex h-full w-full items-center justify-center" style={{ backgroundColor: '#0d0a07' }}>
-                                    {/* Play button */}
-                                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition hover:bg-white/30">
-                                        <svg className="ml-1 h-7 w-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z" />
-                                        </svg>
-                                    </div>
-                                    {/* Duration badge */}
-                                    {post.video_duration && (
-                                        <span
-                                            className="absolute bottom-2 right-2 rounded px-1.5 py-0.5 text-xs font-medium text-white"
-                                            style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
-                                        >
-                                            {post.video_duration}
-                                        </span>
-                                    )}
-                                    {/* Video badge */}
-                                    <span
-                                        className="absolute left-2 top-2 rounded px-2 py-0.5 text-xs font-medium text-white"
-                                        style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-                                    >
-                                        🎬 Video
-                                    </span>
-                                </div>
+                    ) : post.media_type === 'video' ? (
+                        /* ── Free video ── */
+                        <button
+                            onClick={onPlay}
+                            className="group relative h-full w-full cursor-pointer"
+                            aria-label="Prehrať video"
+                        >
+                            {/* Thumbnail or dark bg */}
+                            {post.thumbnail_url ? (
+                                <img
+                                    src={post.thumbnail_url}
+                                    alt={post.title}
+                                    className="h-full w-full object-cover"
+                                />
                             ) : (
-                                <div
-                                    className="flex h-full w-full items-center justify-center"
-                                    style={{ backgroundColor: '#f0e8df' }}
-                                >
-                                    <span className="text-4xl opacity-30">📸</span>
-                                </div>
+                                <div className="h-full w-full" style={{ backgroundColor: '#0d0a07' }} />
                             )}
-                        </>
+
+                            {/* Play button overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/30">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/25 backdrop-blur-sm transition group-hover:bg-white/35 group-hover:scale-110">
+                                    <svg className="ml-1 h-7 w-7 text-white drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            {/* Duration badge */}
+                            {post.video_duration && (
+                                <span
+                                    className="absolute bottom-2 right-2 rounded px-1.5 py-0.5 text-xs font-medium text-white"
+                                    style={{ backgroundColor: 'rgba(0,0,0,0.72)' }}
+                                >
+                                    {post.video_duration}
+                                </span>
+                            )}
+
+                            {/* Video type badge */}
+                            <span
+                                className="absolute left-2 top-2 rounded px-2 py-0.5 text-xs font-medium text-white"
+                                style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+                            >
+                                🎬 Video
+                            </span>
+                        </button>
+                    ) : (
+                        /* ── Image post ── */
+                        post.media_url ? (
+                            <img
+                                src={post.media_url}
+                                alt={post.title}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <div
+                                className="flex h-full w-full items-center justify-center"
+                                style={{ backgroundColor: '#f0e8df' }}
+                            >
+                                <span className="text-4xl opacity-30">📸</span>
+                            </div>
+                        )
                     )}
                 </div>
             )}
@@ -303,11 +346,9 @@ function PostCard({
                 {/* Like */}
                 <button
                     onClick={onLike}
-                    className="flex items-center gap-1 rounded-full px-2 py-1.5 text-sm transition hover:bg-gray-50"
+                    className="flex items-center gap-1 rounded-full px-2 py-1.5 transition hover:bg-gray-50"
                 >
-                    <span className="text-lg leading-none transition-transform active:scale-125">
-                        {isLiked ? '❤️' : '🤍'}
-                    </span>
+                    <span className="text-lg leading-none">{isLiked ? '❤️' : '🤍'}</span>
                     {likeCount > 0 && (
                         <span className="text-xs font-medium" style={{ color: isLiked ? '#c4714a' : '#9a8a7a' }}>
                             {likeCount}
@@ -315,8 +356,8 @@ function PostCard({
                     )}
                 </button>
 
-                {/* Comments (static for now) */}
-                <button className="flex items-center gap-1 rounded-full px-2 py-1.5 text-sm transition hover:bg-gray-50">
+                {/* Comments */}
+                <button className="flex items-center gap-1 rounded-full px-2 py-1.5 transition hover:bg-gray-50">
                     <span className="text-lg leading-none">💬</span>
                     <span className="text-xs font-medium" style={{ color: '#9a8a7a' }}>0</span>
                 </button>
@@ -324,15 +365,16 @@ function PostCard({
                 {/* Save */}
                 <button
                     onClick={onSave}
-                    className="flex items-center gap-1 rounded-full px-2 py-1.5 text-sm transition hover:bg-gray-50"
+                    className="rounded-full px-2 py-1.5 transition hover:bg-gray-50"
+                    title={isSaved ? 'Uložené' : 'Uložiť'}
                 >
-                    <span className="text-lg leading-none">{isSaved ? '🔖' : '🔖'}</span>
+                    <span className="text-lg leading-none" style={{ opacity: isSaved ? 1 : 0.5 }}>🔖</span>
                 </button>
 
                 {/* Share — right aligned */}
                 <div className="flex-1" />
                 <button
-                    className="rounded-full px-2 py-1.5 text-sm transition hover:bg-gray-50"
+                    className="rounded-full px-2 py-1.5 transition hover:bg-gray-50"
                     onClick={() => navigator.share?.({ title: post.title, url: `/coaches/${post.coach.id}` })}
                 >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: '#9a8a7a' }}>
@@ -341,7 +383,7 @@ function PostCard({
                 </button>
             </div>
 
-            {/* Content */}
+            {/* Content text */}
             <div className="px-4 pb-1 pt-1">
                 {post.title && (
                     <p className="text-sm font-semibold" style={{ color: '#2d2118' }}>{post.title}</p>
@@ -351,11 +393,11 @@ function PostCard({
                 </p>
             </div>
 
-            {/* Play video button — only for non-exclusive videos */}
-            {post.media_type === 'video' && !post.is_exclusive && (
+            {/* Prehrať video button (only for free videos with a URL) */}
+            {post.media_type === 'video' && !post.is_exclusive && post.media_url && (
                 <div className="px-4 pb-4 pt-2">
                     <button
-                        onClick={() => alert('Prehrávač videa bude dostupný čoskoro.')}
+                        onClick={onPlay}
                         className="flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition hover:bg-orange-50"
                         style={{ borderColor: '#c4714a', color: '#c4714a' }}
                     >
@@ -367,7 +409,7 @@ function PostCard({
                 </div>
             )}
 
-            {!post.media_type || post.media_type === 'none' ? <div className="h-3" /> : null}
+            {post.media_type === 'none' && <div className="h-3" />}
         </div>
     );
 }

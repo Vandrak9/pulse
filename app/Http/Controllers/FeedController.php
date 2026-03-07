@@ -33,6 +33,10 @@ class FeedController extends Controller
             'title'          => $post->title,
             'content'        => $post->content,
             'media_type'     => $post->media_type,
+            'media_url'      => $post->media_path ?: null,
+            'thumbnail_url'  => $post->thumbnail_path
+                ? Storage::url($post->thumbnail_path)
+                : null,
             'video_duration' => $post->video_duration,
             'is_exclusive'   => $post->is_exclusive,
             'like_count'     => $post->likes_count,
