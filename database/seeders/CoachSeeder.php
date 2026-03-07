@@ -98,6 +98,93 @@ class CoachSeeder extends Seeder
                     ],
                 ],
             ],
+
+            // ── Joga ──
+            [
+                'user' => [
+                    'name' => 'Zuzana Procházková',
+                    'email' => 'zuzana.prochazka@pulse.sk',
+                ],
+                'coach' => [
+                    'bio' => 'Certifikovaná inštruktorka jogy s 6-ročnou praxou. Vyštudovala som Hatha a Vinyasa jogu v Indii. Pomáham ľuďom nájsť rovnováhu medzi telom a mysľou — či už si začiatočník alebo pokročilý.',
+                    'specialization' => 'Joga & Meditácia',
+                    'monthly_price' => 9.99,
+                    'rating' => 5.0,
+                    'subscriber_count' => 674,
+                    'avatar_url' => 'https://randomuser.me/api/portraits/women/44.jpg',
+                    'avatar_file' => 'avatars/zuzana-prochazka.jpg',
+                ],
+                'posts' => [
+                    [
+                        'title' => '10-minútová ranná joga pre začiatočníkov',
+                        'content' => 'Ideálny štart do dňa — táto krátka rutina prebudí telo, uvoľní stuhnuté svaly a nastaví pozitívnu myseľ na celý deň. Žiadne pomôcky nie sú potrebné...',
+                        'is_exclusive' => false,
+                    ],
+                    [
+                        'title' => '30-dňová joga výzva — kompletný program',
+                        'content' => 'Každý deň nová lekcia, postupne náročnejšia. Program je zostavený tak, aby si po 30 dňoch zvládol základné ásany správne a bez bolesti...',
+                        'is_exclusive' => true,
+                    ],
+                ],
+            ],
+
+            // ── Beh ──
+            [
+                'user' => [
+                    'name' => 'Peter Horváth',
+                    'email' => 'peter.horvath@pulse.sk',
+                ],
+                'coach' => [
+                    'bio' => 'Maratónec a bežecký tréner. Prebehol som 14 maratónov vrátane Viedne, Berlína a Prahy. Trénujem bežcov všetkých úrovní — od prvých 5 km až po prípravu na maratón pod 4 hodiny.',
+                    'specialization' => 'Beh & Vytrvalosť',
+                    'monthly_price' => 8.99,
+                    'rating' => 4.7,
+                    'subscriber_count' => 289,
+                    'avatar_url' => 'https://randomuser.me/api/portraits/men/67.jpg',
+                    'avatar_file' => 'avatars/peter-horvath.jpg',
+                ],
+                'posts' => [
+                    [
+                        'title' => 'Ako sa pripraviť na prvých 10 km',
+                        'content' => 'Desiatka je snom každého začínajúceho bežca. Tu je môj 8-týždňový plán, ktorý ťa dostane do cieľa bez zranení a s úsmevom...',
+                        'is_exclusive' => false,
+                    ],
+                    [
+                        'title' => 'Tréningový plán na maratón — 16 týždňov',
+                        'content' => 'Kompletný plán vrátane dlhých behov, intervalov, regenerácie a výžiovej stratégie na deň preteku. Odskúšané na vlastnej koži aj so stovkami klientov...',
+                        'is_exclusive' => true,
+                    ],
+                ],
+            ],
+
+            // ── Wellness ──
+            [
+                'user' => [
+                    'name' => 'Katarína Molnárová',
+                    'email' => 'katarina.molnar@pulse.sk',
+                ],
+                'coach' => [
+                    'bio' => 'Wellness koučka a špecialistka na zvládanie stresu. Kombinujem vedecky overené metódy dýchania, pohybu a mentálnej hygieny. Pomáham ľuďom žiť plnohodnotnejší a vyrovnanejší život.',
+                    'specialization' => 'Wellness & Zvládanie stresu',
+                    'monthly_price' => 11.99,
+                    'rating' => 4.9,
+                    'subscriber_count' => 512,
+                    'avatar_url' => 'https://randomuser.me/api/portraits/women/57.jpg',
+                    'avatar_file' => 'avatars/katarina-molnar.jpg',
+                ],
+                'posts' => [
+                    [
+                        'title' => 'Dychové cvičenie na okamžité upokojenie',
+                        'content' => 'Technika 4-7-8 dýchania dokáže znížiť hladinu kortizolu za menej ako 2 minúty. Vysvetlím ti, prečo to funguje a ako ju správne robiť...',
+                        'is_exclusive' => false,
+                    ],
+                    [
+                        'title' => 'Môj 7-dňový wellness reset — protokol',
+                        'content' => 'Celý týždeň krok po kroku: spánková rutina, ranné rituály, výživa, pohyb a digitálny detox. Klienti hlásia o 60% nižší stres už po prvom týždni...',
+                        'is_exclusive' => true,
+                    ],
+                ],
+            ],
         ];
 
         Storage::disk('public')->makeDirectory('avatars');
@@ -146,7 +233,7 @@ class CoachSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
-        $this->command->info('Seeded 3 coaches and 1 fan user.');
+        $this->command->info('Seeded 6 coaches and 1 fan user.');
     }
 
     private function downloadAvatar(string $url, string $path): ?string
@@ -170,6 +257,9 @@ class CoachSeeder extends Seeder
             'tomas.kovac@pulse.sk',
             'lucia.horakova@pulse.sk',
             'marek.blaho@pulse.sk',
+            'zuzana.prochazka@pulse.sk',
+            'peter.horvath@pulse.sk',
+            'katarina.molnar@pulse.sk',
             'fan@pulse.sk',
         ];
 
