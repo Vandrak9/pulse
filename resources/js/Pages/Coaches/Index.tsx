@@ -87,7 +87,8 @@ export default function CoachesIndex({ coaches }: Props) {
                         borderColor: '#e8d9c4',
                     }}
                 >
-                    <div className="no-scrollbar mx-auto flex max-w-5xl flex-nowrap gap-2 overflow-x-auto px-4 py-3 pr-8">
+                    <div className="relative mx-auto max-w-5xl">
+                        <div className="no-scrollbar flex flex-nowrap gap-2 overflow-x-auto px-4 py-3 pr-10">
                         {CATEGORIES.map((cat) => {
                             const isActive = activeKeyword === cat.keyword;
                             return (
@@ -105,6 +106,9 @@ export default function CoachesIndex({ coaches }: Props) {
                                 </button>
                             );
                         })}
+                        </div>
+                        {/* Scroll hint fade */}
+                        <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-[#faf6f0] to-transparent" />
                     </div>
                 </div>
 

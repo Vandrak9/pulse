@@ -25,7 +25,7 @@ class CoachSeeder extends Seeder
                 'coach' => [
                     'bio' => 'Som certifikovaný silový tréner s viac ako 8 rokmi skúseností. Špecializujem sa na budovanie svalovej hmoty a zvyšovanie výkonnosti. Prešiel som stovkami klientov od začiatočníkov až po pokročilých atlétov.',
                     'specialization' => 'Silový tréning & Hypertrofia',
-                    'monthly_price' => 29.99,
+                    'monthly_price' => 12.99,
                     'rating' => 4.8,
                     'subscriber_count' => 342,
                     'avatar_url' => 'https://randomuser.me/api/portraits/men/45.jpg',
@@ -52,7 +52,7 @@ class CoachSeeder extends Seeder
                 'coach' => [
                     'bio' => 'Fitness trénerka a výživová poradkyňa. Po vlastnom prechode zo 82 kg na fit postavu som sa rozhodla pomáhať ženám, ktoré chcú zmeniť svoje telo aj myslenie. Zdravá výživa a pohyb sú základ.',
                     'specialization' => 'Výživa & Ženský fitness',
-                    'monthly_price' => 24.99,
+                    'monthly_price' => 7.99,
                     'rating' => 4.9,
                     'subscriber_count' => 891,
                     'avatar_url' => 'https://randomuser.me/api/portraits/women/31.jpg',
@@ -79,7 +79,7 @@ class CoachSeeder extends Seeder
                 'coach' => [
                     'bio' => 'Profesionálny crossfit atlét a tréner. Trénujem jednotlivcov aj tímy, ktorí chcú byť funkčne silní, rýchli a odolní. Moje tréningy sú náročné, ale výsledky hovoria za všetko.',
                     'specialization' => 'CrossFit & Silový tréning',
-                    'monthly_price' => 34.99,
+                    'monthly_price' => 14.99,
                     'rating' => 4.6,
                     'subscriber_count' => 156,
                     'avatar_url' => 'https://randomuser.me/api/portraits/men/22.jpg',
