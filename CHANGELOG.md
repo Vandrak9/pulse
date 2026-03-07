@@ -14,6 +14,37 @@ Versioning follows [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.P
 
 ---
 
+## [0.5.0] — 2026-03-07
+
+### Added
+- `Feed.tsx` — OnlyFans-style scrollable content feed:
+  - Stories row: horizontal scroll, round 56px avatars, terracotta gradient ring, "Objaviť +" discover button
+  - Post cards: coach header (40px avatar with gradient ring), Slovak relative timestamp, 16:9 media area
+  - Video posts: dark bg, centered ▶ play button, duration badge, 🎬 badge
+  - Image posts: warm placeholder
+  - Exclusive locked posts: blur overlay, 🔒 icon, "Predplatiť za €X/mes" CTA button
+  - Like toggle with optimistic UI (instant feedback, background sync)
+  - Action bar: 🤍/❤️ like (with count), 💬 comments, 🔖 save, share button
+  - "▶ Prehrať video" full-width terracotta outline button for free videos
+  - Slovak relative times: "pred hodinou", "pred 3 dňami", etc.
+- `FeedController` — `index()` + `like()`:
+  - Fetches latest 20 posts with eager-loaded coach+user
+  - Batch liked IDs query (no N+1): single `whereIn` for current user's likes
+  - `like()` toggles PostLike record, returns `back()`
+- `post_likes` table — `user_id`, `post_id` with unique constraint, cascade deletes
+- `PostLike` model — `belongsTo User/Post`, `$timestamps = false`
+- `Post` model — added `likes(): HasMany` relationship
+- Routes: `GET /feed` + `POST /feed/like/{post}` (both `auth` middleware)
+
+### Changed
+- `PulseLayout.tsx` — "Objaviť" bottom tab now links to `/feed` (was `/coaches`)
+- `CoachSeeder` — 6 posts per coach with realistic varied timestamps (`hours_ago` field):
+  - Mix of video, image, none media types
+  - Range from 1h ago to 5 days ago
+  - Slovak fitness content titles
+
+---
+
 ## [0.4.0] — 2026-03-07
 
 ### Added

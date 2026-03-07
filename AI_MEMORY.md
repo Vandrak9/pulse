@@ -140,3 +140,4 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [2026-03-07 20:04:22] 9da0bc5: chore: add v0.3.0 changelog entry for app layout and home page
 - [2026-03-07 20:10:05] 41fb550: feat: auth pages and user roles
 - [2026-03-07 20:10:21] a4cde0f: chore: add v0.4.0 changelog entry
+- [2026-03-07 20:23:16] c62559c: feat: OnlyFans-style content feed with stories and likes
