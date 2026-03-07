@@ -14,6 +14,32 @@ Versioning follows [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.P
 
 ---
 
+## [0.4.0] — 2026-03-07
+
+### Added
+- `Auth/Login.tsx` — fully redesigned with PULSE branding:
+  - Standalone page (no GuestLayout) with cream background `#faf6f0`
+  - PULSE serif logo at top, white card `rounded-2xl`, warm border
+  - Custom inputs with warm border focus ring (`#c4714a`)
+  - Terracotta rounded-full submit button, SK labels ("Vitaj späť", "Heslo", "Zapamätať si ma", "Zabudol si heslo?")
+- `Auth/Register.tsx` — fully redesigned with PULSE branding:
+  - Title: "Pridaj sa k PULSE"
+  - Role selector at top: "Som fanúšik 👤" / "Som kouč 💪" (2-column grid, active state highlighted)
+  - Same warm input and button styles as Login
+- `users.role` column — enum `fan|coach`, default `fan` (migration added)
+- `RegisteredUserController` — validates `role`, saves to DB, role-based redirect:
+  - `coach` → `/dashboard/profile` (complete your profile)
+  - `fan` → `/coaches` (browse coaches)
+
+### Changed
+- `Home.tsx` — featured coaches section redesigned:
+  - Replaced tall photo cards with compact cards matching `Coaches/Index.tsx` style
+  - Round 80px avatar, name, specialization badge, rating, price
+  - Horizontal scroll gap reduced to `gap-3`
+- `User` model — `role` added to `$fillable`
+
+---
+
 ## [0.3.0] — 2026-03-07
 
 ### Added
