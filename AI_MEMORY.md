@@ -131,3 +131,7 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [2026-03-07 19:34:28] 5293459: fix: realistic prices and category scroll hint
 - [2026-03-07 19:37:45] 0f725cf: feat: add coaches for Joga, Beh and Wellness categories
 - [2026-03-07 19:40:39] c7b6e37: feat: coach detail page redesign
+- [2026-03-07 19:40:57] 5b6a4d0: chore: update AI_MEMORY with Show.tsx redesign
+- [2026-03-07 19:49:26] 58af863: feat: pulse layout with nav, date formatting, and video/media content support
+- [2026-03-07 19:51:54] 03fe728: chore: add CHANGELOG.md with semantic versioning
+- [2026-03-07 20:01:42] 4f85cb9: feat: app layout, navigation and home page

@@ -14,6 +14,39 @@ Versioning follows [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.P
 
 ---
 
+## [0.3.0] — 2026-03-07
+
+### Added
+- `Home.tsx` — full landing page:
+  - Hero section: warm gradient, decorative blobs, serif title, social proof stats
+  - Featured coaches: horizontal scroll row (top 4 by subscriber count)
+  - How it works: 3-step guide with large faded step numbers (01/02/03)
+  - Categories: 6-tile grid (💪🧘🥗🏃🌿✨) linking to /coaches with keyword filter
+  - CTA banner: gradient terracotta for coach recruitment
+- `HomeController` — fetches top 4 coaches by `subscriber_count` for featured row
+- `PulseLayout.tsx` — complete rewrite:
+  - Sticky top nav (z-50): PULSE serif logo, desktop search bar, auth-aware right side
+  - Guest: Prihlásiť + Registrovať buttons
+  - Logged in: notification bell (with unread dot) + avatar initial
+  - Bottom mobile tab bar (fixed, md:hidden): 🏠 Domov / 🔍 Objaviť / 💬 Správy / 👤 Profil
+  - Active tab detection via `usePage().url`
+  - Page content wrapped in `<main className="animate-fade-in">`
+  - Bottom spacer `h-16 md:hidden` to prevent content hiding behind tab bar
+- `tailwind.config.js` — `animate-fade-in` keyframe (opacity 0→1, translateY 8px→0, 0.35s)
+- `resources/css/app.css` — `.no-scrollbar` moved to `@layer utilities`
+
+### Changed
+- `routes/web.php` — `GET /` now renders `Home` via `HomeController@index` (replaced Welcome closure)
+- `Coaches/Index.tsx` — sticky filter offset updated to `top-16` to sit below new taller nav
+- `Coaches/Index.tsx` — `.no-scrollbar` inline `<style>` tag removed (now uses app.css utility)
+
+### Routes
+```
+GET  /   → HomeController@index
+```
+
+---
+
 ## [0.2.0] — 2026-03-07
 
 ### Added
