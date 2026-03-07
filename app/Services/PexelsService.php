@@ -15,17 +15,21 @@ class PexelsService
 
     /**
      * Search Pexels for videos.
-     * Returns array of ['video_url' => ..., 'thumbnail_url' => ..., 'width' => ..., 'height' => ...]
+     * Returns array of ['video_url', 'thumbnail_url', 'duration', 'width', 'height']
      */
-    public function searchVideos(string $query, int $perPage = 5): array
-    {
+    public function searchVideos(
+        string $query,
+        int $perPage = 5,
+        ?int $minDuration = null,
+        ?int $maxDuration = null,
+    ): array {
+        $params = ['query' => $query, 'per_page' => $perPage, 'orientation' => 'landscape'];
+        if ($minDuration !== null) $params['min_duration'] = $minDuration;
+        if ($maxDuration !== null) $params['max_duration'] = $maxDuration;
+
         $response = Http::withHeaders(['Authorization' => $this->apiKey])
             ->timeout(15)
-            ->get('https://api.pexels.com/videos/search', [
-                'query'       => $query,
-                'per_page'    => $perPage,
-                'orientation' => 'landscape',
-            ]);
+            ->get('https://api.pexels.com/videos/search', $params);
 
         if (! $response->successful()) {
             return [];
@@ -43,6 +47,7 @@ class PexelsService
                 $results[] = [
                     'video_url'     => $file['link'],
                     'thumbnail_url' => $video['image'] ?? null,
+                    'duration'      => $video['duration'] ?? null,  // seconds (int)
                     'width'         => $file['width'] ?? 1280,
                     'height'        => $file['height'] ?? 720,
                 ];
@@ -54,7 +59,7 @@ class PexelsService
 
     /**
      * Search Pexels for images.
-     * Returns array of ['image_url' => ..., 'thumbnail_url' => ..., 'width' => ..., 'height' => ...]
+     * Returns array of ['image_url', 'thumbnail_url', 'width', 'height']
      */
     public function searchImages(string $query, int $perPage = 5): array
     {

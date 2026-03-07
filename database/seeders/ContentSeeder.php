@@ -22,30 +22,44 @@ class ContentSeeder extends Seeder
     {
         Storage::disk('public')->makeDirectory('thumbnails');
 
+        // reel_count = how many video posts to make reels (short clips)
+        // remaining video posts become long videos
         $assignments = [
             'tomas.kovac@pulse.sk' => [
-                'video_queries' => ['weightlifting', 'gym workout', 'bench press'],
-                'image_query'   => 'gym fitness',
+                'reel_count'   => 2,
+                'reel_query'   => 'weightlifting',
+                'video_query'  => 'gym workout',
+                'image_query'  => 'gym fitness',
             ],
             'lucia.horakova@pulse.sk' => [
-                'video_queries' => ['healthy cooking', 'meal prep'],
-                'image_query'   => 'healthy food protein',
+                'reel_count'   => 1,
+                'reel_query'   => 'healthy food',
+                'video_query'  => 'healthy cooking',
+                'image_query'  => 'healthy food protein',
             ],
             'zuzana.prochazka@pulse.sk' => [
-                'video_queries' => ['yoga', 'meditation', 'stretching yoga'],
-                'image_query'   => 'yoga pose woman',
+                'reel_count'   => 2,
+                'reel_query'   => 'yoga',
+                'video_query'  => 'meditation yoga',
+                'image_query'  => 'yoga pose woman',
             ],
             'katarina.molnar@pulse.sk' => [
-                'video_queries' => ['wellness spa', 'breathing exercise meditation'],
-                'image_query'   => 'wellness relaxation',
+                'reel_count'   => 2,
+                'reel_query'   => 'wellness',
+                'video_query'  => 'breathing exercise',
+                'image_query'  => 'wellness relaxation',
             ],
             'marek.blaho@pulse.sk' => [
-                'video_queries' => ['crossfit', 'hiit workout', 'functional fitness'],
-                'image_query'   => 'crossfit training',
+                'reel_count'   => 2,
+                'reel_query'   => 'crossfit',
+                'video_query'  => 'hiit workout',
+                'image_query'  => 'crossfit training',
             ],
             'peter.horvath@pulse.sk' => [
-                'video_queries' => ['running outdoors', 'marathon running', 'jogging', 'trail running'],
-                'image_query'   => 'running sport',
+                'reel_count'   => 2,
+                'reel_query'   => 'running',
+                'video_query'  => 'marathon running',
+                'image_query'  => 'running sport',
             ],
         ];
 
@@ -59,7 +73,6 @@ class ContentSeeder extends Seeder
             $coach = $user->coach;
             $this->command->line("\n  Processing <fg=cyan>{$user->name}</>");
 
-            // Get posts by media type, ordered by created_at
             $videoPosts = Post::where('coach_id', $coach->id)
                 ->where('media_type', 'video')
                 ->orderBy('created_at')
@@ -70,62 +83,82 @@ class ContentSeeder extends Seeder
                 ->orderBy('created_at')
                 ->get();
 
-            // Assign video content
-            $videoQueries = $config['video_queries'];
-            foreach ($videoPosts as $i => $post) {
-                $query = $videoQueries[$i] ?? $videoQueries[0];
-                $results = $this->pexels->searchVideos($query, 1);
+            $reelCount = min($config['reel_count'], $videoPosts->count());
 
-                if (empty($results)) {
-                    $this->command->warn("    No video results for '{$query}'");
+            // ── Reels (short clips, max 60s) ──
+            $reelResults = $this->pexels->searchVideos($config['reel_query'], max($reelCount, 3), maxDuration: 60);
+            foreach ($videoPosts->take($reelCount) as $i => $post) {
+                $result = $reelResults[$i] ?? ($reelResults[0] ?? null);
+                if (! $result) {
+                    $this->command->warn("    No reel results for '{$config['reel_query']}'");
                     continue;
                 }
+                $thumb = $this->downloadFile($result['thumbnail_url'], 'thumbnails', 'jpg');
+                $duration = $result['duration'] ?? null;
 
-                $result = $results[0];
-                $thumbnailPath = $this->downloadFile($result['thumbnail_url'], 'thumbnails', 'jpg');
-
-                $post->media_path = $result['video_url'];
-                $post->thumbnail_path = $thumbnailPath;
+                $post->media_path    = $result['video_url'];
+                $post->thumbnail_path = $thumb;
+                $post->video_type    = 'reel';
+                $post->video_duration = $duration;
                 $post->save();
 
-                $this->command->line("    <fg=green>✓</> Video: {$query} → saved");
+                $durStr = $duration ? "{$duration}s" : '?s';
+                $this->command->line("    <fg=green>✓</> Reel ({$durStr}): {$config['reel_query']}");
             }
 
-            // Assign image content
-            if ($imagePosts->isNotEmpty()) {
-                $imageCount = $imagePosts->count();
-                $results = $this->pexels->searchImages($config['image_query'], $imageCount);
-
-                foreach ($imagePosts as $i => $post) {
-                    $result = $results[$i] ?? ($results[0] ?? null);
+            // ── Long videos (60s+) ──
+            $longPosts = $videoPosts->slice($reelCount);
+            $longCount = $longPosts->count();
+            if ($longCount > 0) {
+                $videoResults = $this->pexels->searchVideos($config['video_query'], max($longCount, 3), minDuration: 60);
+                foreach ($longPosts->values() as $i => $post) {
+                    $result = $videoResults[$i] ?? ($videoResults[0] ?? null);
                     if (! $result) {
-                        $this->command->warn("    No image results for '{$config['image_query']}'");
+                        $this->command->warn("    No video results for '{$config['video_query']}'");
                         continue;
                     }
+                    $thumb = $this->downloadFile($result['thumbnail_url'], 'thumbnails', 'jpg');
+                    $duration = $result['duration'] ?? null;
 
-                    $post->media_path = $result['image_url'];
+                    $post->media_path     = $result['video_url'];
+                    $post->thumbnail_path = $thumb;
+                    $post->video_type     = 'video';
+                    $post->video_duration = $duration;
                     $post->save();
 
-                    $this->command->line("    <fg=green>✓</> Image: {$config['image_query']} → saved");
+                    $durStr = $duration ? "{$duration}s" : '?s';
+                    $this->command->line("    <fg=green>✓</> Video ({$durStr}): {$config['video_query']}");
                 }
             }
 
-            // Set is_exclusive: first 2 media posts free, rest exclusive
-            $allMediaPosts = Post::where('coach_id', $coach->id)
+            // ── Images ──
+            if ($imagePosts->isNotEmpty()) {
+                $imgResults = $this->pexels->searchImages($config['image_query'], $imagePosts->count());
+                foreach ($imagePosts as $i => $post) {
+                    $result = $imgResults[$i] ?? ($imgResults[0] ?? null);
+                    if (! $result) continue;
+                    $post->media_path = $result['image_url'];
+                    $post->save();
+                    $this->command->line("    <fg=green>✓</> Image: {$config['image_query']}");
+                }
+            }
+
+            // ── is_exclusive: first 2 media posts free, rest exclusive ──
+            $allMedia = Post::where('coach_id', $coach->id)
                 ->whereIn('media_type', ['video', 'image'])
                 ->orderBy('created_at')
                 ->get();
 
-            foreach ($allMediaPosts as $i => $post) {
+            foreach ($allMedia as $i => $post) {
                 $post->is_exclusive = $i >= 2;
                 $post->save();
             }
 
-            $this->command->line("  <fg=green>Done</> {$user->name}: {$videoPosts->count()} videos, {$imagePosts->count()} images");
+            $this->command->line("  <fg=green>Done</> {$user->name}: {$reelCount} reels, " . max(0, $videoPosts->count() - $reelCount) . " videos, {$imagePosts->count()} images");
         }
 
         $this->command->newLine();
-        $this->command->info('ContentSeeder complete — real Pexels media assigned.');
+        $this->command->info('ContentSeeder complete — real Pexels media with reel/video types assigned.');
     }
 
     private function downloadFile(string $url, string $folder, string $ext): ?string
@@ -139,7 +172,7 @@ class ContentSeeder extends Seeder
                 return $path;
             }
         } catch (\Exception $e) {
-            $this->command->warn("    Download failed ({$url}): " . $e->getMessage());
+            $this->command->warn("    Download failed: " . $e->getMessage());
         }
 
         return null;

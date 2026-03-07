@@ -15,6 +15,7 @@ class Post extends Model
         'media_path',
         'thumbnail_path',
         'video_duration',
+        'video_type',
         'media_type',
         'is_exclusive',
     ];

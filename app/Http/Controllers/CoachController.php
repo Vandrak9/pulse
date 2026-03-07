@@ -47,15 +47,18 @@ class CoachController extends Controller
             ->orderByDesc('created_at')
             ->get()
             ->map(fn ($post) => [
-                'id' => $post->id,
-                'title' => $post->title,
-                'content' => $post->content,
-                'media_type' => $post->media_type,
-                'media_path' => $post->media_path,
-                'thumbnail_path' => $post->thumbnail_path,
+                'id'             => $post->id,
+                'title'          => $post->title,
+                'content'        => $post->content,
+                'media_type'     => $post->media_type,
+                'media_url'      => $post->media_path ?: null,
+                'thumbnail_url'  => $post->thumbnail_path
+                    ? Storage::url($post->thumbnail_path)
+                    : null,
+                'video_type'     => $post->video_type,
                 'video_duration' => $post->video_duration,
-                'is_exclusive' => $post->is_exclusive,
-                'created_at' => $post->created_at->toDateString(),
+                'is_exclusive'   => $post->is_exclusive,
+                'created_at'     => $post->created_at->toDateString(),
             ]);
 
         return Inertia::render('Coaches/Show', [

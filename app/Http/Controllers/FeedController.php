@@ -37,6 +37,7 @@ class FeedController extends Controller
             'thumbnail_url'  => $post->thumbnail_path
                 ? Storage::url($post->thumbnail_path)
                 : null,
+            'video_type'     => $post->video_type,
             'video_duration' => $post->video_duration,
             'is_exclusive'   => $post->is_exclusive,
             'like_count'     => $post->likes_count,
