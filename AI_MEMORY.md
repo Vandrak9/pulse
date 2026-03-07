@@ -105,3 +105,4 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [2026-03-07 18:00:00] initial: Initial commit: add Laravel .gitignore
 - [2026-03-07 18:10:00] chore: initial Laravel setup with Inertia React
 - [2026-03-07 18:30:00] feat: database schema and models
+- [2026-03-07 18:36:41] a604154: chore: AI memory and git hooks setup
