@@ -56,6 +56,8 @@ class CoachController extends Controller
                 'bio' => $coach->bio,
                 'specialization' => $coach->specialization,
                 'monthly_price' => $coach->monthly_price,
+                'rating' => $coach->rating,
+                'subscriber_count' => $coach->subscriber_count,
                 'is_verified' => $coach->is_verified,
                 'avatar_url' => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)

@@ -6,6 +6,8 @@ interface CoachData {
     bio: string | null;
     specialization: string | null;
     monthly_price: string;
+    rating: string | null;
+    subscriber_count: number;
     is_verified: boolean;
     avatar_url: string | null;
 }
@@ -25,41 +27,45 @@ interface Props {
     isSubscribed: boolean;
 }
 
+const BENEFITS = [
+    'Exkluzívny obsah',
+    'Priame správy',
+    'Personalizované plány',
+];
+
 export default function CoachShow({ coach, posts, isSubscribed }: Props) {
     const price = parseFloat(coach.monthly_price);
+    const rating = coach.rating ? parseFloat(coach.rating) : null;
 
     return (
         <>
             <Head title={coach.name} />
 
-            <div className="min-h-screen" style={{ backgroundColor: '#faf6f0' }}>
-                {/* Back link */}
-                <div className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 lg:px-8">
+            <div className="min-h-screen pb-20" style={{ backgroundColor: '#faf6f0' }}>
+
+                {/* ── Back button ── */}
+                <div className="absolute left-4 top-4 z-20 sm:left-6">
                     <Link
                         href="/coaches"
-                        className="text-sm font-medium hover:underline"
-                        style={{ color: '#c4714a' }}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-1.5 text-sm font-medium shadow-sm backdrop-blur-sm transition hover:bg-white"
+                        style={{ color: '#2d2118' }}
                     >
-                        ← All Coaches
+                        ← Späť na koučov
                     </Link>
                 </div>
 
-                {/* Cover / Hero */}
+                {/* ── Hero cover ── */}
                 <div
-                    className="h-40 w-full"
-                    style={{ backgroundColor: '#2d2118' }}
-                />
-
-                {/* Profile card */}
-                <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-                    <div className="-mt-16 flex items-end gap-5">
-                        {/* Avatar */}
+                    className="relative h-[200px] w-full"
+                    style={{
+                        background: 'linear-gradient(to right, #c4714a, #5a3e2b)',
+                    }}
+                >
+                    {/* Avatar — bottom-center overlapping cover */}
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
                         <div
-                            className="flex h-32 w-32 flex-shrink-0 items-center justify-center rounded-full border-4 border-white text-4xl font-bold text-white shadow"
-                            style={{
-                                backgroundColor: '#c4714a',
-                                overflow: 'hidden',
-                            }}
+                            className="h-[120px] w-[120px] overflow-hidden rounded-full border-4 border-white shadow-lg"
+                            style={{ backgroundColor: '#c4714a' }}
                         >
                             {coach.avatar_url ? (
                                 <img
@@ -68,152 +74,235 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                                     className="h-full w-full object-cover"
                                 />
                             ) : (
-                                coach.name.charAt(0).toUpperCase()
+                                <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-white">
+                                    {coach.name.charAt(0).toUpperCase()}
+                                </div>
                             )}
-                        </div>
-
-                        {/* Name + badge */}
-                        <div className="pb-2">
-                            <div className="flex items-center gap-2">
-                                <h1
-                                    className="text-2xl font-bold"
-                                    style={{ color: '#2d2118' }}
-                                >
-                                    {coach.name}
-                                </h1>
-                                {coach.is_verified && (
-                                    <span
-                                        className="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
-                                        style={{ backgroundColor: '#4a7c59' }}
-                                    >
-                                        Verified
-                                    </span>
-                                )}
-                            </div>
-                            {coach.specialization && (
-                                <p
-                                    className="mt-0.5 text-sm font-medium"
-                                    style={{ color: '#4a7c59' }}
-                                >
-                                    {coach.specialization}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Bio + Subscribe */}
-                    <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="max-w-xl">
-                            {coach.bio ? (
-                                <p className="leading-relaxed" style={{ color: '#2d2118' }}>
-                                    {coach.bio}
-                                </p>
-                            ) : (
-                                <p className="italic text-gray-400">No bio yet.</p>
-                            )}
-                        </div>
-
-                        {/* Subscribe box */}
-                        <div
-                            className="flex-shrink-0 rounded-2xl p-5 shadow-sm"
-                            style={{ backgroundColor: '#fff', minWidth: '200px' }}
-                        >
-                            <p className="text-sm font-medium" style={{ color: '#2d2118' }}>
-                                Monthly subscription
-                            </p>
-                            <p
-                                className="mt-1 text-3xl font-bold"
-                                style={{ color: '#c4714a' }}
-                            >
-                                {price === 0 ? 'Free' : `€${price.toFixed(2)}`}
-                            </p>
-                            {!isSubscribed && (
-                                <button
-                                    className="mt-4 w-full rounded-xl py-2 font-semibold text-white transition hover:opacity-90"
-                                    style={{ backgroundColor: '#c4714a' }}
-                                >
-                                    Subscribe
-                                </button>
-                            )}
-                            {isSubscribed && (
-                                <span
-                                    className="mt-4 block w-full rounded-xl py-2 text-center font-semibold text-white"
-                                    style={{ backgroundColor: '#4a7c59' }}
-                                >
-                                    Subscribed
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Posts feed */}
-                    <div className="mt-10 pb-16">
-                        <h2
-                            className="mb-4 text-xl font-bold"
-                            style={{ color: '#2d2118' }}
-                        >
-                            Posts
-                        </h2>
-
-                        {posts.length === 0 && (
-                            <p className="text-gray-400 italic">No posts yet.</p>
-                        )}
-
-                        <div className="flex flex-col gap-4">
-                            {posts.map((post) => {
-                                const locked = post.is_exclusive && !isSubscribed;
-                                return (
-                                    <div
-                                        key={post.id}
-                                        className="relative overflow-hidden rounded-2xl bg-white p-5 shadow-sm"
-                                    >
-                                        {locked && (
-                                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl backdrop-blur-sm"
-                                                style={{ backgroundColor: 'rgba(250,246,240,0.7)' }}
-                                            >
-                                                <span className="text-3xl">🔒</span>
-                                                <p
-                                                    className="mt-2 text-sm font-semibold"
-                                                    style={{ color: '#2d2118' }}
-                                                >
-                                                    Subscribe to unlock
-                                                </p>
-                                            </div>
-                                        )}
-                                        <div className={locked ? 'select-none blur-sm' : ''}>
-                                            <div className="flex items-center justify-between">
-                                                <h3
-                                                    className="font-semibold"
-                                                    style={{ color: '#2d2118' }}
-                                                >
-                                                    {post.title}
-                                                </h3>
-                                                <span className="text-xs text-gray-400">
-                                                    {post.created_at}
-                                                </span>
-                                            </div>
-                                            <p
-                                                className="mt-2 text-sm leading-relaxed"
-                                                style={{ color: '#2d2118' }}
-                                            >
-                                                {post.content}
-                                            </p>
-                                            {post.is_exclusive && (
-                                                <span
-                                                    className="mt-3 inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                                                    style={{ backgroundColor: '#c4714a' }}
-                                                >
-                                                    Exclusive
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
                         </div>
                     </div>
                 </div>
+
+                {/* ── Coach info ── */}
+                <div className="mx-auto max-w-2xl px-4 sm:px-6">
+                    {/* Space for avatar overlap */}
+                    <div className="pt-20 text-center">
+
+                        {/* Name */}
+                        <h1
+                            className="font-serif text-2xl font-bold"
+                            style={{ color: '#2d2118' }}
+                        >
+                            {coach.name}
+                        </h1>
+
+                        {/* Specialization badge */}
+                        {coach.specialization && (
+                            <span
+                                className="mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold"
+                                style={{ backgroundColor: '#fce8de', color: '#c4714a' }}
+                            >
+                                {coach.specialization}
+                            </span>
+                        )}
+
+                        {/* Rating + subscribers */}
+                        <div
+                            className="mt-3 flex items-center justify-center gap-3 text-sm"
+                            style={{ color: '#9a8a7a' }}
+                        >
+                            {rating !== null && (
+                                <>
+                                    <span className="flex items-center gap-1">
+                                        <span style={{ color: '#f5a623' }}>★</span>
+                                        <span className="font-medium" style={{ color: '#2d2118' }}>
+                                            {rating.toFixed(1)}
+                                        </span>
+                                    </span>
+                                    <span style={{ color: '#e8d9c4' }}>|</span>
+                                </>
+                            )}
+                            <span>
+                                {coach.subscriber_count.toLocaleString('sk-SK')} sledovateľov
+                            </span>
+                            {coach.is_verified && (
+                                <>
+                                    <span style={{ color: '#e8d9c4' }}>|</span>
+                                    <span
+                                        className="flex items-center gap-1 font-medium"
+                                        style={{ color: '#4a7c59' }}
+                                    >
+                                        ✓ Overený
+                                    </span>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Bio */}
+                        {coach.bio && (
+                            <p
+                                className="mx-auto mt-4 max-w-sm text-sm leading-relaxed"
+                                style={{ color: '#6b5e52' }}
+                            >
+                                {coach.bio}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* ── Subscription box ── */}
+                    <div
+                        className="mt-8 rounded-2xl bg-white p-6 shadow-md"
+                        style={{ border: '1px solid #e8d9c4' }}
+                    >
+                        <p
+                            className="text-xs font-semibold uppercase tracking-widest"
+                            style={{ color: '#9a8a7a' }}
+                        >
+                            Predplatné
+                        </p>
+
+                        <div className="mt-1 flex items-baseline gap-1">
+                            <span
+                                className="font-serif text-4xl font-bold"
+                                style={{ color: '#c4714a' }}
+                            >
+                                {price === 0 ? 'Zadarmo' : `€${price.toFixed(2)}`}
+                            </span>
+                            {price > 0 && (
+                                <span className="text-sm" style={{ color: '#9a8a7a' }}>
+                                    / mesiac
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Benefits */}
+                        <ul className="mt-4 space-y-2">
+                            {BENEFITS.map((b) => (
+                                <li key={b} className="flex items-center gap-2 text-sm" style={{ color: '#2d2118' }}>
+                                    <span
+                                        className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                                        style={{ backgroundColor: '#c4714a' }}
+                                    >
+                                        ✓
+                                    </span>
+                                    {b}
+                                </li>
+                            ))}
+                        </ul>
+
+                        {/* CTA */}
+                        {isSubscribed ? (
+                            <div
+                                className="mt-5 w-full rounded-full py-3 text-center text-sm font-semibold text-white"
+                                style={{ backgroundColor: '#4a7c59' }}
+                            >
+                                ✓ Predplatené
+                            </div>
+                        ) : (
+                            <button
+                                className="mt-5 w-full rounded-full py-3 text-sm font-semibold text-white transition-colors"
+                                style={{ backgroundColor: '#c4714a' }}
+                                onMouseEnter={(e) =>
+                                    (e.currentTarget.style.backgroundColor = '#5a3e2b')
+                                }
+                                onMouseLeave={(e) =>
+                                    (e.currentTarget.style.backgroundColor = '#c4714a')
+                                }
+                            >
+                                Predplatiť teraz
+                            </button>
+                        )}
+
+                        <p
+                            className="mt-2 text-center text-xs"
+                            style={{ color: '#9a8a7a' }}
+                        >
+                            Zruš kedykoľvek
+                        </p>
+                    </div>
+
+                    {/* ── Content preview ── */}
+                    {posts.length > 0 && (
+                        <div className="mt-10">
+                            <h2
+                                className="mb-4 font-serif text-xl font-bold"
+                                style={{ color: '#2d2118' }}
+                            >
+                                Ukážka obsahu
+                            </h2>
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {posts.slice(0, 3).map((post) => (
+                                    <PostCard
+                                        key={post.id}
+                                        post={post}
+                                        isSubscribed={isSubscribed}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </>
+    );
+}
+
+function PostCard({
+    post,
+    isSubscribed,
+}: {
+    post: Post;
+    isSubscribed: boolean;
+}) {
+    const locked = post.is_exclusive && !isSubscribed;
+
+    return (
+        <div
+            className="relative overflow-hidden rounded-2xl bg-white shadow-sm"
+            style={{ border: '1px solid #e8d9c4' }}
+        >
+            {/* Lock overlay */}
+            {locked && (
+                <div
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl backdrop-blur-sm"
+                    style={{ backgroundColor: 'rgba(250,246,240,0.75)' }}
+                >
+                    <span className="text-3xl">🔒</span>
+                    <p className="text-center text-xs font-semibold" style={{ color: '#2d2118' }}>
+                        Predplaťte sa pre prístup
+                    </p>
+                </div>
+            )}
+
+            <div className={`p-4 ${locked ? 'select-none blur-sm' : ''}`}>
+                {/* Exclusive badge */}
+                {post.is_exclusive && (
+                    <span
+                        className="mb-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                        style={{ backgroundColor: '#c4714a' }}
+                    >
+                        Exkluzívne
+                    </span>
+                )}
+
+                <h3
+                    className="text-sm font-semibold leading-snug"
+                    style={{ color: '#2d2118' }}
+                >
+                    {post.title}
+                </h3>
+
+                <p
+                    className="mt-1.5 line-clamp-3 text-xs leading-relaxed"
+                    style={{ color: '#9a8a7a' }}
+                >
+                    {post.content}
+                </p>
+
+                <p className="mt-3 text-xs" style={{ color: '#c4b8a8' }}>
+                    {post.created_at}
+                </p>
+            </div>
+        </div>
     );
 }
