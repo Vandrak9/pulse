@@ -22,44 +22,74 @@ class ContentSeeder extends Seeder
     {
         Storage::disk('public')->makeDirectory('thumbnails');
 
-        // reel_count = how many video posts to make reels (short clips)
-        // remaining video posts become long videos
+        // reel_count = how many video posts become reels (short clips ≤60s)
+        // remaining video posts become long videos (≥60s)
         $assignments = [
             'tomas.kovac@pulse.sk' => [
-                'reel_count'   => 2,
+                'reel_count'   => 3,
                 'reel_query'   => 'weightlifting',
                 'video_query'  => 'gym workout',
                 'image_query'  => 'gym fitness',
             ],
             'lucia.horakova@pulse.sk' => [
-                'reel_count'   => 1,
+                'reel_count'   => 3,
                 'reel_query'   => 'healthy food',
                 'video_query'  => 'healthy cooking',
                 'image_query'  => 'healthy food protein',
             ],
             'zuzana.prochazka@pulse.sk' => [
-                'reel_count'   => 2,
+                'reel_count'   => 3,
                 'reel_query'   => 'yoga',
                 'video_query'  => 'meditation yoga',
                 'image_query'  => 'yoga pose woman',
             ],
             'katarina.molnar@pulse.sk' => [
-                'reel_count'   => 2,
+                'reel_count'   => 3,
                 'reel_query'   => 'wellness',
                 'video_query'  => 'breathing exercise',
                 'image_query'  => 'wellness relaxation',
             ],
             'marek.blaho@pulse.sk' => [
-                'reel_count'   => 2,
+                'reel_count'   => 3,
                 'reel_query'   => 'crossfit',
                 'video_query'  => 'hiit workout',
                 'image_query'  => 'crossfit training',
             ],
             'peter.horvath@pulse.sk' => [
-                'reel_count'   => 2,
+                'reel_count'   => 3,
                 'reel_query'   => 'running',
                 'video_query'  => 'marathon running',
                 'image_query'  => 'running sport',
+            ],
+            'jana.novotna@pulse.sk' => [
+                'reel_count'   => 3,
+                'reel_query'   => 'pilates',
+                'video_query'  => 'pilates core workout',
+                'image_query'  => 'pilates studio',
+            ],
+            'martin.simko@pulse.sk' => [
+                'reel_count'   => 3,
+                'reel_query'   => 'functional training',
+                'video_query'  => 'kettlebell workout',
+                'image_query'  => 'functional training gym',
+            ],
+            'radoslav.oravec@pulse.sk' => [
+                'reel_count'   => 3,
+                'reel_query'   => 'boxing',
+                'video_query'  => 'boxing training',
+                'image_query'  => 'boxing gym',
+            ],
+            'eva.kovacova@pulse.sk' => [
+                'reel_count'   => 3,
+                'reel_query'   => 'stretching',
+                'video_query'  => 'flexibility workout',
+                'image_query'  => 'stretching fitness',
+            ],
+            'michal.dubovsky@pulse.sk' => [
+                'reel_count'   => 3,
+                'reel_query'   => 'cycling',
+                'video_query'  => 'triathlon training',
+                'image_query'  => 'cycling sport',
             ],
         ];
 
@@ -86,7 +116,7 @@ class ContentSeeder extends Seeder
             $reelCount = min($config['reel_count'], $videoPosts->count());
 
             // ── Reels (short clips, max 60s) ──
-            $reelResults = $this->pexels->searchVideos($config['reel_query'], max($reelCount, 3), maxDuration: 60);
+            $reelResults = $this->pexels->searchVideos($config['reel_query'], max($reelCount, 5), maxDuration: 60);
             foreach ($videoPosts->take($reelCount) as $i => $post) {
                 $result = $reelResults[$i] ?? ($reelResults[0] ?? null);
                 if (! $result) {
@@ -96,9 +126,9 @@ class ContentSeeder extends Seeder
                 $thumb = $this->downloadFile($result['thumbnail_url'], 'thumbnails', 'jpg');
                 $duration = $result['duration'] ?? null;
 
-                $post->media_path    = $result['video_url'];
+                $post->media_path     = $result['video_url'];
                 $post->thumbnail_path = $thumb;
-                $post->video_type    = 'reel';
+                $post->video_type     = 'reel';
                 $post->video_duration = $duration;
                 $post->save();
 
@@ -133,7 +163,7 @@ class ContentSeeder extends Seeder
 
             // ── Images ──
             if ($imagePosts->isNotEmpty()) {
-                $imgResults = $this->pexels->searchImages($config['image_query'], $imagePosts->count());
+                $imgResults = $this->pexels->searchImages($config['image_query'], max($imagePosts->count(), 3));
                 foreach ($imagePosts as $i => $post) {
                     $result = $imgResults[$i] ?? ($imgResults[0] ?? null);
                     if (! $result) continue;
@@ -154,11 +184,16 @@ class ContentSeeder extends Seeder
                 $post->save();
             }
 
+            // ── Reels are always free for registered users ──
+            Post::where('coach_id', $coach->id)
+                ->where('video_type', 'reel')
+                ->update(['is_exclusive' => false]);
+
             $this->command->line("  <fg=green>Done</> {$user->name}: {$reelCount} reels, " . max(0, $videoPosts->count() - $reelCount) . " videos, {$imagePosts->count()} images");
         }
 
         $this->command->newLine();
-        $this->command->info('ContentSeeder complete — real Pexels media with reel/video types assigned.');
+        $this->command->info('ContentSeeder complete — reels always free, long videos/images may be exclusive.');
     }
 
     private function downloadFile(string $url, string $folder, string $ext): ?string
