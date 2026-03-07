@@ -142,3 +142,4 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [2026-03-07 20:10:21] a4cde0f: chore: add v0.4.0 changelog entry
 - [2026-03-07 20:23:16] c62559c: feat: OnlyFans-style content feed with stories and likes
 - [2026-03-07 20:23:54] dc70918: chore: add v0.5.0 changelog entry and update AI memory
+- [2026-03-07 20:34:27] eb63789: feat: real Pexels stock content with video player

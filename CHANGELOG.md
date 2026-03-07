@@ -14,6 +14,36 @@ Versioning follows [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.P
 
 ---
 
+## [0.6.0] — 2026-03-07
+
+### Added
+- `app/Services/PexelsService.php` — Pexels API client:
+  - `searchVideos($query, $perPage)` — fetches HD MP4 links + thumbnail URLs from `/videos/search`
+  - `searchImages($query, $perPage)` — fetches large image URLs from `/v1/search`
+  - Uses `Authorization` header with `PEXELS_API_KEY` from `.env`
+- `database/seeders/ContentSeeder.php` — assigns real Pexels media to all 6 coaches:
+  - Per-coach search queries (e.g., "weightlifting", "yoga", "crossfit")
+  - Downloads video thumbnails locally to `storage/app/public/thumbnails/`
+  - Stores video stream URLs in `posts.media_path`
+  - Sets `is_exclusive`: first 2 media posts free, rest exclusive
+- `resources/js/Components/VideoModal.tsx` — fullscreen video player:
+  - Fixed overlay `bg-black/92`, HTML5 `<video controls autoPlay playsInline>`
+  - Post title + coach name at top
+  - X close button + click outside to close + Escape key to close
+  - Locks page scroll while open
+- `PEXELS_API_KEY` added to `.env`
+
+### Changed
+- `FeedController` — DTO now includes `media_url` (external URL) and `thumbnail_url` (`Storage::url()`)
+- `Feed.tsx` — real media rendering:
+  - Video cards show real Pexels thumbnail images (not dark placeholder)
+  - Clicking thumbnail or "Prehrať video" opens `VideoModal`
+  - Image posts show real Pexels images via `<img src={media_url}>`
+  - Exclusive posts show blurred thumbnail hint behind lock overlay
+  - `onPlay` callback threads from `Feed` → `PostCard` → `VideoModal`
+
+---
+
 ## [0.5.0] — 2026-03-07
 
 ### Added
