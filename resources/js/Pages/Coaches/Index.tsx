@@ -48,7 +48,6 @@ export default function CoachesIndex({ coaches }: Props) {
         <PulseLayout>
             <Head title="Nájdi svojho kouča" />
 
-            <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
 
             <div className="min-h-screen" style={{ backgroundColor: '#faf6f0' }}>
 
@@ -72,7 +71,7 @@ export default function CoachesIndex({ coaches }: Props) {
 
                 {/* ── Category filter ── */}
                 <div
-                    className="sticky top-[57px] z-10 border-b"
+                    className="sticky top-16 z-10 border-b"
                     style={{ backgroundColor: 'rgba(250,246,240,0.95)', backdropFilter: 'blur(8px)', borderColor: '#e8d9c4' }}
                 >
                     <div className="relative mx-auto max-w-5xl">
