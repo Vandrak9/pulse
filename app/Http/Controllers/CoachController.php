@@ -13,6 +13,10 @@ class CoachController extends Controller
     public function index(): Response
     {
         $coaches = Coach::with('user')
+            ->withCount([
+                'posts as video_count' => fn ($q) => $q->where('media_type', 'video'),
+                'posts as image_count' => fn ($q) => $q->where('media_type', 'image'),
+            ])
             ->orderByDesc('created_at')
             ->paginate(24)
             ->through(fn ($coach) => [
@@ -23,6 +27,8 @@ class CoachController extends Controller
                 'bio' => $coach->bio,
                 'rating' => $coach->rating,
                 'subscriber_count' => $coach->subscriber_count,
+                'video_count' => $coach->video_count,
+                'image_count' => $coach->image_count,
                 'avatar_url' => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
@@ -44,7 +50,10 @@ class CoachController extends Controller
                 'id' => $post->id,
                 'title' => $post->title,
                 'content' => $post->content,
+                'media_type' => $post->media_type,
                 'media_path' => $post->media_path,
+                'thumbnail_path' => $post->thumbnail_path,
+                'video_duration' => $post->video_duration,
                 'is_exclusive' => $post->is_exclusive,
                 'created_at' => $post->created_at->toDateString(),
             ]);
