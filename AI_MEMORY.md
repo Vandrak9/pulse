@@ -50,6 +50,15 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - PostgreSQL database `pulse_db` created, user `pulse` configured
 - `CLAUDE.md` created with full architecture documentation
 
+### Phase 5 — Coach Profile Feature
+- `CoachController` — index (paginated, 12/page), show (coach + posts), edit (auth), update (with avatar upload)
+- `GET /coaches` → `Coaches/Index.tsx` — grid of verified coach cards (avatar, name, specialization, price)
+- `GET /coaches/{coach}` → `Coaches/Show.tsx` — full profile: cover area, avatar, bio, price box, subscribe button, blurred exclusive posts for non-subscribers
+- `GET|PUT /dashboard/profile` → `Coaches/Edit.tsx` — form to edit bio, specialization, monthly_price, avatar upload
+- Palette applied via inline styles: terracotta `#c4714a`, green `#4a7c59`, cream `#faf6f0`, dark brown `#2d2118`
+- Avatar stored via `Storage::disk('public')` in `avatars/` folder
+- Posts marked `is_exclusive` are blurred with a lock overlay for non-subscribers
+
 ### Phase 4 — Database Schema & Models
 - **coaches** — `user_id`, `bio`, `specialization`, `monthly_price`, `avatar_path`, `stripe_account_id`, `is_verified`
 - **posts** — `coach_id`, `title`, `content`, `media_path`, `is_exclusive`
@@ -88,7 +97,7 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 ## Next Steps
 
 - [ ] Stripe Connect onboarding flow for coaches
-- [ ] Coach profile pages (public + dashboard)
+- [x] Coach profile pages (public + dashboard) — **done 2026-03-07**
 - [ ] Subscription flow (subscribe to coach, manage plan)
 - [ ] Post creation with media upload
 - [ ] Paid private messaging between fans and coaches
@@ -106,3 +115,8 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [2026-03-07 18:10:00] chore: initial Laravel setup with Inertia React
 - [2026-03-07 18:30:00] feat: database schema and models
 - [2026-03-07 18:36:41] a604154: chore: AI memory and git hooks setup
+- [2026-03-07 18:36:46] d216dd6: chore: update AI_MEMORY.md with hook-appended entry
+- [2026-03-07 18:39:27] 9bc52b2: chore: nginx and queue worker configuration
+- [2026-03-07 18:42:29] c7fe3c6: fix: set pulse as nginx default_server on port 80
+- [2026-03-07 18:47:30] c72b5b9: feat: add /scanner proxy to nginx config
+- [2026-03-07 19:11:25] 35c1123: feat: coach profile pages
