@@ -21,6 +21,7 @@ class CoachController extends Controller
                 'name' => $coach->user->name,
                 'specialization' => $coach->specialization,
                 'monthly_price' => $coach->monthly_price,
+                'bio' => $coach->bio,
                 'avatar_url' => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
