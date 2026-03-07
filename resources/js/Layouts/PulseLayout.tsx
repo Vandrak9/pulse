@@ -6,7 +6,7 @@ interface Props {
 
 const TAB_ITEMS = [
     { label: 'Domov',    icon: '🏠', href: '/' },
-    { label: 'Objaviť', icon: '🔍', href: '/coaches' },
+    { label: 'Feed',     icon: '📱', href: '/feed' },
     { label: 'Správy',  icon: '💬', href: '/messages' },
     { label: 'Profil',  icon: '👤', href: '/dashboard/profile' },
 ];

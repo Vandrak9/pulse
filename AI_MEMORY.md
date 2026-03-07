@@ -138,3 +138,5 @@ Fans subscribe to coaches, send tips, and pay for private messages — similar t
 - [2026-03-07 19:51:54] 03fe728: chore: add CHANGELOG.md with semantic versioning
 - [2026-03-07 20:01:42] 4f85cb9: feat: app layout, navigation and home page
 - [2026-03-07 20:04:22] 9da0bc5: chore: add v0.3.0 changelog entry for app layout and home page
+- [2026-03-07 20:10:05] 41fb550: feat: auth pages and user roles
+- [2026-03-07 20:10:21] a4cde0f: chore: add v0.4.0 changelog entry
