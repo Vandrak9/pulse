@@ -96,3 +96,25 @@ PULSE is a fitness creator monetization platform targeting the Slovak (SK) and C
 ### Coach Approval
 - New coach accounts require admin approval before they can publish programs.
 - Status tracked via `coaches.status` enum: `pending`, `approved`, `suspended`.
+
+---
+
+## Current Project Status (as of 2026-03-07)
+
+### Completed
+- [x] Laravel 11 installed with Breeze (React + TypeScript) + Inertia.js
+- [x] Packages: laravel/cashier, predis/predis, inertiajs/inertia-laravel
+- [x] Environment configured: PostgreSQL, Redis cache/queue, database sessions
+- [x] PostgreSQL database `pulse_db` running, all migrations applied
+- [x] Models: User (Billable), Coach, Post, Tip, Message — with full relationships
+- [x] AI_MEMORY.md created with git post-commit hook for automatic logging
+
+### In Progress / Next Steps
+- [ ] Stripe Connect onboarding flow for coaches
+- [ ] Coach public profile pages
+- [ ] Subscription flow (fan subscribes to coach)
+- [ ] Post creation with media upload
+- [ ] Paid private messaging
+- [ ] Tip payment flow
+- [ ] Admin panel (coach verification)
+- [ ] S3 file storage migration
