@@ -7,11 +7,15 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 class CoachSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->cleanup();
+
         $coaches = [
             [
                 'user' => [
@@ -22,6 +26,8 @@ class CoachSeeder extends Seeder
                     'bio' => 'Som certifikovaný silový tréner s viac ako 8 rokmi skúseností. Špecializujem sa na budovanie svalovej hmoty a zvyšovanie výkonnosti. Prešiel som stovkami klientov od začiatočníkov až po pokročilých atlétov. Verím, že každý môže dosiahnuť svoje ciele — treba len správny plán a odhodlanie.',
                     'specialization' => 'Silový tréning & Hypertrofia',
                     'monthly_price' => 29.99,
+                    'avatar_url' => 'https://randomuser.me/api/portraits/men/45.jpg',
+                    'avatar_file' => 'avatars/tomas-kovac.jpg',
                 ],
                 'posts' => [
                     [
@@ -45,6 +51,8 @@ class CoachSeeder extends Seeder
                     'bio' => 'Fitness trénerka a výživová poradkyňa. Po vlastnom prechode zo 82 kg na fit postavu som sa rozhodla pomáhať ženám, ktoré chcú zmeniť svoje telo aj myslenie. Tréningom a zdravým jedlom sa dá dosiahnuť neuveriteľne veľa — bez hladovania a bez extrémov.',
                     'specialization' => 'Ženský fitness & Výživa',
                     'monthly_price' => 24.99,
+                    'avatar_url' => 'https://randomuser.me/api/portraits/women/31.jpg',
+                    'avatar_file' => 'avatars/lucia-horakova.jpg',
                 ],
                 'posts' => [
                     [
@@ -68,6 +76,8 @@ class CoachSeeder extends Seeder
                     'bio' => 'Profesionálny crossfit atlét a tréner. Trénujem jednotlivcov aj tímy, ktorí chcú byť funkčne silní, rýchli a odolní. Moje tréningy sú náročné, ale výsledky hovoria za všetko — moji klienti pravidelne prekonávajú vlastné limity.',
                     'specialization' => 'CrossFit & Funkčný tréning',
                     'monthly_price' => 34.99,
+                    'avatar_url' => 'https://randomuser.me/api/portraits/men/22.jpg',
+                    'avatar_file' => 'avatars/marek-blaho.jpg',
                 ],
                 'posts' => [
                     [
@@ -84,7 +94,14 @@ class CoachSeeder extends Seeder
             ],
         ];
 
+        Storage::disk('public')->makeDirectory('avatars');
+
         foreach ($coaches as $data) {
+            $avatarPath = $this->downloadAvatar(
+                $data['coach']['avatar_url'],
+                $data['coach']['avatar_file'],
+            );
+
             $user = User::create([
                 'name' => $data['user']['name'],
                 'email' => $data['user']['email'],
@@ -97,6 +114,7 @@ class CoachSeeder extends Seeder
                 'bio' => $data['coach']['bio'],
                 'specialization' => $data['coach']['specialization'],
                 'monthly_price' => $data['coach']['monthly_price'],
+                'avatar_path' => $avatarPath,
                 'is_verified' => true,
             ]);
 
@@ -108,9 +126,11 @@ class CoachSeeder extends Seeder
                     'is_exclusive' => $post['is_exclusive'],
                 ]);
             }
+
+            $status = $avatarPath ? 'photo OK' : 'no photo';
+            $this->command->line("  <fg=green>✓</> {$data['user']['name']} ({$status})");
         }
 
-        // Test fan user
         User::create([
             'name' => 'Fanúšik Test',
             'email' => 'fan@pulse.sk',
@@ -119,5 +139,44 @@ class CoachSeeder extends Seeder
         ]);
 
         $this->command->info('Seeded 3 coaches and 1 fan user.');
+    }
+
+    private function downloadAvatar(string $url, string $path): ?string
+    {
+        try {
+            $response = Http::timeout(10)->get($url);
+
+            if ($response->successful()) {
+                Storage::disk('public')->put($path, $response->body());
+                return $path;
+            }
+        } catch (\Exception $e) {
+            $this->command->warn("Could not download avatar from {$url}: {$e->getMessage()}");
+        }
+
+        return null;
+    }
+
+    private function cleanup(): void
+    {
+        $emails = [
+            'tomas.kovac@pulse.sk',
+            'lucia.horakova@pulse.sk',
+            'marek.blaho@pulse.sk',
+            'fan@pulse.sk',
+        ];
+
+        $users = User::whereIn('email', $emails)->get();
+
+        foreach ($users as $user) {
+            if ($user->coach) {
+                if ($user->coach->avatar_path) {
+                    Storage::disk('public')->delete($user->coach->avatar_path);
+                }
+                $user->coach->posts()->delete();
+                $user->coach->delete();
+            }
+            $user->delete();
+        }
     }
 }
