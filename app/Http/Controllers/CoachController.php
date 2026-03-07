@@ -13,15 +13,16 @@ class CoachController extends Controller
     public function index(): Response
     {
         $coaches = Coach::with('user')
-            ->where('is_verified', true)
             ->orderByDesc('created_at')
-            ->paginate(12)
+            ->paginate(24)
             ->through(fn ($coach) => [
                 'id' => $coach->id,
                 'name' => $coach->user->name,
                 'specialization' => $coach->specialization,
                 'monthly_price' => $coach->monthly_price,
                 'bio' => $coach->bio,
+                'rating' => $coach->rating,
+                'subscriber_count' => $coach->subscriber_count,
                 'avatar_url' => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,

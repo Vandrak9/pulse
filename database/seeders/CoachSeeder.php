@@ -23,9 +23,11 @@ class CoachSeeder extends Seeder
                     'email' => 'tomas.kovac@pulse.sk',
                 ],
                 'coach' => [
-                    'bio' => 'Som certifikovaný silový tréner s viac ako 8 rokmi skúseností. Špecializujem sa na budovanie svalovej hmoty a zvyšovanie výkonnosti. Prešiel som stovkami klientov od začiatočníkov až po pokročilých atlétov. Verím, že každý môže dosiahnuť svoje ciele — treba len správny plán a odhodlanie.',
+                    'bio' => 'Som certifikovaný silový tréner s viac ako 8 rokmi skúseností. Špecializujem sa na budovanie svalovej hmoty a zvyšovanie výkonnosti. Prešiel som stovkami klientov od začiatočníkov až po pokročilých atlétov.',
                     'specialization' => 'Silový tréning & Hypertrofia',
                     'monthly_price' => 29.99,
+                    'rating' => 4.8,
+                    'subscriber_count' => 342,
                     'avatar_url' => 'https://randomuser.me/api/portraits/men/45.jpg',
                     'avatar_file' => 'avatars/tomas-kovac.jpg',
                 ],
@@ -48,9 +50,11 @@ class CoachSeeder extends Seeder
                     'email' => 'lucia.horakova@pulse.sk',
                 ],
                 'coach' => [
-                    'bio' => 'Fitness trénerka a výživová poradkyňa. Po vlastnom prechode zo 82 kg na fit postavu som sa rozhodla pomáhať ženám, ktoré chcú zmeniť svoje telo aj myslenie. Tréningom a zdravým jedlom sa dá dosiahnuť neuveriteľne veľa — bez hladovania a bez extrémov.',
-                    'specialization' => 'Ženský fitness & Výživa',
+                    'bio' => 'Fitness trénerka a výživová poradkyňa. Po vlastnom prechode zo 82 kg na fit postavu som sa rozhodla pomáhať ženám, ktoré chcú zmeniť svoje telo aj myslenie. Zdravá výživa a pohyb sú základ.',
+                    'specialization' => 'Výživa & Ženský fitness',
                     'monthly_price' => 24.99,
+                    'rating' => 4.9,
+                    'subscriber_count' => 891,
                     'avatar_url' => 'https://randomuser.me/api/portraits/women/31.jpg',
                     'avatar_file' => 'avatars/lucia-horakova.jpg',
                 ],
@@ -73,9 +77,11 @@ class CoachSeeder extends Seeder
                     'email' => 'marek.blaho@pulse.sk',
                 ],
                 'coach' => [
-                    'bio' => 'Profesionálny crossfit atlét a tréner. Trénujem jednotlivcov aj tímy, ktorí chcú byť funkčne silní, rýchli a odolní. Moje tréningy sú náročné, ale výsledky hovoria za všetko — moji klienti pravidelne prekonávajú vlastné limity.',
-                    'specialization' => 'CrossFit & Funkčný tréning',
+                    'bio' => 'Profesionálny crossfit atlét a tréner. Trénujem jednotlivcov aj tímy, ktorí chcú byť funkčne silní, rýchli a odolní. Moje tréningy sú náročné, ale výsledky hovoria za všetko.',
+                    'specialization' => 'CrossFit & Silový tréning',
                     'monthly_price' => 34.99,
+                    'rating' => 4.6,
+                    'subscriber_count' => 156,
                     'avatar_url' => 'https://randomuser.me/api/portraits/men/22.jpg',
                     'avatar_file' => 'avatars/marek-blaho.jpg',
                 ],
@@ -114,6 +120,8 @@ class CoachSeeder extends Seeder
                 'bio' => $data['coach']['bio'],
                 'specialization' => $data['coach']['specialization'],
                 'monthly_price' => $data['coach']['monthly_price'],
+                'rating' => $data['coach']['rating'],
+                'subscriber_count' => $data['coach']['subscriber_count'],
                 'avatar_path' => $avatarPath,
                 'is_verified' => true,
             ]);
@@ -128,7 +136,7 @@ class CoachSeeder extends Seeder
             }
 
             $status = $avatarPath ? 'photo OK' : 'no photo';
-            $this->command->line("  <fg=green>✓</> {$data['user']['name']} ({$status})");
+            $this->command->line("  <fg=green>✓</> {$data['user']['name']} | ⭐ {$data['coach']['rating']} | {$data['coach']['subscriber_count']} sledovateľov ({$status})");
         }
 
         User::create([
@@ -145,7 +153,6 @@ class CoachSeeder extends Seeder
     {
         try {
             $response = Http::timeout(10)->get($url);
-
             if ($response->successful()) {
                 Storage::disk('public')->put($path, $response->body());
                 return $path;
@@ -166,9 +173,7 @@ class CoachSeeder extends Seeder
             'fan@pulse.sk',
         ];
 
-        $users = User::whereIn('email', $emails)->get();
-
-        foreach ($users as $user) {
+        foreach (User::whereIn('email', $emails)->get() as $user) {
             if ($user->coach) {
                 if ($user->coach->avatar_path) {
                     Storage::disk('public')->delete($user->coach->avatar_path);

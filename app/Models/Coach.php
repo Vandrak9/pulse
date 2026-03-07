@@ -16,12 +16,15 @@ class Coach extends Model
         'avatar_path',
         'stripe_account_id',
         'is_verified',
+        'rating',
+        'subscriber_count',
     ];
 
     protected function casts(): array
     {
         return [
             'monthly_price' => 'decimal:2',
+            'rating' => 'decimal:1',
             'is_verified' => 'boolean',
         ];
     }
