@@ -1,0 +1,16 @@
+[Unit]
+Description=PULSE Laravel Queue Worker
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/pulse
+ExecStart=/usr/bin/php8.3 /opt/pulse/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+Restart=on-failure
+RestartSec=5s
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
