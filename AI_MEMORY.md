@@ -102,7 +102,10 @@ posts:         id, coach_id, title, content, media_path, thumbnail_path,
                video_duration(int seconds), is_exclusive
 post_likes:    id, user_id, post_id  [unique: user_id+post_id]
 tips:          id, fan_id, coach_id, amount, stripe_payment_id
-messages:      id, sender_id, receiver_id, content, price_paid, stripe_payment_id, is_paid
+messages:      id, sender_id, receiver_id, content, price_paid, stripe_payment_id, is_paid,
+               is_read(bool), read_at(timestamp), message_type(text|image|video|voice),
+               media_path, media_thumbnail, media_duration(int), media_size, media_mime_type,
+               is_broadcast(bool)
 subscriptions, subscription_items  ← Cashier
 sessions, cache, jobs              ← Laravel standard
 ```
@@ -146,8 +149,9 @@ POST /register            → role=coach → /dashboard/profile
 - [ ] `isSubscribed` currently hardcoded `false` — needs real check
 - [ ] Tip jar (one-time Stripe Payment Intent)
 - [x] Direct messages UI (fan ↔ coach, paid messages) ← DONE Session 2
+- [x] Read receipts + unread badges + browser push notifications ← DONE Session 3
 - [ ] Coach content upload form (real file upload to storage)
-- [ ] Notifications system
+- [ ] Notifications system (in-app / email)
 - [ ] Fan profile page (my subscriptions, saved posts)
 - [ ] Coach dashboard (earnings, subscriber stats)
 - [ ] Admin panel (coach verification)
@@ -339,3 +343,8 @@ POST /dashboard/broadcast             → BroadcastController@store (coach only)
 - [2026-03-08 07:27:27] 56b4f44: chore: domain pulsehub.fun with SSL certificate
 - [2026-03-08 07:32:43] fe2edb4: fix: complete multimedia upload rewrite — images, video, voice
 - [2026-03-08 07:38:18] 5e3deb6: fix: unified media upload, CSRF fix, voice playback fix
+- [2026-03-08 07:46:15] fd8109c: fix: media URL in response and empty bubble rendering
+- [2026-03-08 07:52:53] da63702: fix: voice bubble UI and image lightbox
+- [2026-03-08 08:13:44] 26779c8: fix: file size check and voice bubble final fix
+- [2026-03-08 08:19:44] 7d28bd0: fix: iPhone HEIC camera photo compression before upload
+- [2026-03-08 08:24:39] 8ffbe02: feat: read receipts, unread badges and browser notifications
