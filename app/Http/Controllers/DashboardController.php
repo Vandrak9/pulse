@@ -14,7 +14,7 @@ use Inertia\Inertia;
 class DashboardController extends Controller
 {
     /** Abort with 403 if user is not a coach with a coach profile. */
-    private function requireCoach(): \App\Models\Coach
+    private function requireCoach(): \App\Models\Coach|\Illuminate\Http\RedirectResponse
     {
         $user = auth()->user();
         if ($user->role !== 'coach') abort(403, 'Prístup len pre koučov.');
@@ -29,6 +29,7 @@ class DashboardController extends Controller
     {
         $user  = auth()->user();
         $coach = $this->requireCoach();
+        if ($coach instanceof \Illuminate\Http\RedirectResponse) return $coach;
 
         $posts = Post::where('coach_id', $coach->id)->withCount('likes')->get();
 
@@ -86,6 +87,7 @@ class DashboardController extends Controller
     {
         $user  = auth()->user();
         $coach = $this->requireCoach();
+        if ($coach instanceof \Illuminate\Http\RedirectResponse) return $coach;
 
         $subscriberCount = $coach->subscriber_count ?? 0;
         $monthlyPrice    = floatval($coach->monthly_price);
@@ -142,6 +144,7 @@ class DashboardController extends Controller
     {
         $user  = auth()->user();
         $coach = $this->requireCoach();
+        if ($coach instanceof \Illuminate\Http\RedirectResponse) return $coach;
 
         $subscriberCount = $coach->subscriber_count ?? 0;
         $monthlyPrice    = floatval($coach->monthly_price);
