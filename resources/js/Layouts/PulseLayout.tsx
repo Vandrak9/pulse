@@ -30,7 +30,7 @@ const HOW_IT_WORKS = [
 
 export default function PulseLayout({ children }: Props) {
     const page = usePage();
-    const { auth } = page.props as { auth: { user: { name: string; role?: string } | null } };
+    const { auth } = page.props as { auth: { user: { id: number; name: string; role?: string } | null } };
     const user = auth?.user ?? null;
     const isCoach = user?.role === 'coach';
     const url = page.url;
@@ -77,7 +77,7 @@ export default function PulseLayout({ children }: Props) {
         { label: 'Objaviť',    icon: <Search size={18} />,        href: '/coaches',           badge: 0 },
         { label: 'Správy',     icon: <MessageCircle size={18} />, href: '/messages',          badge: unreadCount },
         { label: 'Notifikácie',icon: <Bell size={18} />,          href: '/notifications',     badge: 0 },
-        { label: 'Profil',     icon: <User size={18} />,          href: '/dashboard/profile', badge: 0 },
+        { label: 'Profil',     icon: <User size={18} />,          href: user ? `/profile/${user.id}` : '/login', badge: 0 },
         ...(isCoach ? [
             { label: 'Dashboard',    icon: <BarChart2 size={18} />,   href: '/dashboard',          badge: 0 },
             { label: 'Pridať obsah', icon: <PlusSquare size={18} />,  href: '/dashboard/broadcast', badge: 0 },

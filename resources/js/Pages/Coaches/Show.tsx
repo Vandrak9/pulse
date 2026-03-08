@@ -1,18 +1,21 @@
 import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { formatDuration, formatFullDate } from '@/lib/utils';
 
 interface CoachData {
     id: number;
+    user_id: number;
     name: string;
     bio: string | null;
     specialization: string | null;
     monthly_price: string;
     rating: string | null;
     subscriber_count: number;
+    followers_count: number;
     is_verified: boolean;
+    is_following: boolean;
     avatar_url: string | null;
 }
 
@@ -39,13 +42,36 @@ type Tab = 'all' | 'reels' | 'videos' | 'photos';
 
 const BENEFITS = ['Exkluzivny obsah', 'Priame spravy', 'Personalizovane plany'];
 
-// formatDate, formatDuration → imported from @/lib/utils
-
 export default function CoachShow({ coach, posts, isSubscribed }: Props) {
+    const page = usePage();
+    const { auth } = page.props as { auth: { user: { id: number } | null } };
+
     const price = parseFloat(coach.monthly_price);
     const rating = coach.rating ? parseFloat(coach.rating) : null;
     const [tab, setTab] = useState<Tab>('all');
     const [activeVideo, setActiveVideo] = useState<Post | null>(null);
+
+    // Follow state
+    const [following, setFollowing] = useState(coach.is_following);
+    const [followersCount, setFollowersCount] = useState(coach.followers_count);
+    const [followLoading, setFollowLoading] = useState(false);
+
+    function handleFollow() {
+        if (!auth?.user || followLoading) return;
+        setFollowLoading(true);
+        fetch(`/follow/${coach.user_id}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        })
+            .then(r => r.json())
+            .then(d => { setFollowing(d.following); setFollowersCount(d.count); })
+            .finally(() => setFollowLoading(false));
+    }
 
     const reels = posts.filter((p) => p.video_type === 'reel');
     const videos = posts.filter((p) => p.video_type === 'video');
@@ -115,16 +141,38 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                                             <span style={{ color: '#e8d9c4' }}>|</span>
                                         </>
                                     )}
-                                    <span>{coach.subscriber_count.toLocaleString('sk-SK')} sledovatelov</span>
+                                    <span>{coach.subscriber_count.toLocaleString('sk-SK')} predplatiteľov</span>
+                                    <span style={{ color: '#e8d9c4' }}>|</span>
+                                    <span>{followersCount.toLocaleString('sk-SK')} sledovateľov</span>
                                     {coach.is_verified && (
                                         <>
                                             <span style={{ color: '#e8d9c4' }}>|</span>
-                                            <span className="font-medium" style={{ color: '#4a7c59' }}>&#10003; Overeny</span>
+                                            <span className="font-medium" style={{ color: '#4a7c59' }}>&#10003; Overený</span>
                                         </>
                                     )}
                                 </div>
                                 {coach.bio && (
                                     <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed md:mx-0" style={{ color: '#6b5e52' }}>{coach.bio}</p>
+                                )}
+                                {/* Follow button — visible to logged-in users, below bio */}
+                                {auth?.user && auth.user.id !== coach.user_id && (
+                                    <div className="mt-4 flex justify-center md:justify-start">
+                                        <button
+                                            onClick={handleFollow}
+                                            disabled={followLoading}
+                                            style={{
+                                                padding: '8px 22px', borderRadius: 999,
+                                                border: `1px solid ${following ? '#4a7c59' : '#c4714a'}`,
+                                                background: following ? '#4a7c59' : 'none',
+                                                color: following ? 'white' : '#c4714a',
+                                                fontSize: 13, fontWeight: 600,
+                                                cursor: 'pointer', transition: 'all 0.2s',
+                                                opacity: followLoading ? 0.6 : 1,
+                                            }}
+                                        >
+                                            {following ? '✓ Sledujem' : '+ Sledovať'}
+                                        </button>
+                                    </div>
                                 )}
                             </div>
 
@@ -210,10 +258,10 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                                 {/* Extra stats */}
                                 <div className="mt-4 grid grid-cols-2 gap-3">
                                     {[
-                                        { icon: '👥', value: coach.subscriber_count.toLocaleString('sk-SK'), label: 'Predplatitelia' },
+                                        { icon: '💳', value: coach.subscriber_count.toLocaleString('sk-SK'), label: 'Predplatitelia' },
+                                        { icon: '👥', value: followersCount.toLocaleString('sk-SK'), label: 'Sledovatelia' },
                                         { icon: '⭐', value: rating !== null ? rating.toFixed(1) : '—', label: 'Hodnotenie' },
                                         { icon: '🎬', value: `${posts.filter(p => p.media_type === 'video').length}`, label: 'Videí' },
-                                        { icon: '📸', value: `${posts.filter(p => p.media_type === 'image').length}`, label: 'Fotiek' },
                                     ].map((s, i) => (
                                         <div key={i} className="rounded-2xl bg-white p-4 text-center" style={{ border: '1px solid #e8d9c4' }}>
                                             <div className="text-2xl">{s.icon}</div>

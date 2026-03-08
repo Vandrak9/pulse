@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Coach;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,20 +21,32 @@ class CoachController extends Controller
             ->when(auth()->check(), fn ($q) => $q->where('user_id', '!=', auth()->id()))
             ->orderByDesc('created_at')
             ->paginate(24)
-            ->through(fn ($coach) => [
-                'id' => $coach->id,
-                'name' => $coach->user->name,
-                'specialization' => $coach->specialization,
-                'monthly_price' => $coach->monthly_price,
-                'bio' => $coach->bio,
-                'rating' => $coach->rating,
-                'subscriber_count' => $coach->subscriber_count,
-                'video_count' => $coach->video_count,
-                'image_count' => $coach->image_count,
-                'avatar_url' => $coach->avatar_path
-                    ? Storage::url($coach->avatar_path)
-                    : null,
-            ]);
+            ->through(function ($coach) {
+                $userId = auth()->id();
+                $isFollowing = $userId
+                    ? DB::table('follows')
+                        ->where('follower_id', $userId)
+                        ->where('following_id', $coach->user_id)
+                        ->exists()
+                    : false;
+
+                return [
+                    'id'               => $coach->id,
+                    'user_id'          => $coach->user_id,
+                    'name'             => $coach->user->name,
+                    'specialization'   => $coach->specialization,
+                    'monthly_price'    => $coach->monthly_price,
+                    'bio'              => $coach->bio,
+                    'rating'           => $coach->rating,
+                    'subscriber_count' => $coach->subscriber_count,
+                    'video_count'      => $coach->video_count,
+                    'image_count'      => $coach->image_count,
+                    'is_following'     => $isFollowing,
+                    'avatar_url'       => $coach->avatar_path
+                        ? Storage::url($coach->avatar_path)
+                        : null,
+                ];
+            });
 
         return Inertia::render('Coaches/Index', [
             'coaches' => $coaches,
@@ -62,21 +75,35 @@ class CoachController extends Controller
                 'created_at'     => $post->created_at->toDateString(),
             ]);
 
+        $authUserId     = auth()->id();
+        $isFollowing    = $authUserId
+            ? DB::table('follows')
+                ->where('follower_id', $authUserId)
+                ->where('following_id', $coach->user_id)
+                ->exists()
+            : false;
+        $followersCount = DB::table('follows')
+            ->where('following_id', $coach->user_id)
+            ->count();
+
         return Inertia::render('Coaches/Show', [
             'coach' => [
-                'id' => $coach->id,
-                'name' => $coach->user->name,
-                'bio' => $coach->bio,
-                'specialization' => $coach->specialization,
-                'monthly_price' => $coach->monthly_price,
-                'rating' => $coach->rating,
-                'subscriber_count' => $coach->subscriber_count,
-                'is_verified' => $coach->is_verified,
-                'avatar_url' => $coach->avatar_path
+                'id'              => $coach->id,
+                'user_id'         => $coach->user_id,
+                'name'            => $coach->user->name,
+                'bio'             => $coach->bio,
+                'specialization'  => $coach->specialization,
+                'monthly_price'   => $coach->monthly_price,
+                'rating'          => $coach->rating,
+                'subscriber_count'=> $coach->subscriber_count,
+                'followers_count' => $followersCount,
+                'is_verified'     => $coach->is_verified,
+                'is_following'    => $isFollowing,
+                'avatar_url'      => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
             ],
-            'posts' => $posts,
+            'posts'        => $posts,
             'isSubscribed' => false,
         ]);
     }

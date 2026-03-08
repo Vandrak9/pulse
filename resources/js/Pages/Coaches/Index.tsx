@@ -1,9 +1,10 @@
 import PulseLayout from '@/Layouts/PulseLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface Coach {
     id: number;
+    user_id: number;
     name: string;
     specialization: string | null;
     monthly_price: string;
@@ -13,6 +14,7 @@ interface Coach {
     subscriber_count: number;
     video_count: number;
     image_count: number;
+    is_following: boolean;
 }
 
 interface PaginatedCoaches {
@@ -36,6 +38,10 @@ const CATEGORIES = [
 ];
 
 export default function CoachesIndex({ coaches }: Props) {
+    const page = usePage();
+    const { auth } = page.props as { auth: { user: { id: number } | null } };
+    const isLoggedIn = !!auth?.user;
+
     const [activeKeyword, setActiveKeyword] = useState<string | null>(null);
 
     const filtered = activeKeyword
@@ -113,7 +119,7 @@ export default function CoachesIndex({ coaches }: Props) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                            {filtered.map((coach) => <CoachCard key={coach.id} coach={coach} />)}
+                            {filtered.map((coach) => <CoachCard key={coach.id} coach={coach} isLoggedIn={isLoggedIn} />)}
                         </div>
                     )}
 
@@ -140,9 +146,29 @@ export default function CoachesIndex({ coaches }: Props) {
     );
 }
 
-function CoachCard({ coach }: { coach: Coach }) {
+function CoachCard({ coach, isLoggedIn }: { coach: Coach; isLoggedIn: boolean }) {
     const price = parseFloat(coach.monthly_price);
     const rating = coach.rating ? parseFloat(coach.rating) : null;
+    const [following, setFollowing] = useState(coach.is_following);
+    const [followLoading, setFollowLoading] = useState(false);
+
+    function handleFollow(e: React.MouseEvent) {
+        e.preventDefault();
+        if (!isLoggedIn || followLoading) return;
+        setFollowLoading(true);
+        fetch(`/follow/${coach.user_id}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        })
+            .then(r => r.json())
+            .then(d => setFollowing(d.following))
+            .finally(() => setFollowLoading(false));
+    }
 
     const contentBadges: string[] = [];
     if (coach.video_count > 0) contentBadges.push(`🎬 ${coach.video_count} videí`);
@@ -221,6 +247,23 @@ function CoachCard({ coach }: { coach: Coach }) {
             >
                 Predplatiť
             </Link>
+
+            {isLoggedIn && (
+                <button
+                    onClick={handleFollow}
+                    disabled={followLoading}
+                    className="mt-2 w-full rounded-full py-1.5 text-center text-xs font-semibold transition-colors"
+                    style={{
+                        border: `1px solid ${following ? '#4a7c59' : '#c4714a'}`,
+                        color: following ? '#4a7c59' : '#c4714a',
+                        background: following ? 'rgba(74,124,89,0.08)' : 'none',
+                        cursor: followLoading ? 'default' : 'pointer',
+                        opacity: followLoading ? 0.6 : 1,
+                    }}
+                >
+                    {following ? '✓ Sledujem' : '+ Sledovať'}
+                </button>
+            )}
         </div>
     );
 }

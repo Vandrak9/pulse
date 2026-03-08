@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\PostLike;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -78,14 +79,22 @@ class FeedController extends Controller
         $mappedReels  = $reelPosts->map($mapPost)->values();
         $mappedVideos = $videoPosts->map($mapPost)->values();
 
+        // Followed coach user_ids for ring differentiation
+        $followedUserIds = DB::table('follows')
+            ->where('follower_id', $userId)
+            ->pluck('following_id')
+            ->toArray();
+
         $coaches = Coach::with('user')
             ->orderByDesc('subscriber_count')
-            ->limit(10)
+            ->limit(12)
             ->get()
             ->map(fn ($coach) => [
-                'id'         => $coach->id,
-                'name'       => $coach->user->name,
-                'avatar_url' => $coach->avatar_path
+                'id'          => $coach->id,
+                'user_id'     => $coach->user_id,
+                'name'        => $coach->user->name,
+                'is_followed' => in_array($coach->user_id, $followedUserIds),
+                'avatar_url'  => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
             ]);

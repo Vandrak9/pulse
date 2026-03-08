@@ -6,8 +6,10 @@ import { formatDuration, relativeTime as relativeTimeUtil } from '@/lib/utils';
 
 interface Coach {
     id: number;
+    user_id: number;
     name: string;
     avatar_url: string | null;
+    is_followed: boolean;
 }
 
 interface FeedCoach {
@@ -164,32 +166,39 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
                                         Objavit
                                     </span>
                                 </Link>
-                                {coaches.map((coach) => (
-                                    <Link key={coach.id} href={`/coaches/${coach.id}`} className="flex flex-col items-center gap-1">
-                                        <div
-                                            className="h-14 w-14 flex-shrink-0 rounded-full p-0.5"
-                                            style={{ background: 'linear-gradient(135deg, #c4714a, #f5a623)' }}
-                                        >
-                                            <div className="flex h-full w-full items-center justify-center rounded-full bg-white p-0.5">
-                                                <div className="h-full w-full overflow-hidden rounded-full">
-                                                    {coach.avatar_url ? (
-                                                        <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
-                                                    ) : (
-                                                        <div
-                                                            className="flex h-full w-full items-center justify-center text-lg font-bold text-white"
-                                                            style={{ backgroundColor: '#c4714a' }}
-                                                        >
-                                                            {coach.name.charAt(0)}
-                                                        </div>
-                                                    )}
+                                {coaches.map((coach) => {
+                                    // Ring color: terracotta if subscribed (not implemented yet → default),
+                                    // orange if followed, grey if neither
+                                    const ringGradient = coach.is_followed
+                                        ? 'linear-gradient(135deg, #c4714a, #f5a623)'
+                                        : 'linear-gradient(135deg, #e8d9c4, #d0c5b8)';
+                                    return (
+                                        <Link key={coach.id} href={`/coaches/${coach.id}`} className="flex flex-col items-center gap-1">
+                                            <div
+                                                className="h-14 w-14 flex-shrink-0 rounded-full p-0.5"
+                                                style={{ background: ringGradient }}
+                                            >
+                                                <div className="flex h-full w-full items-center justify-center rounded-full bg-white p-0.5">
+                                                    <div className="h-full w-full overflow-hidden rounded-full">
+                                                        {coach.avatar_url ? (
+                                                            <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
+                                                        ) : (
+                                                            <div
+                                                                className="flex h-full w-full items-center justify-center text-lg font-bold text-white"
+                                                                style={{ backgroundColor: '#c4714a' }}
+                                                            >
+                                                                {coach.name.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <span className="w-14 truncate text-center text-xs" style={{ color: '#2d2118' }}>
-                                            {coach.name.split(' ')[0]}
-                                        </span>
-                                    </Link>
-                                ))}
+                                            <span className="w-14 truncate text-center text-xs" style={{ color: coach.is_followed ? '#c4714a' : '#2d2118' }}>
+                                                {coach.name.split(' ')[0]}
+                                            </span>
+                                        </Link>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

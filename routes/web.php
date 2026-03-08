@@ -4,11 +4,13 @@ use App\Http\Controllers\BroadcastController;
 use App\Http\Controllers\CoachController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\FollowController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MediaStreamController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserProfileController;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -84,6 +86,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markOneRead'])->name('notifications.read-one');
+
+    // Social profiles
+    Route::get('/profile/me', [UserProfileController::class, 'me'])->name('profile.me');
+    Route::get('/profile/{userId}', [UserProfileController::class, 'show'])->name('profile.show');
+    Route::post('/profile/update', [UserProfileController::class, 'update'])->name('profile.update-social');
+
+    // Follow / unfollow
+    Route::post('/follow/{userId}', [FollowController::class, 'toggle'])->name('follow.toggle');
 });
 
 // ── Public API endpoints ───────────────────────────────────────────────────────
