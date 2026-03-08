@@ -37,57 +37,99 @@ export default function Home({ featured }: Props) {
 
             {/* ── Hero ── */}
             <section
-                className="relative overflow-hidden px-4 py-20 text-center sm:py-28"
+                className="relative overflow-hidden px-4 py-16 sm:py-24"
                 style={{ background: 'linear-gradient(160deg, #faf6f0 0%, #f5ece0 50%, #eedfd0 100%)' }}
             >
                 {/* Decorative blobs */}
                 <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full opacity-30 blur-3xl" style={{ backgroundColor: '#c4714a' }} />
                 <div className="pointer-events-none absolute -bottom-10 -right-10 h-48 w-48 rounded-full opacity-20 blur-3xl" style={{ backgroundColor: '#4a7c59' }} />
 
-                <div className="relative mx-auto max-w-2xl">
-                    <span
-                        className="mb-4 inline-block rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-widest text-white"
-                        style={{ backgroundColor: '#c4714a' }}
-                    >
-                        #1 Fitness platforma na Slovensku
-                    </span>
+                <div className="relative mx-auto max-w-5xl">
+                    {/* Desktop: two-column split. Mobile: centered */}
+                    <div className="flex flex-col items-center gap-10 text-center md:flex-row md:items-center md:gap-16 md:text-left">
 
-                    <h1 className="mt-4 font-serif text-5xl font-bold leading-tight sm:text-6xl" style={{ color: '#2d2118' }}>
-                        Tvoj fitness journey
-                        <br />
-                        <span style={{ color: '#c4714a' }}>začína tu</span>
-                    </h1>
+                        {/* Left: text */}
+                        <div className="flex-1">
+                            <span
+                                className="mb-4 inline-block rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-widest text-white"
+                                style={{ backgroundColor: '#c4714a' }}
+                            >
+                                #1 Fitness platforma na Slovensku
+                            </span>
 
-                    <p className="mx-auto mt-5 max-w-lg text-lg leading-relaxed" style={{ color: '#6b5e52' }}>
-                        Predplaťte si koučov ktorí vám skutočne pomôžu dosiahnuť vaše ciele — bez zbytočností, len výsledky.
-                    </p>
+                            <h1 className="mt-4 font-serif text-5xl font-bold leading-tight sm:text-6xl" style={{ color: '#2d2118' }}>
+                                Tvoj fitness journey
+                                <br />
+                                <span style={{ color: '#c4714a' }}>začína tu</span>
+                            </h1>
 
-                    <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                        <Link
-                            href="/coaches"
-                            className="rounded-full px-8 py-3 text-base font-semibold text-white shadow-sm transition-colors"
-                            style={{ backgroundColor: '#c4714a' }}
-                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
-                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
-                        >
-                            Objaviť koučov
-                        </Link>
-                        <Link
-                            href="/register"
-                            className="rounded-full border px-8 py-3 text-base font-semibold transition hover:bg-white"
-                            style={{ borderColor: '#c4714a', color: '#c4714a' }}
-                        >
-                            Staň sa koučom
-                        </Link>
-                    </div>
+                            <p className="mx-auto mt-5 max-w-lg text-lg leading-relaxed md:mx-0" style={{ color: '#6b5e52' }}>
+                                Predplaťte si koučov ktorí vám skutočne pomôžu dosiahnuť vaše ciele — bez zbytočností, len výsledky.
+                            </p>
 
-                    {/* Social proof */}
-                    <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm" style={{ color: '#9a8a7a' }}>
-                        <span>⭐ 4.8 priemerné hodnotenie</span>
-                        <span className="hidden sm:inline" style={{ color: '#e8d9c4' }}>|</span>
-                        <span>👥 2 864 sledovateľov</span>
-                        <span className="hidden sm:inline" style={{ color: '#e8d9c4' }}>|</span>
-                        <span>🎬 120+ videí</span>
+                            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 md:justify-start">
+                                <Link
+                                    href="/coaches"
+                                    className="rounded-full px-8 py-3 text-base font-semibold text-white shadow-sm transition-colors"
+                                    style={{ backgroundColor: '#c4714a' }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
+                                >
+                                    Objaviť koučov
+                                </Link>
+                                <Link
+                                    href="/register"
+                                    className="rounded-full border px-8 py-3 text-base font-semibold transition hover:bg-white"
+                                    style={{ borderColor: '#c4714a', color: '#c4714a' }}
+                                >
+                                    Staň sa koučom
+                                </Link>
+                            </div>
+
+                            {/* Social proof */}
+                            <div className="mt-8 flex flex-wrap items-center justify-center gap-5 text-sm md:justify-start" style={{ color: '#9a8a7a' }}>
+                                <span>⭐ 4.8 hodnotenie</span>
+                                <span style={{ color: '#e8d9c4' }}>|</span>
+                                <span>👥 2 864 fanúšikov</span>
+                                <span style={{ color: '#e8d9c4' }}>|</span>
+                                <span>🎬 120+ videí</span>
+                            </div>
+                        </div>
+
+                        {/* Right: app mockup preview — desktop only */}
+                        <div className="hidden md:block flex-shrink-0" style={{ width: 320 }}>
+                            <div
+                                className="relative overflow-hidden rounded-3xl shadow-2xl"
+                                style={{
+                                    background: 'linear-gradient(145deg, #c4714a 0%, #5a3e2b 60%, #2d2118 100%)',
+                                    aspectRatio: '9/16',
+                                    maxHeight: 420,
+                                }}
+                            >
+                                {/* Mockup screen content */}
+                                <div style={{ padding: '24px 20px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                                        <div style={{ fontFamily: 'Georgia, serif', color: 'white', fontWeight: 700, fontSize: 18 }}>PULSE</div>
+                                    </div>
+                                    {[0,1,2].map(i => (
+                                        <div key={i} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ height: 8, background: 'rgba(255,255,255,0.4)', borderRadius: 4, marginBottom: 5, width: '70%' }} />
+                                                <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 4, width: '50%' }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, aspectRatio: '16/9', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <span style={{ color: 'white', fontSize: 16 }}>▶</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Gradient overlay */}
+                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, background: 'linear-gradient(to top, rgba(45,33,24,0.8), transparent)' }} />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -106,8 +148,13 @@ export default function Home({ featured }: Props) {
                             </Link>
                         </div>
 
-                        {/* Horizontal scroll row — max 4 cards */}
-                        <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
+                        {/* Mobile: horizontal scroll. Desktop: 3-col grid */}
+                        <div className="md:hidden no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6">
+                            {featured.map((coach) => (
+                                <FeaturedCoachCard key={coach.id} coach={coach} />
+                            ))}
+                        </div>
+                        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {featured.map((coach) => (
                                 <FeaturedCoachCard key={coach.id} coach={coach} />
                             ))}
@@ -191,7 +238,7 @@ function FeaturedCoachCard({ coach }: { coach: Coach }) {
     return (
         <Link
             href={`/coaches/${coach.id}`}
-            className="flex w-40 flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-4 pt-5 shadow-sm transition hover:shadow-md"
+            className="flex w-40 flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-4 pt-5 shadow-sm transition hover:shadow-md md:w-auto"
             style={{ border: '1px solid #e8d9c4' }}
         >
             {/* Round avatar */}

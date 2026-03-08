@@ -71,7 +71,7 @@ export default function CoachesIndex({ coaches }: Props) {
 
                 {/* ── Category filter ── */}
                 <div
-                    className="sticky top-16 z-10 border-b"
+                    className="sticky top-14 z-10 border-b md:top-0"
                     style={{ backgroundColor: 'rgba(250,246,240,0.95)', backdropFilter: 'blur(8px)', borderColor: '#e8d9c4' }}
                 >
                     <div className="relative mx-auto max-w-5xl">
@@ -112,7 +112,7 @@ export default function CoachesIndex({ coaches }: Props) {
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                             {filtered.map((coach) => <CoachCard key={coach.id} coach={coach} />)}
                         </div>
                     )}

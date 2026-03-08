@@ -80,4 +80,22 @@ Route::middleware('auth')->group(function () {
         ->name('broadcast.store');
 });
 
+// ── Public API endpoints ───────────────────────────────────────────────────────
+
+Route::get('/api/coaches/suggested', function () {
+    $coaches = \App\Models\Coach::with('user')
+        ->orderByDesc('subscriber_count')
+        ->limit(4)
+        ->get()
+        ->map(fn ($c) => [
+            'id'             => $c->id,
+            'name'           => $c->user->name,
+            'specialization' => $c->specialization,
+            'avatar_url'     => $c->avatar_path
+                ? \Illuminate\Support\Facades\Storage::url($c->avatar_path)
+                : null,
+        ]);
+    return response()->json($coaches);
+});
+
 require __DIR__.'/auth.php';

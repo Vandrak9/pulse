@@ -52,7 +52,7 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
         <PulseLayout>
             <Head title="Dashboard" />
             <div style={{ background: '#faf6f0', minHeight: '100vh', paddingBottom: 80 }}>
-                <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px' }}>
+                <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 24px' }}>
 
                     {/* ── Header ── */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
@@ -87,7 +87,7 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
                     </div>
 
                     {/* ── Stats grid ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 24 }}>
+                    <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: 12, marginBottom: 24 }}>
                         {[
                             { label: 'Mesačný zárobok', value: `€${fmt(stats.monthly_revenue)}`, icon: '💰', color: '#c4714a', big: true },
                             { label: 'Predplatitelia', value: stats.subscriber_count.toLocaleString('sk-SK'), icon: '👥', color: '#2d2118' },
@@ -108,16 +108,16 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
                     </div>
 
                     {/* ── Revenue chart ── */}
-                    <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '20px 16px', marginBottom: 24 }}>
+                    <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '24px 20px', marginBottom: 24 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700, color: '#2d2118', margin: 0 }}>
+                            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 18, fontWeight: 700, color: '#2d2118', margin: 0 }}>
                                 Zárobky — posledných 6 mesiacov
                             </h2>
                             <Link href="/dashboard/earnings" style={{ fontSize: 13, color: '#c4714a', textDecoration: 'none', fontWeight: 600 }}>
                                 Detail →
                             </Link>
                         </div>
-                        <ResponsiveContainer width="100%" height={180}>
+                        <ResponsiveContainer width="100%" height={220}>
                             <BarChart data={revenue_chart} barSize={32} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9a8a7a' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 11, fill: '#9a8a7a' }} axisLine={false} tickLine={false}
@@ -163,7 +163,7 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
                     </div>
 
                     {/* ── Bottom row: top post + activity ── */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16 }}>
 
                         {/* Top post */}
                         <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '18px 16px' }}>

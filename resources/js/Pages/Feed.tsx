@@ -1,6 +1,6 @@
 import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { formatDuration, relativeTime as relativeTimeUtil } from '@/lib/utils';
 
@@ -47,6 +47,9 @@ const relativeTime = relativeTimeUtil;
 type Tab = 'feed' | 'reels' | 'videos';
 
 export default function Feed({ posts, reels, videos, coaches }: Props) {
+    const page = usePage();
+    const { auth } = page.props as { auth: { user: { name: string; role?: string } | null } };
+    const isCoach = auth?.user?.role === 'coach';
     const [tab, setTab] = useState<Tab>('feed');
 
     const allPosts = [...posts, ...reels, ...videos].filter(
@@ -98,11 +101,39 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
 
             <div className="min-h-screen" style={{ backgroundColor: '#faf6f0' }}>
 
+                {/* Coach composer — desktop only, coaches only */}
+                {isCoach && tab === 'feed' && (
+                    <div className="hidden md:block border-b bg-white" style={{ borderColor: '#e8d9c4' }}>
+                        <div className="mx-auto max-w-2xl px-4 py-4">
+                            <Link href="/dashboard/profile" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+                                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#c4714a', color: 'white', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    {auth?.user?.name?.charAt(0).toUpperCase()}
+                                </div>
+                                <div style={{
+                                    flex: 1, padding: '10px 16px', borderRadius: 999,
+                                    border: '1px solid #e8d9c4', background: '#faf6f0',
+                                    fontSize: 14, color: '#9a8a7a', cursor: 'pointer',
+                                }}>
+                                    Zdieľaj niečo so svojimi predplatiteľmi...
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <div style={{ padding: '8px 14px', borderRadius: 999, background: '#fce8de', color: '#c4714a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                        🎬 Video
+                                    </div>
+                                    <div style={{ padding: '8px 14px', borderRadius: 999, background: '#fce8de', color: '#c4714a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                        📸 Foto
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+                    </div>
+                )}
+
                 {/* Stories row — hidden on reels tab */}
                 {tab !== 'reels' && (
                     <div className="border-b bg-white" style={{ borderColor: '#e8d9c4' }}>
                         <div className="no-scrollbar overflow-x-auto">
-                            <div className="flex gap-4 px-4 py-3" style={{ width: 'max-content' }}>
+                            <div className="mx-auto flex max-w-2xl gap-4 px-4 py-3 md:gap-5 md:py-4" style={{ width: 'max-content' }}>
                                 <Link href="/coaches" className="flex flex-col items-center gap-1">
                                     <div
                                         className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed text-2xl font-light"
@@ -146,8 +177,8 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
                 )}
 
                 {/* Tab bar */}
-                <div className="sticky top-0 z-10 border-b bg-white" style={{ borderColor: '#e8d9c4' }}>
-                    <div className="flex">
+                <div className="sticky top-0 z-10 border-b bg-white md:top-0" style={{ borderColor: '#e8d9c4' }}>
+                    <div className="mx-auto flex max-w-2xl">
                         {([
                             ['feed', 'Pre teba'],
                             ['reels', 'Reels'],
@@ -170,7 +201,7 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
 
                 {/* ── Tab: Pre teba (mixed feed) ── */}
                 {tab === 'feed' && (
-                    <div className="mx-auto max-w-lg pb-6">
+                    <div className="mx-auto max-w-2xl pb-6">
                         {posts.length === 0 ? (
                             <div className="py-20 text-center">
                                 <p className="text-lg" style={{ color: '#9a8a7a' }}>Zatial ziadne prispevky.</p>

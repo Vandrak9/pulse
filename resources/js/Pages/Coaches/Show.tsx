@@ -67,7 +67,7 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
             <div className="min-h-screen pb-20" style={{ backgroundColor: '#faf6f0' }}>
 
                 {/* Hero cover */}
-                <div className="relative h-[200px] w-full" style={{ background: 'linear-gradient(to right, #c4714a, #5a3e2b)' }}>
+                <div className="relative h-[200px] w-full md:h-[240px]" style={{ background: 'linear-gradient(to right, #c4714a, #5a3e2b)' }}>
                     <div className="absolute left-4 top-4 z-10 sm:left-6">
                         <Link
                             href="/coaches"
@@ -76,8 +76,9 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                             &larr; Spat na koucov
                         </Link>
                     </div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-                        <div className="h-[120px] w-[120px] overflow-hidden rounded-full border-4 border-white shadow-lg" style={{ backgroundColor: '#c4714a' }}>
+                    {/* Avatar — mobile: centered, desktop: left-aligned within container */}
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 md:left-8 md:translate-x-0">
+                        <div className="h-[120px] w-[120px] overflow-hidden rounded-full border-4 border-white shadow-lg md:h-[140px] md:w-[140px]" style={{ backgroundColor: '#c4714a' }}>
                             {coach.avatar_url ? (
                                 <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
                             ) : (
@@ -89,167 +90,193 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                     </div>
                 </div>
 
-                <div className="mx-auto max-w-2xl px-4 sm:px-6">
+                {/* ── Desktop two-column layout / Mobile single-column ── */}
+                <div className="mx-auto max-w-5xl px-4 sm:px-6">
+                    <div className="flex flex-col gap-8 md:flex-row md:gap-10 md:pt-6">
 
-                    {/* Coach info */}
-                    <div className="pt-20 text-center">
-                        <h1 className="font-serif text-2xl font-bold" style={{ color: '#2d2118' }}>{coach.name}</h1>
-                        {coach.specialization && (
-                            <span className="mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold" style={{ backgroundColor: '#fce8de', color: '#c4714a' }}>
-                                {coach.specialization}
-                            </span>
-                        )}
-                        <div className="mt-3 flex items-center justify-center gap-3 text-sm" style={{ color: '#9a8a7a' }}>
-                            {rating !== null && (
-                                <>
-                                    <span className="flex items-center gap-1">
-                                        <span style={{ color: '#f5a623' }}>&#9733;</span>
-                                        <span className="font-medium" style={{ color: '#2d2118' }}>{rating.toFixed(1)}</span>
+                        {/* LEFT COLUMN — profile info + content (60%) */}
+                        <div className="min-w-0 flex-1 md:w-3/5">
+
+                            {/* Coach info — mobile: centered with padding-top for avatar; desktop: left-aligned */}
+                            <div className="pt-20 text-center md:pt-16 md:pl-44 md:text-left">
+                                <h1 className="font-serif text-2xl font-bold md:text-3xl" style={{ color: '#2d2118' }}>{coach.name}</h1>
+                                {coach.specialization && (
+                                    <span className="mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold" style={{ backgroundColor: '#fce8de', color: '#c4714a' }}>
+                                        {coach.specialization}
                                     </span>
-                                    <span style={{ color: '#e8d9c4' }}>|</span>
-                                </>
-                            )}
-                            <span>{coach.subscriber_count.toLocaleString('sk-SK')} sledovatelov</span>
-                            {coach.is_verified && (
-                                <>
-                                    <span style={{ color: '#e8d9c4' }}>|</span>
-                                    <span className="font-medium" style={{ color: '#4a7c59' }}>&#10003; Overeny</span>
-                                </>
-                            )}
-                        </div>
-                        {coach.bio && (
-                            <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed" style={{ color: '#6b5e52' }}>{coach.bio}</p>
-                        )}
-                    </div>
-
-                    {/* Subscription box */}
-                    <div className="mt-8 rounded-2xl bg-white p-6 shadow-md" style={{ border: '1px solid #e8d9c4' }}>
-                        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#9a8a7a' }}>Predplatne</p>
-                        <div className="mt-1 flex items-baseline gap-1">
-                            <span className="font-serif text-4xl font-bold" style={{ color: '#c4714a' }}>
-                                {price === 0 ? 'Zadarmo' : `€${price.toFixed(2)}`}
-                            </span>
-                            {price > 0 && <span className="text-sm" style={{ color: '#9a8a7a' }}>/ mesiac</span>}
-                        </div>
-                        <ul className="mt-4 space-y-2">
-                            {BENEFITS.map((b) => (
-                                <li key={b} className="flex items-center gap-2 text-sm" style={{ color: '#2d2118' }}>
-                                    <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: '#c4714a' }}>
-                                        &#10003;
-                                    </span>
-                                    {b}
-                                </li>
-                            ))}
-                        </ul>
-                        {isSubscribed ? (
-                            <div className="mt-5 w-full rounded-full py-3 text-center text-sm font-semibold text-white" style={{ backgroundColor: '#4a7c59' }}>
-                                &#10003; Predplatene
-                            </div>
-                        ) : (
-                            <button
-                                className="mt-5 w-full rounded-full py-3 text-sm font-semibold text-white transition-colors"
-                                style={{ backgroundColor: '#c4714a' }}
-                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
-                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
-                            >
-                                Predplatit teraz
-                            </button>
-                        )}
-                        <p className="mt-2 text-center text-xs" style={{ color: '#9a8a7a' }}>Zrus kedykolvek</p>
-                    </div>
-
-                    {/* Content tabs */}
-                    {posts.length > 0 && (
-                        <div className="mt-10">
-                            {/* Tab bar */}
-                            <div className="mb-5 flex rounded-2xl bg-white p-1 shadow-sm" style={{ border: '1px solid #e8d9c4' }}>
-                                {([
-                                    ['all', 'Vsetko'],
-                                    ['reels', 'Reels'],
-                                    ['videos', 'Videa'],
-                                    ['photos', 'Fotky'],
-                                ] as [Tab, string][]).map(([t, label]) => (
-                                    <button
-                                        key={t}
-                                        onClick={() => setTab(t)}
-                                        className="flex-1 rounded-xl py-2 text-xs font-semibold transition"
-                                        style={{
-                                            backgroundColor: tab === t ? '#c4714a' : 'transparent',
-                                            color: tab === t ? '#fff' : '#9a8a7a',
-                                        }}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
+                                )}
+                                <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm md:justify-start" style={{ color: '#9a8a7a' }}>
+                                    {rating !== null && (
+                                        <>
+                                            <span className="flex items-center gap-1">
+                                                <span style={{ color: '#f5a623' }}>&#9733;</span>
+                                                <span className="font-medium" style={{ color: '#2d2118' }}>{rating.toFixed(1)}</span>
+                                            </span>
+                                            <span style={{ color: '#e8d9c4' }}>|</span>
+                                        </>
+                                    )}
+                                    <span>{coach.subscriber_count.toLocaleString('sk-SK')} sledovatelov</span>
+                                    {coach.is_verified && (
+                                        <>
+                                            <span style={{ color: '#e8d9c4' }}>|</span>
+                                            <span className="font-medium" style={{ color: '#4a7c59' }}>&#10003; Overeny</span>
+                                        </>
+                                    )}
+                                </div>
+                                {coach.bio && (
+                                    <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed md:mx-0" style={{ color: '#6b5e52' }}>{coach.bio}</p>
+                                )}
                             </div>
 
-                            {/* All tab */}
-                            {tab === 'all' && (
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {posts.slice(0, 9).map((post) => (
-                                        <PostCard
-                                            key={post.id}
-                                            post={post}
-                                            isSubscribed={isSubscribed}
-                                            onPlay={() => setActiveVideo(post)}
-                                        />
-                                    ))}
+                            {/* Subscription box — mobile only (on desktop it's in right column) */}
+                            <div className="mt-8 md:hidden">
+                                <SubscriptionBox coach={coach} price={price} isSubscribed={isSubscribed} />
+                            </div>
+
+                            {/* Content tabs */}
+                            {posts.length > 0 && (
+                                <div className="mt-10">
+                                    {/* Tab bar */}
+                                    <div className="mb-5 flex rounded-2xl bg-white p-1 shadow-sm" style={{ border: '1px solid #e8d9c4' }}>
+                                        {([
+                                            ['all', 'Vsetko'],
+                                            ['reels', 'Reels'],
+                                            ['videos', 'Videa'],
+                                            ['photos', 'Fotky'],
+                                        ] as [Tab, string][]).map(([t, label]) => (
+                                            <button
+                                                key={t}
+                                                onClick={() => setTab(t)}
+                                                className="flex-1 rounded-xl py-2 text-xs font-semibold transition"
+                                                style={{
+                                                    backgroundColor: tab === t ? '#c4714a' : 'transparent',
+                                                    color: tab === t ? '#fff' : '#9a8a7a',
+                                                }}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {tab === 'all' && (
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            {posts.slice(0, 9).map((post) => (
+                                                <PostCard key={post.id} post={post} isSubscribed={isSubscribed} onPlay={() => setActiveVideo(post)} />
+                                            ))}
+                                        </div>
+                                    )}
+                                    {tab === 'reels' && (
+                                        reels.length === 0 ? (
+                                            <p className="py-10 text-center text-sm" style={{ color: '#9a8a7a' }}>Ziadne reels.</p>
+                                        ) : (
+                                            <div className="grid grid-cols-3 gap-1">
+                                                {reels.map((post) => (
+                                                    <ReelThumbnail key={post.id} post={post} isSubscribed={isSubscribed} onPlay={() => setActiveVideo(post)} />
+                                                ))}
+                                            </div>
+                                        )
+                                    )}
+                                    {tab === 'videos' && (
+                                        videos.length === 0 ? (
+                                            <p className="py-10 text-center text-sm" style={{ color: '#9a8a7a' }}>Ziadne videa.</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {videos.map((post) => (
+                                                    <VideoListCard key={post.id} post={post} isSubscribed={isSubscribed} onPlay={() => setActiveVideo(post)} />
+                                                ))}
+                                            </div>
+                                        )
+                                    )}
+                                    {tab === 'photos' && (
+                                        photos.length === 0 ? (
+                                            <p className="py-10 text-center text-sm" style={{ color: '#9a8a7a' }}>Ziadne fotky.</p>
+                                        ) : (
+                                            <div className="grid grid-cols-3 gap-1">
+                                                {photos.map((post) => (
+                                                    <PhotoThumbnail key={post.id} post={post} isSubscribed={isSubscribed} />
+                                                ))}
+                                            </div>
+                                        )
+                                    )}
                                 </div>
                             )}
-
-                            {/* Reels tab — 3-col 9:16 grid */}
-                            {tab === 'reels' && (
-                                reels.length === 0 ? (
-                                    <p className="py-10 text-center text-sm" style={{ color: '#9a8a7a' }}>Ziadne reels.</p>
-                                ) : (
-                                    <div className="grid grid-cols-3 gap-1">
-                                        {reels.map((post) => (
-                                            <ReelThumbnail
-                                                key={post.id}
-                                                post={post}
-                                                isSubscribed={isSubscribed}
-                                                onPlay={() => setActiveVideo(post)}
-                                            />
-                                        ))}
-                                    </div>
-                                )
-                            )}
-
-                            {/* Videos tab — list cards */}
-                            {tab === 'videos' && (
-                                videos.length === 0 ? (
-                                    <p className="py-10 text-center text-sm" style={{ color: '#9a8a7a' }}>Ziadne videa.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {videos.map((post) => (
-                                            <VideoListCard
-                                                key={post.id}
-                                                post={post}
-                                                isSubscribed={isSubscribed}
-                                                onPlay={() => setActiveVideo(post)}
-                                            />
-                                        ))}
-                                    </div>
-                                )
-                            )}
-
-                            {/* Photos tab — image grid */}
-                            {tab === 'photos' && (
-                                photos.length === 0 ? (
-                                    <p className="py-10 text-center text-sm" style={{ color: '#9a8a7a' }}>Ziadne fotky.</p>
-                                ) : (
-                                    <div className="grid grid-cols-3 gap-1">
-                                        {photos.map((post) => (
-                                            <PhotoThumbnail key={post.id} post={post} isSubscribed={isSubscribed} />
-                                        ))}
-                                    </div>
-                                )
-                            )}
                         </div>
-                    )}
+
+                        {/* RIGHT COLUMN — sticky subscription box (desktop only) */}
+                        <div className="hidden md:block md:w-2/5 flex-shrink-0">
+                            <div className="sticky top-6">
+                                <SubscriptionBox coach={coach} price={price} isSubscribed={isSubscribed} />
+
+                                {/* Extra stats */}
+                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                    {[
+                                        { icon: '👥', value: coach.subscriber_count.toLocaleString('sk-SK'), label: 'Predplatitelia' },
+                                        { icon: '⭐', value: rating !== null ? rating.toFixed(1) : '—', label: 'Hodnotenie' },
+                                        { icon: '🎬', value: `${posts.filter(p => p.media_type === 'video').length}`, label: 'Videí' },
+                                        { icon: '📸', value: `${posts.filter(p => p.media_type === 'image').length}`, label: 'Fotiek' },
+                                    ].map((s, i) => (
+                                        <div key={i} className="rounded-2xl bg-white p-4 text-center" style={{ border: '1px solid #e8d9c4' }}>
+                                            <div className="text-2xl">{s.icon}</div>
+                                            <div className="mt-1 font-serif text-lg font-bold" style={{ color: '#2d2118' }}>{s.value}</div>
+                                            <div className="text-xs" style={{ color: '#9a8a7a' }}>{s.label}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Message button */}
+                                <Link
+                                    href="/messages"
+                                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border py-3 text-sm font-semibold transition hover:bg-gray-50"
+                                    style={{ borderColor: '#e8d9c4', color: '#2d2118' }}
+                                >
+                                    💬 Poslať správu
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </PulseLayout>
+    );
+}
+
+/* ── Subscription box (shared mobile/desktop) ── */
+function SubscriptionBox({ coach, price, isSubscribed }: { coach: CoachData; price: number; isSubscribed: boolean }) {
+    return (
+        <div className="rounded-2xl bg-white p-6 shadow-md" style={{ border: '1px solid #e8d9c4' }}>
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#9a8a7a' }}>Predplatne</p>
+            <div className="mt-1 flex items-baseline gap-1">
+                <span className="font-serif text-4xl font-bold" style={{ color: '#c4714a' }}>
+                    {price === 0 ? 'Zadarmo' : `€${price.toFixed(2)}`}
+                </span>
+                {price > 0 && <span className="text-sm" style={{ color: '#9a8a7a' }}>/ mesiac</span>}
+            </div>
+            <ul className="mt-4 space-y-2">
+                {BENEFITS.map((b) => (
+                    <li key={b} className="flex items-center gap-2 text-sm" style={{ color: '#2d2118' }}>
+                        <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: '#c4714a' }}>
+                            &#10003;
+                        </span>
+                        {b}
+                    </li>
+                ))}
+            </ul>
+            {isSubscribed ? (
+                <div className="mt-5 w-full rounded-full py-3 text-center text-sm font-semibold text-white" style={{ backgroundColor: '#4a7c59' }}>
+                    &#10003; Predplatene
+                </div>
+            ) : (
+                <button
+                    className="mt-5 w-full rounded-full py-3 text-sm font-semibold text-white transition-colors"
+                    style={{ backgroundColor: '#c4714a' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
+                >
+                    Predplatit teraz
+                </button>
+            )}
+            <p className="mt-2 text-center text-xs" style={{ color: '#9a8a7a' }}>Zrus kedykolvek</p>
+        </div>
     );
 }
 
