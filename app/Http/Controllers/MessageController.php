@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -133,8 +134,47 @@ class MessageController extends Controller
             'voice_duration' => 'nullable|integer|min:1|max:3600',
         ]);
 
-        $user = auth()->user();
-        User::findOrFail($userId);
+        $user     = auth()->user();
+        $receiver = User::findOrFail($userId);
+
+        // ── Message access policy ────────────────────────────────────────────────
+        if ($receiver->role === 'coach' && $receiver->coach) {
+            $access   = $receiver->coach->messages_access ?? 'followers';
+            $senderId = $user->id;
+
+            $deny = function (string $msg) use ($request) {
+                if ($request->header('X-Inertia')) {
+                    return back()->withErrors(['access' => $msg]);
+                }
+                return response()->json(['error' => $msg], 403);
+            };
+
+            if ($access === 'nobody') {
+                return $deny('Tento kouč má správy vypnuté.');
+            }
+
+            if ($access === 'subscribers') {
+                $isSubscribed = DB::table('subscriptions')
+                    ->where('user_id', $senderId)
+                    ->where('stripe_status', 'active')
+                    ->where('subscribable_id', $receiver->coach->id)
+                    ->exists();
+                if (!$isSubscribed) {
+                    return $deny('Len predplatitelia môžu písať tomuto koučovi.');
+                }
+            }
+
+            if ($access === 'followers') {
+                $isFollowing = DB::table('follows')
+                    ->where('follower_id', $senderId)
+                    ->where('following_id', $userId)
+                    ->exists();
+                if (!$isFollowing) {
+                    return $deny('Najprv sleduj kouča, aby si mu mohol písať.');
+                }
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────────
 
         $messageType   = 'text';
         $mediaPath     = null;

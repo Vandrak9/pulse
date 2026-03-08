@@ -1,5 +1,6 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
+import axios from 'axios';
 import PulseLayout from '@/Layouts/PulseLayout';
 import Avatar from '@/Components/Avatar';
 import { relativeTime } from '@/lib/utils';
@@ -93,20 +94,151 @@ function ConversationRow({ conv, compact = false }: { conv: Conversation; compac
     );
 }
 
+interface CoachResult {
+    id: number;
+    user_id: number;
+    name: string;
+    specialization: string | null;
+    avatar_url: string | null;
+}
+
+function NewMessageModal({ onClose }: { onClose: () => void }) {
+    const [query, setQuery]     = useState('');
+    const [results, setResults] = useState<CoachResult[]>([]);
+    const [loading, setLoading] = useState(false);
+    const inputRef              = useRef<HTMLInputElement>(null);
+
+    useEffect(() => { inputRef.current?.focus(); }, []);
+
+    useEffect(() => {
+        if (!query.trim()) { setResults([]); return; }
+        const timer = setTimeout(() => {
+            setLoading(true);
+            axios.get<CoachResult[]>(`/coaches/search?q=${encodeURIComponent(query)}`)
+                .then(r => setResults(r.data))
+                .catch(() => setResults([]))
+                .finally(() => setLoading(false));
+        }, 250);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    return (
+        <div
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 100,
+                background: 'rgba(0,0,0,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 20,
+            }}
+        >
+            <div style={{
+                background: 'white', borderRadius: 18, width: '100%', maxWidth: 440,
+                border: '1px solid #e8d9c4', overflow: 'hidden',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
+            }}>
+                {/* Header */}
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0e8df', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700, color: '#2d2118', margin: 0 }}>
+                        Nová správa
+                    </h2>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9a8a7a', lineHeight: 1 }}>×</button>
+                </div>
+
+                {/* Search input */}
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0e8df' }}>
+                    <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#9a8a7a' }}>🔍</span>
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            placeholder="Hľadaj kouča..."
+                            value={query}
+                            onChange={e => setQuery(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 12px 10px 34px',
+                                borderRadius: 10, border: '1px solid #e8d9c4',
+                                fontSize: 14, color: '#2d2118', background: '#faf6f0',
+                                outline: 'none', boxSizing: 'border-box',
+                            }}
+                        />
+                    </div>
+                </div>
+
+                {/* Results */}
+                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                    {loading && (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#9a8a7a', fontSize: 13 }}>Hľadám…</div>
+                    )}
+                    {!loading && query.trim() && results.length === 0 && (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#9a8a7a', fontSize: 13 }}>Žiadni kouči nenájdení</div>
+                    )}
+                    {!loading && results.map(coach => (
+                        <button
+                            key={coach.id}
+                            onClick={() => { onClose(); router.visit(`/messages/${coach.user_id}`); }}
+                            style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                                padding: '12px 20px', background: 'none', border: 'none',
+                                cursor: 'pointer', textAlign: 'left', transition: 'background 0.12s',
+                                borderBottom: '1px solid #f0e8df',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                            <Avatar src={coach.avatar_url} name={coach.name} size={40} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: 14, fontWeight: 600, color: '#2d2118', margin: 0 }}>{coach.name}</p>
+                                {coach.specialization && (
+                                    <p style={{ fontSize: 12, color: '#9a8a7a', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {coach.specialization}
+                                    </p>
+                                )}
+                            </div>
+                            <span style={{ fontSize: 12, color: '#c4714a', fontWeight: 600, flexShrink: 0 }}>Napísať →</span>
+                        </button>
+                    ))}
+                    {!query.trim() && (
+                        <div style={{ padding: '28px 20px', textAlign: 'center' }}>
+                            <div style={{ fontSize: 36, marginBottom: 8 }}>💬</div>
+                            <p style={{ fontSize: 13, color: '#9a8a7a', margin: 0 }}>Zadaj meno kouča, ktorému chceš napísať</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function MessagesIndex({ conversations }: Props) {
+    const [showNewMessage, setShowNewMessage] = useState(false);
+
     return (
         <PulseLayout>
             <Head title="Správy" />
+
+            {showNewMessage && <NewMessageModal onClose={() => setShowNewMessage(false)} />}
 
             {/* ── MOBILE layout ── */}
             <div className="md:hidden" style={{ background: '#faf6f0', minHeight: '100vh' }}>
                 <div style={{
                     background: 'white', borderBottom: '1px solid #e8d9c4',
                     padding: '16px 20px', position: 'sticky', top: 57, zIndex: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                     <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 700, color: '#2d2118', margin: 0 }}>
                         Správy
                     </h1>
+                    <button
+                        onClick={() => setShowNewMessage(true)}
+                        style={{
+                            background: '#c4714a', color: 'white', border: 'none',
+                            borderRadius: 999, padding: '8px 16px', fontSize: 13,
+                            fontWeight: 600, cursor: 'pointer',
+                        }}
+                    >
+                        + Nová správa
+                    </button>
                 </div>
 
                 {conversations.length === 0 ? (
@@ -142,11 +274,23 @@ export default function MessagesIndex({ conversations }: Props) {
                 }}>
                     {/* Panel header */}
                     <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #e8d9c4', flexShrink: 0 }}>
-                        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 700, color: '#2d2118', margin: 0 }}>
-                            Správy
-                        </h1>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 700, color: '#2d2118', margin: 0 }}>
+                                Správy
+                            </h1>
+                            <button
+                                onClick={() => setShowNewMessage(true)}
+                                style={{
+                                    background: '#c4714a', color: 'white', border: 'none',
+                                    borderRadius: 999, padding: '7px 14px', fontSize: 12,
+                                    fontWeight: 600, cursor: 'pointer',
+                                }}
+                            >
+                                + Nová správa
+                            </button>
+                        </div>
                         {/* Search within conversations */}
-                        <div style={{ marginTop: 12, position: 'relative' }}>
+                        <div style={{ position: 'relative' }}>
                             <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9a8a7a', fontSize: 13 }}>🔍</span>
                             <input
                                 type="text"

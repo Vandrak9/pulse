@@ -99,6 +99,7 @@ class CoachController extends Controller
                 'followers_count' => $followersCount,
                 'is_verified'     => $coach->is_verified,
                 'is_following'    => $isFollowing,
+                'messages_access' => $coach->messages_access ?? 'followers',
                 'avatar_url'      => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
@@ -114,11 +115,12 @@ class CoachController extends Controller
 
         return Inertia::render('Coaches/Edit', [
             'coach' => $coach ? [
-                'id' => $coach->id,
-                'bio' => $coach->bio,
-                'specialization' => $coach->specialization,
-                'monthly_price' => $coach->monthly_price,
-                'avatar_url' => $coach->avatar_path
+                'id'              => $coach->id,
+                'bio'             => $coach->bio,
+                'specialization'  => $coach->specialization,
+                'monthly_price'   => $coach->monthly_price,
+                'messages_access' => $coach->messages_access ?? 'followers',
+                'avatar_url'      => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
             ] : null,
@@ -128,18 +130,20 @@ class CoachController extends Controller
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'bio' => ['nullable', 'string', 'max:2000'],
-            'specialization' => ['nullable', 'string', 'max:255'],
-            'monthly_price' => ['required', 'numeric', 'min:0'],
-            'avatar' => ['nullable', 'image', 'max:2048'],
+            'bio'             => ['nullable', 'string', 'max:2000'],
+            'specialization'  => ['nullable', 'string', 'max:255'],
+            'monthly_price'   => ['required', 'numeric', 'min:0'],
+            'avatar'          => ['nullable', 'image', 'max:2048'],
+            'messages_access' => ['nullable', 'in:followers,subscribers,nobody'],
         ]);
 
         $user = $request->user();
         $coach = $user->coach ?? new Coach(['user_id' => $user->id]);
 
-        $coach->bio = $validated['bio'] ?? null;
-        $coach->specialization = $validated['specialization'] ?? null;
-        $coach->monthly_price = $validated['monthly_price'];
+        $coach->bio             = $validated['bio'] ?? null;
+        $coach->specialization  = $validated['specialization'] ?? null;
+        $coach->monthly_price   = $validated['monthly_price'];
+        $coach->messages_access = $validated['messages_access'] ?? 'followers';
 
         if ($request->hasFile('avatar')) {
             if ($coach->avatar_path) {
@@ -151,6 +155,27 @@ class CoachController extends Controller
         $coach->save();
 
         return redirect()->route('dashboard.profile.edit')
-            ->with('success', 'Profile updated successfully.');
+            ->with('success', 'Profil bol uložený.');
+    }
+
+    public function search(Request $request)
+    {
+        $q = $request->input('q', '');
+
+        $coaches = Coach::with('user')
+            ->whereHas('user', fn ($q2) => $q2->where('name', 'like', '%' . $q . '%'))
+            ->limit(8)
+            ->get()
+            ->map(fn ($c) => [
+                'id'             => $c->id,
+                'user_id'        => $c->user_id,
+                'name'           => $c->user->name,
+                'specialization' => $c->specialization,
+                'avatar_url'     => $c->avatar_path
+                    ? Storage::url($c->avatar_path)
+                    : null,
+            ]);
+
+        return response()->json($coaches);
     }
 }

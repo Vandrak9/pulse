@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/coaches', [CoachController::class, 'index'])->name('coaches.index');
+Route::get('/coaches/search', [CoachController::class, 'search'])->name('coaches.search');
 Route::get('/coaches/{coach}', [CoachController::class, 'show'])->name('coaches.show');
 
 // ── Authenticated routes ───────────────────────────────────────────────────────

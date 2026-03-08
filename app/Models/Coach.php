@@ -18,6 +18,7 @@ class Coach extends Model
         'is_verified',
         'rating',
         'subscriber_count',
+        'messages_access',
     ];
 
     protected function casts(): array

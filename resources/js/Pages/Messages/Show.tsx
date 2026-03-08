@@ -239,7 +239,11 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
         router.post(`/messages/${partner.id}`, { content: input.trim() }, {
             preserveScroll: true,
             onSuccess: () => { setInput(''); setSending(false); },
-            onError: () => setSending(false),
+            onError: (errs) => {
+                setSending(false);
+                const msg = (errs as Record<string, string>).access ?? Object.values(errs)[0] as string;
+                if (msg) showToast(msg, 'error');
+            },
         });
     };
 

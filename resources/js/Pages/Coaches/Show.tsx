@@ -17,6 +17,7 @@ interface CoachData {
     followers_count: number;
     is_verified: boolean;
     is_following: boolean;
+    messages_access: 'followers' | 'subscribers' | 'nobody';
     avatar_url: string | null;
 }
 
@@ -156,9 +157,18 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                                 {coach.bio && (
                                     <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed md:mx-0" style={{ color: '#6b5e52' }}>{coach.bio}</p>
                                 )}
-                                {/* Follow button — visible to logged-in users, below bio */}
+                                {/* Message access badge */}
+                                {coach.messages_access !== 'followers' && (
+                                    <p className="mt-2 text-xs" style={{ color: '#9a8a7a' }}>
+                                        {coach.messages_access === 'subscribers'
+                                            ? '💬 Píše len predplatiteľom'
+                                            : '💬 Správy vypnuté'}
+                                    </p>
+                                )}
+
+                                {/* Follow + Message buttons */}
                                 {auth?.user && auth.user.id !== coach.user_id && (
-                                    <div className="mt-4 flex justify-center md:justify-start">
+                                    <div className="mt-4 flex flex-wrap justify-center gap-2 md:justify-start">
                                         <button
                                             onClick={handleFollow}
                                             disabled={followLoading}
@@ -174,6 +184,22 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                                         >
                                             {following ? '✓ Sledujem' : '+ Sledovať'}
                                         </button>
+                                        {coach.messages_access !== 'nobody' && (
+                                            <Link
+                                                href={`/messages/${coach.user_id}`}
+                                                style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                                    padding: '8px 18px', borderRadius: 999,
+                                                    border: '1px solid #c4714a', color: '#c4714a',
+                                                    fontSize: 13, fontWeight: 600, textDecoration: 'none',
+                                                    transition: 'all 0.2s',
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = '#fce8de'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                            >
+                                                💬 Napísať správu
+                                            </Link>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -274,13 +300,17 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                                 </div>
 
                                 {/* Message button */}
-                                <Link
-                                    href="/messages"
-                                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border py-3 text-sm font-semibold transition hover:bg-gray-50"
-                                    style={{ borderColor: '#e8d9c4', color: '#2d2118' }}
-                                >
-                                    💬 Poslať správu
-                                </Link>
+                                {coach.messages_access !== 'nobody' && auth?.user && auth.user.id !== coach.user_id && (
+                                    <Link
+                                        href={`/messages/${coach.user_id}`}
+                                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border py-3 text-sm font-semibold transition"
+                                        style={{ borderColor: '#c4714a', color: '#c4714a' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#fce8de')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                    >
+                                        💬 Napísať správu
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>
