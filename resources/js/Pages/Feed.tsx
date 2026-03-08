@@ -104,27 +104,46 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
                 {/* Coach composer — desktop only, coaches only */}
                 {isCoach && tab === 'feed' && (
                     <div className="hidden md:block border-b bg-white" style={{ borderColor: '#e8d9c4' }}>
-                        <div className="mx-auto max-w-2xl px-4 py-4">
-                            <Link href="/dashboard/profile" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
-                                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#c4714a', color: 'white', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div className="mx-auto max-w-xl px-4 py-4">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{
+                                    width: 40, height: 40, borderRadius: '50%', background: '#c4714a',
+                                    color: 'white', fontWeight: 700, fontSize: 16, flexShrink: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
                                     {auth?.user?.name?.charAt(0).toUpperCase()}
                                 </div>
-                                <div style={{
-                                    flex: 1, padding: '10px 16px', borderRadius: 999,
-                                    border: '1px solid #e8d9c4', background: '#faf6f0',
-                                    fontSize: 14, color: '#9a8a7a', cursor: 'pointer',
-                                }}>
-                                    Zdieľaj niečo so svojimi predplatiteľmi...
-                                </div>
+                                <Link
+                                    href="/dashboard/broadcast"
+                                    style={{
+                                        flex: 1, padding: '11px 18px', borderRadius: 999,
+                                        border: '1px solid #e8d9c4', background: '#faf6f0',
+                                        fontSize: 14, color: '#9a8a7a', cursor: 'pointer',
+                                        textDecoration: 'none', display: 'block',
+                                        transition: 'border-color 0.15s',
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.borderColor = '#c4714a')}
+                                    onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8d9c4')}
+                                >
+                                    Čo chceš zdieľať so svojimi predplatiteľmi?
+                                </Link>
                                 <div style={{ display: 'flex', gap: 8 }}>
-                                    <div style={{ padding: '8px 14px', borderRadius: 999, background: '#fce8de', color: '#c4714a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                    <Link href="/dashboard/broadcast" style={{
+                                        padding: '9px 14px', borderRadius: 999, background: '#fce8de',
+                                        color: '#c4714a', fontSize: 13, fontWeight: 600,
+                                        textDecoration: 'none', whiteSpace: 'nowrap',
+                                    }}>
                                         🎬 Video
-                                    </div>
-                                    <div style={{ padding: '8px 14px', borderRadius: 999, background: '#fce8de', color: '#c4714a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                    </Link>
+                                    <Link href="/dashboard/broadcast" style={{
+                                        padding: '9px 14px', borderRadius: 999, background: '#fce8de',
+                                        color: '#c4714a', fontSize: 13, fontWeight: 600,
+                                        textDecoration: 'none', whiteSpace: 'nowrap',
+                                    }}>
                                         📸 Foto
-                                    </div>
+                                    </Link>
                                 </div>
-                            </Link>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -178,7 +197,7 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
 
                 {/* Tab bar */}
                 <div className="sticky top-0 z-10 border-b bg-white md:top-0" style={{ borderColor: '#e8d9c4' }}>
-                    <div className="mx-auto flex max-w-2xl">
+                    <div className="mx-auto flex max-w-xl">
                         {([
                             ['feed', 'Pre teba'],
                             ['reels', 'Reels'],
@@ -201,7 +220,7 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
 
                 {/* ── Tab: Pre teba (mixed feed) ── */}
                 {tab === 'feed' && (
-                    <div className="mx-auto max-w-2xl pb-6">
+                    <div className="mx-auto max-w-xl pb-6">
                         {posts.length === 0 ? (
                             <div className="py-20 text-center">
                                 <p className="text-lg" style={{ color: '#9a8a7a' }}>Zatial ziadne prispevky.</p>
@@ -240,7 +259,7 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
 
                 {/* ── Tab: Videa (YouTube-style) ── */}
                 {tab === 'videos' && (
-                    <div className="mx-auto max-w-2xl px-4 pb-6 pt-4">
+                    <div className="mx-auto max-w-xl px-4 pb-6 pt-4">
                         {videos.length === 0 ? (
                             <div className="py-20 text-center">
                                 <p style={{ color: '#9a8a7a' }}>Ziadne dlhe videa.</p>

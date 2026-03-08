@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
+import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut } from 'lucide-react';
 
 interface Props {
     children: React.ReactNode;
@@ -69,18 +70,18 @@ export default function PulseLayout({ children }: Props) {
             .catch(() => {});
     }, []);
 
-    // Desktop sidebar nav links
-    const desktopNavLinks = [
-        { label: 'Domov',      icon: '🏠', href: '/',                   badge: 0 },
-        { label: 'Feed',       icon: '📱', href: '/feed',                badge: 0 },
-        { label: 'Objaviť',   icon: '🔍', href: '/coaches',             badge: 0 },
-        { label: 'Správy',    icon: '💬', href: '/messages',            badge: unreadCount },
-        { label: 'Notifikácie', icon: '🔔', href: '/notifications',     badge: 0 },
-        { label: 'Profil',    icon: '👤', href: '/dashboard/profile',   badge: 0 },
-        ...(isCoach ? [{ label: 'Dashboard', icon: '📊', href: '/dashboard', badge: 0 }] : []),
+    // Desktop sidebar nav links (Lucide icons)
+    const desktopNavLinks: { label: string; icon: React.ReactNode; href: string; badge: number }[] = [
+        { label: 'Domov',       icon: <Home size={18} />,          href: '/',                 badge: 0 },
+        { label: 'Feed',        icon: <Rss size={18} />,           href: '/feed',              badge: 0 },
+        { label: 'Objaviť',    icon: <Search size={18} />,        href: '/coaches',           badge: 0 },
+        { label: 'Správy',     icon: <MessageCircle size={18} />, href: '/messages',          badge: unreadCount },
+        { label: 'Notifikácie',icon: <Bell size={18} />,          href: '/notifications',     badge: 0 },
+        { label: 'Profil',     icon: <User size={18} />,          href: '/dashboard/profile', badge: 0 },
+        ...(isCoach ? [{ label: 'Dashboard', icon: <BarChart2 size={18} />, href: '/dashboard', badge: 0 }] : []),
     ];
 
-    // Mobile bottom tab links
+    // Mobile bottom tab links (keep emoji for mobile — clear at small size)
     const mobileLinks = [
         { label: 'Domov',   icon: '🏠', href: '/' },
         { label: 'Feed',    icon: '📱', href: '/feed' },
@@ -138,7 +139,7 @@ export default function PulseLayout({ children }: Props) {
                                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#faf6f0'; }}
                                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                             >
-                                <span style={{ fontSize: 18, lineHeight: 1 }}>{link.icon}</span>
+                                <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{link.icon}</span>
                                 <span style={{ flex: 1 }}>{link.label}</span>
                                 {link.badge > 0 && (
                                     <span style={{
@@ -189,7 +190,7 @@ export default function PulseLayout({ children }: Props) {
                                 onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
                                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                             >
-                                <span>🚪</span> Odhlásiť sa
+                                <LogOut size={15} style={{ flexShrink: 0 }} /> Odhlásiť sa
                             </Link>
                         </>
                     ) : (
@@ -299,7 +300,7 @@ export default function PulseLayout({ children }: Props) {
                                         onMouseEnter={e => { e.currentTarget.style.background = '#c4714a'; e.currentTarget.style.color = 'white'; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#c4714a'; }}
                                     >
-                                        Sledovať
+                                        Zobraziť
                                     </Link>
                                 </div>
                             ))}

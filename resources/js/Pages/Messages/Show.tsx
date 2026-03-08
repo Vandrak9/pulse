@@ -3,7 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
 import PulseLayout from '@/Layouts/PulseLayout';
 import Avatar from '@/Components/Avatar';
-import { getInitials, formatChatDate, formatTime, formatDuration, isSameDay } from '@/lib/utils';
+import { getInitials, formatChatDate, formatTime, formatDuration, isSameDay, relativeTime } from '@/lib/utils';
 
 interface Message {
     id: number;
@@ -27,9 +27,19 @@ interface Partner {
     is_verified: boolean;
 }
 
+interface Conversation {
+    partner_id: number;
+    partner_name: string;
+    partner_role: string;
+    partner_avatar: string | null;
+    last_message: { content: string; created_at: string; is_mine: boolean; message_type: string } | null;
+    unread_count: number;
+}
+
 interface Props {
     partner: Partner;
     messages: Message[];
+    conversations: Conversation[];
 }
 
 type VoiceState = 'idle' | 'recording' | 'uploading';
@@ -131,7 +141,7 @@ function VoiceBubble({ msg }: { msg: Message }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function MessagesShow({ partner, messages: initialMessages }: Props) {
+export default function MessagesShow({ partner, messages: initialMessages, conversations }: Props) {
     const [messages, setMessages]         = useState<Message[]>(initialMessages);
     const [input, setInput]               = useState('');
     const [sending, setSending]           = useState(false);
@@ -420,7 +430,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
         <PulseLayout>
             <Head title={`Správy — ${partner.name}`} />
 
-            {/* Lightbox */}
+            {/* Lightbox (fixed — works for both mobile + desktop) */}
             {lightbox && (
                 <div
                     onClick={() => setLightbox(null)}
@@ -465,7 +475,72 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                 </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', background: '#faf6f0' }}>
+            {/* Two-panel layout: flex row. Left = conversation list (desktop only). Right = chat. */}
+            <div style={{ display: 'flex', height: '100vh', background: '#faf6f0' }}>
+
+                {/* Left panel — conversation list (desktop only) */}
+                <div className="hidden md:flex" style={{
+                    width: 360, flexShrink: 0, flexDirection: 'column',
+                    borderRight: '1px solid #e8d9c4', background: 'white', height: '100vh',
+                }}>
+                    <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid #e8d9c4', flexShrink: 0 }}>
+                        <a href="/messages" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#c4714a', fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
+                            ← Správy
+                        </a>
+                        <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 18, fontWeight: 700, color: '#2d2118', margin: 0 }}>Konverzácie</h2>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        {conversations.length === 0 ? (
+                            <div style={{ padding: '32px 20px', textAlign: 'center', color: '#9a8a7a', fontSize: 14 }}>Žiadne konverzácie</div>
+                        ) : conversations.map(conv => {
+                            const isActive = conv.partner_id === partner.id;
+                            const preview = conv.last_message
+                                ? (conv.last_message.message_type === 'voice' ? '🎤 Hlasová správa' :
+                                   conv.last_message.message_type === 'image' ? '📷 Fotka' :
+                                   conv.last_message.message_type === 'video' ? '🎥 Video' :
+                                   conv.last_message.content)
+                                : 'Začni konverzáciu';
+                            return (
+                                <a key={conv.partner_id} href={`/messages/${conv.partner_id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                                    <div
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+                                            background: isActive ? '#fce8de' : 'white',
+                                            borderBottom: '1px solid #f0e8df',
+                                            borderLeft: isActive ? '3px solid #c4714a' : '3px solid transparent',
+                                            transition: 'background 0.15s', cursor: 'pointer',
+                                        }}
+                                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#faf6f0'; }}
+                                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'white'; }}
+                                    >
+                                        <Avatar src={conv.partner_avatar} name={conv.partner_name} size={40} />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                                                <span style={{ fontWeight: isActive ? 600 : conv.unread_count > 0 ? 700 : 500, fontSize: 13, color: isActive ? '#c4714a' : '#2d2118' }}>
+                                                    {conv.partner_name}
+                                                </span>
+                                                {conv.last_message && <span style={{ fontSize: 10, color: '#9a8a7a' }}>{relativeTime(conv.last_message.created_at)}</span>}
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: 12, color: '#9a8a7a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                                    {conv.last_message?.is_mine ? 'Ty: ' : ''}{preview}
+                                                </span>
+                                                {conv.unread_count > 0 && (
+                                                    <span style={{ background: '#c4714a', color: 'white', borderRadius: 999, minWidth: 17, height: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, padding: '0 4px', marginLeft: 6, flexShrink: 0 }}>
+                                                        {conv.unread_count > 99 ? '99+' : conv.unread_count}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Right panel — chat (fills remaining space) */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
 
                 {/* Top bar */}
                 <div style={{
@@ -473,7 +548,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     padding: '12px 16px', display: 'flex', alignItems: 'center',
                     gap: 12, flexShrink: 0, zIndex: 10,
                 }}>
-                    <a href="/messages" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
+                    <a href="/messages" className="md:hidden" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
                     <Avatar src={partner.avatar} name={partner.name} size={40} />
                     <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 15, color: '#2d2118' }}>{partner.name}</div>
@@ -744,7 +819,8 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                         </>
                     )}
                 </div>
-            </div>
+                </div> {/* end right panel */}
+            </div> {/* end two-panel wrapper */}
 
             <style>{`
                 @keyframes pulse-red {

@@ -12,75 +12,8 @@ class MessageController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
-
-        // Load last 500 messages — 1 query, avoids N+1
-        $allMessages = Message::where('sender_id', $user->id)
-            ->orWhere('receiver_id', $user->id)
-            ->orderByDesc('id')
-            ->limit(500)
-            ->get();
-
-        if ($allMessages->isEmpty()) {
-            return Inertia::render('Messages/Index', ['conversations' => []]);
-        }
-
-        // Group by partner + compute unread count — pure PHP, no extra queries
-        $conversationMap = [];
-        foreach ($allMessages as $msg) {
-            $partnerId = $msg->sender_id === $user->id ? $msg->receiver_id : $msg->sender_id;
-            if (!isset($conversationMap[$partnerId])) {
-                $conversationMap[$partnerId] = ['last' => $msg, 'unread' => 0];
-            }
-            if ($msg->receiver_id === $user->id && !$msg->is_read) {
-                $conversationMap[$partnerId]['unread']++;
-            }
-        }
-
-        // Load all partners + coaches in 1 eager-loaded query
-        $partners = User::with('coach')
-            ->whereIn('id', array_keys($conversationMap))
-            ->get()
-            ->keyBy('id');
-
-        $conversations = [];
-        foreach ($conversationMap as $partnerId => $data) {
-            $partner = $partners->get($partnerId);
-            if (!$partner) continue;
-
-            $coach     = $partner->coach ?? null;
-            $avatarUrl = $coach && $coach->avatar_path
-                ? '/storage/' . $coach->avatar_path
-                : null;
-
-            $lastMsg = $data['last'];
-            $conversations[] = [
-                'partner_id'     => $partnerId,
-                'partner_name'   => $partner->name,
-                'partner_role'   => $partner->role,
-                'partner_avatar' => $avatarUrl,
-                'last_message'   => [
-                    'content'      => $lastMsg->content,
-                    'created_at'   => $lastMsg->created_at,
-                    'is_mine'      => $lastMsg->sender_id === $user->id,
-                    'message_type' => $lastMsg->message_type ?? 'text',
-                ],
-                'unread_count' => $data['unread'],
-            ];
-        }
-
-        // Sort: unread conversations first, then by latest message time
-        usort($conversations, function ($a, $b) {
-            $aUnread = $a['unread_count'] > 0 ? 1 : 0;
-            $bUnread = $b['unread_count'] > 0 ? 1 : 0;
-            if ($aUnread !== $bUnread) return $bUnread - $aUnread;
-            $aTime = (string) ($a['last_message']['created_at'] ?? '0');
-            $bTime = (string) ($b['last_message']['created_at'] ?? '0');
-            return strcmp($bTime, $aTime);
-        });
-
         return Inertia::render('Messages/Index', [
-            'conversations' => $conversations,
+            'conversations' => $this->buildConversations(auth()->user()),
         ]);
     }
 
@@ -123,15 +56,73 @@ class MessageController extends Controller
         });
 
         return Inertia::render('Messages/Show', [
-            'partner' => [
+            'partner'       => [
                 'id'          => $partner->id,
                 'name'        => $partner->name,
                 'role'        => $partner->role,
                 'avatar'      => $avatarUrl,
                 'is_verified' => $coach ? $coach->is_verified : false,
             ],
-            'messages' => $formattedMessages,
+            'messages'      => $formattedMessages,
+            'conversations' => $this->buildConversations($user),
         ]);
+    }
+
+    private function buildConversations($user): array
+    {
+        $allMessages = Message::where('sender_id', $user->id)
+            ->orWhere('receiver_id', $user->id)
+            ->orderByDesc('id')
+            ->limit(500)
+            ->get();
+
+        if ($allMessages->isEmpty()) return [];
+
+        $conversationMap = [];
+        foreach ($allMessages as $msg) {
+            $partnerId = $msg->sender_id === $user->id ? $msg->receiver_id : $msg->sender_id;
+            if (!isset($conversationMap[$partnerId])) {
+                $conversationMap[$partnerId] = ['last' => $msg, 'unread' => 0];
+            }
+            if ($msg->receiver_id === $user->id && !$msg->is_read) {
+                $conversationMap[$partnerId]['unread']++;
+            }
+        }
+
+        $partners = User::with('coach')
+            ->whereIn('id', array_keys($conversationMap))
+            ->get()->keyBy('id');
+
+        $conversations = [];
+        foreach ($conversationMap as $partnerId => $data) {
+            $partner = $partners->get($partnerId);
+            if (!$partner) continue;
+            $c         = $partner->coach ?? null;
+            $avatarUrl = $c && $c->avatar_path ? '/storage/' . $c->avatar_path : null;
+            $lastMsg   = $data['last'];
+            $conversations[] = [
+                'partner_id'     => $partnerId,
+                'partner_name'   => $partner->name,
+                'partner_role'   => $partner->role,
+                'partner_avatar' => $avatarUrl,
+                'last_message'   => [
+                    'content'      => $lastMsg->content,
+                    'created_at'   => $lastMsg->created_at,
+                    'is_mine'      => $lastMsg->sender_id === $user->id,
+                    'message_type' => $lastMsg->message_type ?? 'text',
+                ],
+                'unread_count' => $data['unread'],
+            ];
+        }
+
+        usort($conversations, function ($a, $b) {
+            $aU = $a['unread_count'] > 0 ? 1 : 0;
+            $bU = $b['unread_count'] > 0 ? 1 : 0;
+            if ($aU !== $bU) return $bU - $aU;
+            return strcmp((string) ($b['last_message']['created_at'] ?? '0'), (string) ($a['last_message']['created_at'] ?? '0'));
+        });
+
+        return $conversations;
     }
 
     public function store(Request $request, $userId)

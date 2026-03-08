@@ -1,3 +1,4 @@
+import React from 'react';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link } from '@inertiajs/react';
 
@@ -97,37 +98,72 @@ export default function Home({ featured }: Props) {
                         </div>
 
                         {/* Right: app mockup preview — desktop only */}
-                        <div className="hidden md:block flex-shrink-0" style={{ width: 320 }}>
-                            <div
-                                className="relative overflow-hidden rounded-3xl shadow-2xl"
-                                style={{
-                                    background: 'linear-gradient(145deg, #c4714a 0%, #5a3e2b 60%, #2d2118 100%)',
-                                    aspectRatio: '9/16',
-                                    maxHeight: 420,
-                                }}
-                            >
-                                {/* Mockup screen content */}
-                                <div style={{ padding: '24px 20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                                        <div style={{ fontFamily: 'Georgia, serif', color: 'white', fontWeight: 700, fontSize: 18 }}>PULSE</div>
+                        <div className="hidden md:block flex-shrink-0" style={{ width: 300 }}>
+                            {/* Phone frame */}
+                            <div style={{
+                                background: '#1a1a1a', borderRadius: 36, padding: 10,
+                                boxShadow: '0 32px 64px rgba(0,0,0,0.28), 0 8px 24px rgba(196,113,74,0.2)',
+                                maxHeight: 520,
+                            }}>
+                                <div style={{
+                                    background: '#faf6f0', borderRadius: 28, overflow: 'hidden',
+                                    aspectRatio: '9/18', position: 'relative',
+                                }}>
+                                    {/* App nav bar */}
+                                    <div style={{ background: 'white', padding: '12px 14px', borderBottom: '1px solid #e8d9c4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ fontFamily: 'Georgia, serif', color: '#c4714a', fontWeight: 700, fontSize: 16 }}>PULSE</span>
+                                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#c4714a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <span style={{ color: 'white', fontWeight: 700, fontSize: 11 }}>T</span>
+                                        </div>
                                     </div>
-                                    {[0,1,2].map(i => (
-                                        <div key={i} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ height: 8, background: 'rgba(255,255,255,0.4)', borderRadius: 4, marginBottom: 5, width: '70%' }} />
-                                                <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 4, width: '50%' }} />
+                                    {/* Stories strip */}
+                                    <div style={{ background: 'white', padding: '8px 12px', display: 'flex', gap: 8, borderBottom: '1px solid #f0e8df' }}>
+                                        {['💪','🧘','🥗','🏃'].map((e, i) => (
+                                            <div key={i} style={{ textAlign: 'center', flexShrink: 0 }}>
+                                                <div style={{ width: 38, height: 38, borderRadius: '50%', background: `linear-gradient(135deg, #c4714a, #f5a623)`, padding: 2, marginBottom: 2 }}>
+                                                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#e8d9c4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>{e}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {/* Post cards */}
+                                    {[
+                                        { name: 'Tomáš K.', spec: 'Silový tréning', lines: ['70%','50%'], hasMedia: true, color: '#4a7c59' },
+                                        { name: 'Lucia H.', spec: 'Joga & Wellness', lines: ['60%','40%'], hasMedia: false, color: '#c4714a' },
+                                    ].map((p, i) => (
+                                        <div key={i} style={{ background: 'white', marginBottom: 6 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
+                                                <div style={{ width: 30, height: 30, borderRadius: '50%', background: p.color, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 11, fontWeight: 700 }}>
+                                                    {p.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, fontWeight: 600, color: '#2d2118' }}>{p.name}</div>
+                                                    <div style={{ fontSize: 9, color: '#c4714a' }}>{p.spec}</div>
+                                                </div>
+                                            </div>
+                                            {p.hasMedia && (
+                                                <div style={{ height: 90, background: 'linear-gradient(135deg, #2d2118, #5a3e2b)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 12 }}>▶</div>
+                                                </div>
+                                            )}
+                                            <div style={{ padding: '6px 12px 8px' }}>
+                                                {p.lines.map((w, j) => (
+                                                    <div key={j} style={{ height: 6, background: '#f0e8df', borderRadius: 3, marginBottom: 4, width: w }} />
+                                                ))}
+                                                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                                                    <span style={{ fontSize: 12 }}>🤍</span>
+                                                    <span style={{ fontSize: 12 }}>💬</span>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
-                                    <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, aspectRatio: '16/9', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <span style={{ color: 'white', fontSize: 16 }}>▶</span>
-                                        </div>
+                                    {/* Bottom nav bar */}
+                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e8d9c4', padding: '8px 0', display: 'flex', justifyContent: 'space-around' }}>
+                                        {['🏠','📱','🔍','💬','👤'].map((ic, i) => (
+                                            <span key={i} style={{ fontSize: i === 0 ? 16 : 13, opacity: i === 0 ? 1 : 0.4 }}>{ic}</span>
+                                        ))}
                                     </div>
                                 </div>
-                                {/* Gradient overlay */}
-                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, background: 'linear-gradient(to top, rgba(45,33,24,0.8), transparent)' }} />
                             </div>
                         </div>
                     </div>
@@ -234,12 +270,15 @@ export default function Home({ featured }: Props) {
 function FeaturedCoachCard({ coach }: { coach: Coach }) {
     const price = parseFloat(coach.monthly_price);
     const rating = coach.rating ? parseFloat(coach.rating) : null;
+    const [hovered, setHovered] = React.useState(false);
 
     return (
         <Link
             href={`/coaches/${coach.id}`}
-            className="flex w-40 flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-4 pt-5 shadow-sm transition hover:shadow-md md:w-auto"
-            style={{ border: '1px solid #e8d9c4' }}
+            className="group flex w-40 flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-4 pt-5 shadow-sm transition hover:shadow-md md:w-auto"
+            style={{ border: `1px solid ${hovered ? '#c4714a' : '#e8d9c4'}`, transition: 'border-color 0.2s, box-shadow 0.2s', position: 'relative' }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
         >
             {/* Round avatar */}
             <div
@@ -278,6 +317,31 @@ function FeaturedCoachCard({ coach }: { coach: Coach }) {
                 {price === 0 ? 'Zadarmo' : `€${price.toFixed(2)}`}
                 {price > 0 && <span className="ml-1 font-sans text-xs font-normal" style={{ color: '#9a8a7a' }}>/mes</span>}
             </p>
+
+            {/* Hover CTA — desktop only */}
+            <div
+                className="hidden md:block"
+                style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    background: 'linear-gradient(to top, white 60%, transparent)',
+                    borderRadius: '0 0 16px 16px',
+                    padding: '28px 12px 14px',
+                    opacity: hovered ? 1 : 0,
+                    transform: hovered ? 'translateY(0)' : 'translateY(4px)',
+                    transition: 'opacity 0.2s, transform 0.2s',
+                    pointerEvents: hovered ? 'auto' : 'none',
+                }}
+            >
+                <div
+                    style={{
+                        background: '#c4714a', color: 'white', borderRadius: 999,
+                        padding: '7px 0', textAlign: 'center',
+                        fontSize: 12, fontWeight: 700,
+                    }}
+                >
+                    Predplatiť
+                </div>
+            </div>
         </Link>
     );
 }
