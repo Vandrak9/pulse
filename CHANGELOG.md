@@ -1,12 +1,58 @@
 # Changelog
 
-All notable changes to PULSE are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-Versioning follows [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
+Všetky zmeny sú dokumentované podľa [Keep a Changelog](https://keepachangelog.com/sk/1.0.0/).
+Verziovanie podľa [Semantic Versioning](https://semver.org/lang/sk/).
 
-> **MAJOR** — breaking changes
-> **MINOR** — new features, backwards compatible
-> **PATCH** — bug fixes, small UI tweaks, content changes
+## [Unreleased]
+
+### Planned
+- Stripe webhooks pre spoľahlivé potvrdenie platieb
+- Vyhľadávanie koučov a obsahu full-text
+- S3/Cloudflare R2 úložisko médií
+- Laravel Horizon monitoring queue jobov
+- PWA manifest (Add to homescreen)
+- Admin panel (schvaľovanie koučov)
+
+---
+
+## [1.1.0] — 2026-03-08 — "Spark"
+
+### Added
+- Sociálny follow systém (sledovanie koučov zadarmo)
+- Fan/User profily s bio, avatrom, štatistikami predplatného
+- Tvorba príspevkov koučom (text, foto, exkluzívne video)
+- Tvorba Reels (vždy verejné, notifikácia sledovateľom)
+- Nastavenie súkromia správ pre koučov (everyone/subscribers/nobody)
+- Modal nová konverzácia s vyhľadávaním
+- Stripe predplatné v test móde (Checkout hosted page)
+- Reálna kontrola `isSubscribed` (nahradila hardcoded false)
+- Funkčný paywall blur na základe predplatného
+- Systém hodnotení a recenzií koučov (1-5 hviezd)
+- Rating bar chart na profile kouča
+- Overený predplatiteľ badge na recenziách
+- Footer s GDPR odkazmi na všetkých stránkach
+- Login/Register split layout (form + vizuálny panel)
+- Právne stránky (GDPR, VOP, Cookies, Kontakt)
+- Coach Dashboard (zárobky, graf, predplatitelia, aktivita)
+- Developer dokumentácia (README, CONTRIBUTING, docs/)
+- GitHub PR template a Issue templates
+- 32 feature testov (všetky prechádzajú)
+- `develop` branch pre tímový vývoj
+- `pulse_test` DB pre izoláciu testov
+
+### Fixed
+- Follow tlačidlo: axios namiesto Inertia router (JSON konflikt)
+- Fan 403 pri prihlásení (nesprávny middleware)
+- Recenzia 500 pri prvom odoslaní (notifikácia použila nesprávnu schému)
+- Dashboard 500 pre koučov bez profilu (TypeError v `requireCoach()`)
+- RefreshDatabase wiping produkčnej `pulse_db` (phpunit.xml fix)
+- Flash správy sa nezobrazovali po presmerovaní (HandleInertiaRequests)
+
+### Security
+- Rate limiting na write endpointy (messages, uploads)
+- Stripe API volania obalené v `try/catch`
+- Notifikačné inserty obalené v `try/catch`
+- Testy izolované na separátnej `pulse_test` databáze
 
 ---
 

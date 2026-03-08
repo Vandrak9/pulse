@@ -171,3 +171,27 @@ php artisan queue:work --queue=default,notifications
 
 Ak objavíš bezpečnostnú zraniteľnosť, **nepublikuj ju ako issue**.
 Kontaktuj nás priamo: [hello@pulsehub.fun](mailto:hello@pulsehub.fun)
+
+---
+
+## Testovanie
+
+### DÔLEŽITÉ — Izolácia testov
+Testy bežia na separátnej databáze `pulse_test` (PostgreSQL), NIE na `pulse_db`.
+`phpunit.xml` je nakonfigurovaný na `DB_DATABASE=pulse_test`.
+
+Nikdy nespúšťaj testy s `--env=production` alebo so zmenou `DB_CONNECTION` v `.env`.
+
+### Spustenie testov
+```bash
+php artisan test                    # všetky testy
+php artisan test --filter=Coach     # konkrétna skupina
+php artisan test --stop-on-failure  # zastaviť pri prvej chybe
+```
+
+### Pridávanie testov
+- Každá nová feature musí mať aspoň 1 feature test
+- Testy patria do `tests/Feature/`
+- Naming: `FeatureNameTest.php`
+- Vždy použiť `use RefreshDatabase`
+- Factories: `database/factories/` (existuje `UserFactory`, `CoachFactory`)

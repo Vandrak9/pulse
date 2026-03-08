@@ -131,6 +131,32 @@ CVC:    123
 
 ---
 
+## Aktuálny stav (v1.1.0)
+
+### Funkčné features
+- ✅ Autentifikácia (fan/kouč roly)
+- ✅ Profily koučov s obsahom
+- ✅ Sociálny feed (príspevky, reels, videá)
+- ✅ Follow systém (sledovanie koučov)
+- ✅ DM správy (text, foto, video, hlasovky)
+- ✅ Broadcast správy (kouč → všetci predplatitelia)
+- ✅ Notifikácie
+- ✅ Stripe predplatné (test mód)
+- ✅ Hodnotenia a recenzie koučov
+- ✅ Tvorba obsahu (príspevky, reels)
+- ✅ Dashboard pre koučov (zárobky, predplatitelia)
+- ✅ Fan profily
+- ✅ Legal stránky (GDPR, VOP, Cookies)
+
+### Pending features
+- ⏳ Stripe webhooks
+- ⏳ Vyhľadávanie
+- ⏳ S3/Cloudflare R2 úložisko
+- ⏳ Laravel Horizon monitoring
+- ⏳ PWA manifest
+
+---
+
 ## Architektúra
 
 ### Backend (`app/`)
