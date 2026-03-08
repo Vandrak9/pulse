@@ -137,19 +137,28 @@ class MessageController extends Controller
         $content      = $request->input('content', '');
 
         if ($request->hasFile('media')) {
-            $file      = $request->file('media');
-            $mediaMime = $file->getMimeType();
-            $mediaSize = $file->getSize();
+            $file        = $request->file('media');
+            $mediaMime   = $file->getMimeType();
+            $mediaSize   = $file->getSize();
+            $clientType  = $request->input('message_type'); // trust client for voice (iOS audio/mp4 detected as video/mp4)
 
             Log::info('Upload attempt', [
                 'mime'         => $mediaMime,
+                'client_type'  => $clientType,
                 'size'         => $mediaSize,
                 'original'     => $file->getClientOriginalName(),
                 'content_type' => $request->header('Content-Type'),
                 'all_keys'     => array_keys($request->all()),
             ]);
 
-            if (str_starts_with($mediaMime, 'image/')) {
+            // If client explicitly marks as voice, honour it regardless of MIME detection
+            // (iOS records audio/mp4 which PHP often misdetects as video/mp4)
+            if ($clientType === 'voice') {
+                $messageType   = 'voice';
+                $mediaPath     = $file->store('messages/voice', 'public');
+                $mediaDuration = $request->integer('voice_duration') ?: null;
+                $content       = '';
+            } elseif (str_starts_with($mediaMime, 'image/')) {
                 $messageType = 'image';
                 $mediaPath   = $file->store('messages/images', 'public');
                 $content     = '';

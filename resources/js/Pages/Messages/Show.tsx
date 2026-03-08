@@ -275,6 +275,16 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
     const handleMediaFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        // Debug: log actual size so we can verify the check
+        console.log('[media] file:', file.name, 'type:', file.type, 'size bytes:', file.size, 'MB:', (file.size / 1024 / 1024).toFixed(2));
+
+        if (file.size > MAX_SIZE) {
+            showToast(`Súbor je príliš veľký (${Math.round(file.size / 1024 / 1024)}MB, max 50MB)`);
+            e.target.value = '';
+            return;
+        }
+
         const type: 'image' | 'video' | null =
             file.type.startsWith('image/') ? 'image' :
             file.type.startsWith('video/') ? 'video' : null;
@@ -551,7 +561,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                 <input
                     ref={mediaFileRef}
                     type="file"
-                    accept="image/*,video/*"
+                    accept="image/jpeg,image/png,image/heic,image/webp,video/mp4,video/mov,video/quicktime"
                     style={{ display: 'none' }}
                     onChange={handleMediaFileChange}
                 />
