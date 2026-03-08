@@ -201,11 +201,16 @@ POST /register            → role=coach → /dashboard/profile
 ## Deployment
 
 - **Server:** Ubuntu VPS, nginx + PHP 8.3 FPM
+- **Domain:** https://pulsehub.fun (+ www redirect)
+- **SSL:** Let's Encrypt via Certbot, auto-renews, expires 2026-06-06
 - **Root:** `/opt/pulse/public`
 - **Queue:** systemd `pulse-queue.service`, redis driver, tries=3
 - **Storage symlink:** `public/storage → storage/app/public`
+- **Storage dirs:** `storage/app/public/messages/{images,videos,voice}` (775)
 - **Re-seed:** `php artisan migrate:fresh --seed --force`
 - **Build:** `npm run build`
+- **APP_URL:** `https://pulsehub.fun`
+- **SESSION_SECURE_COOKIE:** true (set in .env)
 
 ---
 
@@ -329,3 +334,5 @@ POST /dashboard/broadcast             → BroadcastController@store (coach only)
 - [ ] Search functionality
 - [ ] HTTPS / SSL certificate
 - [ ] S3 migration (`FILESYSTEM_DISK=s3`)
+- [2026-03-08 07:12:59] e43e958: feat: DM chat system with conversation list, messaging UI, multimedia and broadcast
+- [2026-03-08 07:23:46] 0f0dfab: fix: multimedia upload bugs and HTTP compatibility
