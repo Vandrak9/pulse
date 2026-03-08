@@ -16,6 +16,14 @@ class Message extends Model
         'price_paid',
         'stripe_payment_id',
         'is_paid',
+        'is_read',
+        'read_at',
+        'message_type',
+        'media_path',
+        'media_thumbnail',
+        'media_duration',
+        'media_size',
+        'is_broadcast',
         'created_at',
     ];
 
@@ -24,6 +32,9 @@ class Message extends Model
         return [
             'price_paid' => 'decimal:2',
             'is_paid' => 'boolean',
+            'is_read' => 'boolean',
+            'is_broadcast' => 'boolean',
+            'read_at' => 'datetime',
             'created_at' => 'datetime',
         ];
     }

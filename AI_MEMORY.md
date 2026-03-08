@@ -145,7 +145,7 @@ POST /register            → role=coach → /dashboard/profile
 - [ ] Subscription checkout (fan subscribes to coach)
 - [ ] `isSubscribed` currently hardcoded `false` — needs real check
 - [ ] Tip jar (one-time Stripe Payment Intent)
-- [ ] Direct messages UI (fan ↔ coach, paid messages)
+- [x] Direct messages UI (fan ↔ coach, paid messages) ← DONE Session 2
 - [ ] Coach content upload form (real file upload to storage)
 - [ ] Notifications system
 - [ ] Fan profile page (my subscriptions, saved posts)
@@ -245,3 +245,87 @@ POST /register            → role=coach → /dashboard/profile
 - [2026-03-07 20:56:39] 360c0ee: chore: update CHANGELOG and memory for v0.7.0
 - [2026-03-07 21:12:20] 4be45f4: feat: 11 coaches, 3 reels per coach, reels always free for registered users
 - [2026-03-07 21:15:48] f31d41e: fix: reels/videos tabs always show content + persist dominik@haluza.sk
+- [2026-03-07 21:22:40] 92dd247: checkpoint: end of session 1 — full UI MVP ready
+
+---
+
+## Session 2 — 2026-03-08
+
+### What was built
+
+- **DM Chat System** (Phase 1): full fan ↔ coach messaging
+- **Multimedia messages** (Phase 2): image/video/voice message support in schema + controller
+- **Broadcast messaging** (Phase 3): coach sends one message to all subscribers at once
+
+### New DB schema additions
+
+```
+messages (new columns):
+  is_read: boolean default false
+  read_at: timestamp nullable
+  message_type: string default 'text'  (text|image|video|voice|file)
+  media_path: string nullable
+  media_thumbnail: string nullable
+  media_duration: integer nullable (seconds)
+  media_size: integer nullable (bytes)
+  is_broadcast: boolean default false
+
+broadcasts: id, coach_id (FK→users), content, message_type, media_path,
+            media_thumbnail, media_duration, sent_at, timestamps
+broadcast_recipients: id, broadcast_id (FK), user_id (FK), is_read, read_at, created_at
+  ($timestamps = false on BroadcastRecipient)
+```
+
+### New files
+
+```
+app/Http/Controllers/
+  MessageController.php       ← index/show/store/unreadCount
+  MediaStreamController.php   ← stream($messageId) with auth check
+  BroadcastController.php     ← index/store for coach broadcast page
+app/Jobs/SendBroadcastJob.php ← queued, inserts messages in chunks of 50
+app/Models/
+  Broadcast.php               ← belongsTo User (coach_id), hasMany BroadcastRecipient
+  BroadcastRecipient.php      ← $timestamps = false
+database/seeders/MessageSeeder.php ← 19 messages across 3 conversations + 2 broadcasts
+resources/js/Pages/
+  Messages/Index.tsx          ← conversation list (iMessage-style)
+  Messages/Show.tsx           ← chat UI, 5s polling, date separators, read receipts ✓✓
+  Dashboard/Broadcast.tsx     ← composer, preview, confirm modal, history list
+```
+
+### Routes added (all require auth)
+
+```
+GET  /messages                        → MessageController@index
+GET  /messages/{userId}               → MessageController@show (marks as read)
+POST /messages/{userId}               → MessageController@store
+GET  /api/messages/unread-count       → JSON {count: N}
+GET  /media/message/{message}         → MediaStreamController@stream
+GET  /dashboard/broadcast             → BroadcastController@index (coach only)
+POST /dashboard/broadcast             → BroadcastController@store (coach only)
+```
+
+### PulseLayout.tsx changes
+- Added `unreadCount` state fetched from `/api/messages/unread-count` on mount + every 30s
+- Unread badge on 💬 Správy tab in bottom nav
+- Badge: terracotta circle with count
+
+### Current version: v0.8.0
+
+### Remaining for MVP
+
+- [ ] Stripe Connect onboarding flow for coaches
+- [ ] Subscription checkout (fan subscribes to coach) — `isSubscribed` hardcoded `false`
+- [ ] Tip jar (one-time Stripe Payment Intent)
+- [ ] Coach content upload form (real file upload to storage)
+- [ ] Voice note recording UI (MediaRecorder API) in Show.tsx
+- [ ] Image/video picker with client-side compression in Show.tsx
+- [ ] Real Stripe subscriber lookup in BroadcastController (currently uses subscriber_count field)
+- [ ] Notifications system
+- [ ] Fan profile page (my subscriptions, saved posts)
+- [ ] Coach dashboard (earnings, subscriber stats)
+- [ ] Admin panel (coach verification)
+- [ ] Search functionality
+- [ ] HTTPS / SSL certificate
+- [ ] S3 migration (`FILESYSTEM_DISK=s3`)

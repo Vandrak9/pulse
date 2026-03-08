@@ -1,13 +1,14 @@
+import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 
 interface Props {
     children: React.ReactNode;
 }
 
-const TAB_ITEMS = [
-    { label: 'Domov',    icon: '🏠', href: '/' },
-    { label: 'Feed',     icon: '📱', href: '/feed' },
-    { label: 'Správy',  icon: '💬', href: '/messages' },
+const NAV_LINKS = [
+    { label: 'Domov',   icon: '🏠', href: '/' },
+    { label: 'Feed',    icon: '📱', href: '/feed' },
+    { label: 'Správy', icon: '💬', href: '/messages' },
     { label: 'Profil',  icon: '👤', href: '/dashboard/profile' },
 ];
 
@@ -16,11 +17,35 @@ export default function PulseLayout({ children }: Props) {
     const { auth } = page.props as { auth: { user: { name: string } | null } };
     const user = auth?.user ?? null;
     const url = page.url;
+    const [unreadCount, setUnreadCount] = useState(0);
 
     function isActive(href: string) {
         if (href === '/') return url === '/';
         return url.startsWith(href);
     }
+
+    // Fetch unread message count every 30 seconds (only when authenticated)
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchUnread = () => {
+            fetch('/api/messages/unread-count', {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            })
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data && typeof data.count === 'number') {
+                        setUnreadCount(data.count);
+                    }
+                })
+                .catch(() => {});
+        };
+
+        fetchUnread();
+        const interval = setInterval(fetchUnread, 30000);
+        return () => clearInterval(interval);
+    }, [user]);
 
     return (
         <div className="flex min-h-screen flex-col" style={{ backgroundColor: '#faf6f0' }}>
@@ -120,8 +145,9 @@ export default function PulseLayout({ children }: Props) {
                 style={{ borderColor: '#e8d9c4' }}
             >
                 <div className="flex">
-                    {TAB_ITEMS.map((tab) => {
+                    {NAV_LINKS.map((tab) => {
                         const active = isActive(tab.href);
+                        const isMessages = tab.href === '/messages';
                         return (
                             <Link
                                 key={tab.href}
@@ -129,7 +155,30 @@ export default function PulseLayout({ children }: Props) {
                                 className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors"
                                 style={{ color: active ? '#c4714a' : '#9a8a7a' }}
                             >
-                                <span className="text-lg leading-none">{tab.icon}</span>
+                                <span className="relative text-lg leading-none">
+                                    {tab.icon}
+                                    {isMessages && unreadCount > 0 && (
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: -4,
+                                            right: -8,
+                                            background: '#c4714a',
+                                            color: 'white',
+                                            borderRadius: 999,
+                                            fontSize: 9,
+                                            fontWeight: 700,
+                                            minWidth: 16,
+                                            height: 16,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '0 4px',
+                                            lineHeight: 1,
+                                        }}>
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
+                                    )}
+                                </span>
                                 {tab.label}
                             </Link>
                         );
