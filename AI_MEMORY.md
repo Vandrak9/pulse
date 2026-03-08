@@ -333,10 +333,10 @@ POST /dashboard/broadcast             → BroadcastController@store (coach only)
 - [ ] Real Stripe subscriber lookup in BroadcastController (currently uses subscriber_count field)
 - [ ] Notifications system
 - [ ] Fan profile page (my subscriptions, saved posts)
-- [ ] Coach dashboard (earnings, subscriber stats)
+- [x] Coach dashboard (earnings, subscriber stats) ← DONE Session 3
 - [ ] Admin panel (coach verification)
 - [ ] Search functionality
-- [ ] HTTPS / SSL certificate
+- [ ] HTTPS / SSL certificate ← DONE (pulsehub.fun Let's Encrypt)
 - [ ] S3 migration (`FILESYSTEM_DISK=s3`)
 - [2026-03-08 07:12:59] e43e958: feat: DM chat system with conversation list, messaging UI, multimedia and broadcast
 - [2026-03-08 07:23:46] 0f0dfab: fix: multimedia upload bugs and HTTP compatibility
@@ -351,3 +351,41 @@ POST /dashboard/broadcast             → BroadcastController@store (coach only)
 - [2026-03-08 08:25:30] fa2918d: chore: update AI_MEMORY with messaging features and schema
 - [2026-03-08 08:34:06] 3749e86: chore: full project audit report
 - [2026-03-08 08:42:29] 12f4b9e: fix: all critical and important audit issues resolved
+- [2026-03-08 08:43:18] 9a1c55c: chore: update AI_MEMORY with audit fixes and new shared utilities
+- [2026-03-08 08:55:45] 1045866: feat: coach dashboard with earnings, subscribers and analytics
+
+---
+
+## Session 3 — 2026-03-08 (cont.)
+
+### What was built
+
+- **Audit fixes**: Rate limiting (throttle:messages/uploads/likes/broadcasts), client message_type security, N+1 fix in MessageController, BroadcastController role check, removed debug logs, extracted Avatar.tsx + utils.ts, added .env.example entries, DB performance indexes
+- **Shared utilities** `resources/js/lib/utils.ts`: getInitials, formatDuration, formatChatDate, formatFullDate, relativeTime, formatTime, isSameDay
+- **Avatar component** `resources/js/Components/Avatar.tsx`: img or terracotta initials fallback, size prop
+- **Coach Dashboard** (3 pages):
+  - `Dashboard/Index.tsx`: stats grid, 6-month revenue bar chart (recharts), quick actions, recent activity, top post
+  - `Dashboard/Earnings.tsx`: summary cards, bar chart, monthly table (gross/fee/net/status), paginated transaction history
+  - `Dashboard/Subscribers.tsx`: anonymized list, filter tabs, churn rate banner, avg duration card
+- **DashboardController** (`app/Http/Controllers/DashboardController.php`): index/earnings/subscribers + requireCoach() helper
+- **PulseLayout** dropdown: avatar button with click-outside close, Dashboard (coach only) / Profil / Odhlásiť sa links
+- **posts.views** column added (migration + Post::$fillable)
+- **recharts** npm package added
+
+### Routes added
+
+```
+GET /dashboard           → DashboardController@index    (auth+verified)
+GET /dashboard/earnings  → DashboardController@earnings (auth)
+GET /dashboard/subscribers → DashboardController@subscribers (auth)
+```
+
+### DashboardController notes
+
+- `requireCoach()`: aborts 403 if `auth()->user()->role !== 'coach'`
+- Revenue = `subscriber_count × monthly_price × 0.85` (no real Stripe yet)
+- `buildRevenueChart()`: last 6 months using Carbon, current month highlighted
+- `buildRecentActivity()`: real PostLike + Message data, icons by type
+- `buildTransactions()`: simulated 20 tx (real Stripe later)
+- Subscribers anonymized as `Fan#XXXX` format
+
