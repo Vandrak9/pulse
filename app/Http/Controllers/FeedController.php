@@ -146,7 +146,7 @@ class FeedController extends Controller
                 'user_id'       => $coach->user_id,
                 'name'          => $coach->user->name,
                 'is_followed'   => in_array($coach->user_id, $followedUserIds),
-                'is_subscribed' => $user->subscribed('coach_' . $coach->id),
+                'is_subscribed' => in_array($coach->id, $subscribedCoachIds),
                 'avatar_url'    => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,

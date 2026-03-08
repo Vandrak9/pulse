@@ -83,8 +83,12 @@ class CoachController extends Controller
                 ->where('following_id', $coach->user_id)
                 ->exists()
             : false;
-        $isSubscribed   = $authUser
-            ? $authUser->subscribed('coach_' . $coach->id)
+        $isSubscribed   = $authUserId
+            ? DB::table('subscriptions')
+                ->where('user_id', $authUserId)
+                ->where('coach_id', $coach->id)
+                ->whereIn('stripe_status', ['active', 'trialing'])
+                ->exists()
             : false;
         $followersCount = DB::table('follows')
             ->where('following_id', $coach->user_id)
