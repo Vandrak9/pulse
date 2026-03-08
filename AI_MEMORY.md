@@ -641,3 +641,35 @@ POST /dashboard/reels         → PostController@storeReel
   - Opens modal on click, navigates to `/messages/{user_id}` on coach selection
 - [2026-03-08 14:47:44] fe6a9ce: feat: messages privacy setting visible in coach profile edit
 - [2026-03-08 14:49:41] 1ec71bf: chore: v1.0.0 changelog, scalability report, code cleanup
+- [2026-03-08 16:38:34] 0b87fa6: feat: complete fan profile with subscriptions, following, likes tabs
+
+---
+
+## Session 13 — 2026-03-08 (cont.)
+
+### What was built — Complete fan profile page
+
+**Backend — `UserProfileController` full rewrite:**
+- `show()` now returns: `email` (own only), `member_since` (Slovak), `likedPostsCount`, `likedPosts` (last 24, with thumbnail_url), `subscriptions` (real Cashier subs or demo from following coaches), `subscriptionsCount`, `monthly_price` on followingList entries
+- `mySubscriptions()` added: GET `/profile/subscriptions` → JSON; real Stripe subs or demo following coaches
+- Route `/profile/subscriptions` placed BEFORE `/profile/{userId}` to avoid conflict
+- Subscriptions demo: following coaches shown as mock active subscriptions when Cashier table is empty
+
+**Frontend — `Profile/Show.tsx` complete rewrite:**
+- Stats row: Sleduje / Predplatné / Lajky (3 counts)
+- Avatar: hover overlay (📷) always clickable on own profile (no need for edit mode)
+- Member since: `"Člen od marca 2026"` under role badge
+- Role badge: green (#e8f4ec / #4a7c59) for fan, terracotta for coach
+- 4 tabs (own profile): 📋 Predplatné / 👥 Sleduje / ❤️ Páčilo sa mi / ⚙️ Nastavenia
+- 1 tab (other profile): 👥 Sleduje
+- Default tab: `predplatne` (own profile), `sleduje` (other)
+- **Predplatné tab**: subscription rows — avatar, name, spec, subscribed_since, price badge, status pill (green/red), "Profil →" link, ghost "Zrušiť" button (red on hover)
+- **Sleduje tab**: 2-col mobile / 4-col desktop grid; "Sledujem ✓" unfollow button (optimistic, fades card on unfollow)
+- **Lajky tab**: 3-col grid of liked posts — thumbnail, exclusive lock badge, post title, coach name
+- **Nastavenia tab**: email (read-only), "Zmeniť heslo" link, coach settings link (coaches only), danger zone with "Zmazať účet" → confirmation modal
+- Delete modal: overlay with confirm/cancel buttons, calls `router.delete('/profile')`
+- Message button (💬) on other users' profiles
+- `Avatar` component imported from `@/Components/Avatar`
+
+**Seed data added:**
+- `fan@pulse.sk`: profile_bio set, profile_is_public=true, 5 post_likes inserted
