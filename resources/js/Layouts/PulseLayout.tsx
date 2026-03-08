@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut, PlusSquare } from 'lucide-react';
+import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut, PlusSquare, Megaphone } from 'lucide-react';
 
 interface Props {
     children: React.ReactNode;
@@ -96,6 +96,7 @@ export default function PulseLayout({ children }: Props) {
     const desktopNavLinks: { label: string; icon: React.ReactNode; href: string; badge: number; isAddMenu?: boolean }[] = isCoach
         ? [
             { label: 'Dashboard',    icon: <BarChart2 size={18} />,  href: '/dashboard',           badge: 0 },
+            { label: 'Broadcast',    icon: <Megaphone size={18} />,  href: '/dashboard/broadcast', badge: 0 },
             ...sharedLinks,
             { label: 'Pridať obsah', icon: <PlusSquare size={18} />, href: '#',                    badge: 0, isAddMenu: true },
           ]
