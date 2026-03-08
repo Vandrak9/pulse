@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\PostLike;
+use App\Models\Review;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +66,8 @@ class DashboardController extends Controller
                 'total_posts'           => $totalPosts,
                 'total_views'           => $totalViews,
                 'unread_messages'       => $unreadMessages,
+                'rating_avg'            => (float) $coach->rating_avg,
+                'rating_count'          => (int) $coach->rating_count,
             ],
             'top_post'       => $topPost ? [
                 'id'          => $topPost->id,
@@ -256,6 +259,23 @@ class DashboardController extends Controller
                 'text' => 'Nová ' . ($msg->message_type === 'voice' ? 'hlasová ' : '') . 'správa',
                 'icon' => '💬',
                 'time' => $msg->created_at?->toISOString() ?? now()->toISOString(),
+            ];
+        }
+
+        // Recent reviews
+        $recentReviews = Review::where('coach_id', $coach->id)
+            ->with('user:id,name')
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+
+        foreach ($recentReviews as $review) {
+            $stars = str_repeat('★', $review->rating);
+            $activity[] = [
+                'type' => 'review',
+                'text' => ($review->user->name ?? 'Fanúšik') . ' zanechal hodnotenie ' . $stars,
+                'icon' => '⭐',
+                'time' => $review->created_at?->toISOString() ?? now()->toISOString(),
             ];
         }
 

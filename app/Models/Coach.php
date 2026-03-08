@@ -17,6 +17,8 @@ class Coach extends Model
         'stripe_account_id',
         'stripe_product_id',
         'stripe_price_id',
+        'rating_avg',
+        'rating_count',
         'is_verified',
         'rating',
         'subscriber_count',

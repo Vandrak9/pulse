@@ -11,7 +11,8 @@ interface Coach {
     monthly_price: string;
     avatar_url: string | null;
     bio: string | null;
-    rating: string | null;
+    rating_avg: number;
+    rating_count: number;
     subscriber_count: number;
     video_count: number;
     image_count: number;
@@ -185,7 +186,8 @@ function CoachCard({
     onFollow: (e: React.MouseEvent, userId: number) => void;
 }) {
     const price = parseFloat(coach.monthly_price);
-    const rating = coach.rating ? parseFloat(coach.rating) : null;
+    const rating = coach.rating_avg;
+    const ratingCount = coach.rating_count;
 
     const contentBadges: string[] = [];
     if (coach.video_count > 0) contentBadges.push(`🎬 ${coach.video_count} videí`);
@@ -238,17 +240,23 @@ function CoachCard({
             )}
 
             <div className="mt-2 flex items-center gap-2">
-                {rating !== null && (
+                {ratingCount > 0 ? (
                     <>
                         <span className="flex items-center gap-0.5 text-xs">
-                            <span style={{ color: '#f5a623' }}>★</span>
+                            <span style={{ color: '#c4714a' }}>★</span>
                             <span className="font-medium" style={{ color: '#2d2118' }}>{rating.toFixed(1)}</span>
+                            <span style={{ color: '#9a8a7a' }}>({ratingCount})</span>
                         </span>
+                        <span className="h-3 w-px" style={{ backgroundColor: '#e8d9c4' }} />
+                    </>
+                ) : (
+                    <>
+                        <span className="rounded-full px-1.5 py-0.5 text-xs font-semibold" style={{ backgroundColor: '#e8f4ec', color: '#4a7c59' }}>Nové</span>
                         <span className="h-3 w-px" style={{ backgroundColor: '#e8d9c4' }} />
                     </>
                 )}
                 <span className="text-xs" style={{ color: '#9a8a7a' }}>
-                    {coach.subscriber_count.toLocaleString('sk-SK')} sledovateľov
+                    {coach.subscriber_count.toLocaleString('sk-SK')} predplatiteľov
                 </span>
             </div>
 

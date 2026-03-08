@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coach;
+use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -37,7 +38,8 @@ class CoachController extends Controller
                     'specialization'   => $coach->specialization,
                     'monthly_price'    => $coach->monthly_price,
                     'bio'              => $coach->bio,
-                    'rating'           => $coach->rating,
+                    'rating_avg'       => (float) $coach->rating_avg,
+                    'rating_count'     => (int) $coach->rating_count,
                     'subscriber_count' => $coach->subscriber_count,
                     'video_count'      => $coach->video_count,
                     'image_count'      => $coach->image_count,
@@ -94,6 +96,29 @@ class CoachController extends Controller
             ->where('following_id', $coach->user_id)
             ->count();
 
+        // Reviews — last 10, newest first
+        $reviews = Review::where('coach_id', $coach->id)
+            ->where('is_visible', true)
+            ->with('user:id,name,profile_avatar')
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get()
+            ->map(fn ($r) => [
+                'id'          => $r->id,
+                'user_id'     => $r->user_id,
+                'user_name'   => $r->user->name,
+                'user_avatar' => $r->user->profile_avatar
+                    ? Storage::url($r->user->profile_avatar)
+                    : null,
+                'rating'      => (int) $r->rating,
+                'content'     => $r->content,
+                'created_at'  => $r->created_at?->toISOString(),
+            ]);
+
+        $userReview = $authUserId
+            ? Review::where('user_id', $authUserId)->where('coach_id', $coach->id)->first()
+            : null;
+
         return Inertia::render('Coaches/Show', [
             'coach' => [
                 'id'              => $coach->id,
@@ -102,7 +127,8 @@ class CoachController extends Controller
                 'bio'             => $coach->bio,
                 'specialization'  => $coach->specialization,
                 'monthly_price'   => $coach->monthly_price,
-                'rating'          => $coach->rating,
+                'rating_avg'      => (float) $coach->rating_avg,
+                'rating_count'    => (int) $coach->rating_count,
                 'subscriber_count'=> $coach->subscriber_count,
                 'followers_count' => $followersCount,
                 'is_verified'     => $coach->is_verified,
@@ -112,8 +138,14 @@ class CoachController extends Controller
                     ? Storage::url($coach->avatar_path)
                     : null,
             ],
-            'posts'        => $posts,
+            'posts'       => $posts,
             'isSubscribed' => $isSubscribed,
+            'reviews'     => $reviews,
+            'user_review' => $userReview ? [
+                'id'      => $userReview->id,
+                'rating'  => (int) $userReview->rating,
+                'content' => $userReview->content,
+            ] : null,
         ]);
     }
 

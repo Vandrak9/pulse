@@ -10,6 +10,8 @@ interface SuggestedCoach {
     id: number;
     name: string;
     specialization: string | null;
+    rating_avg: number;
+    rating_count: number;
     avatar_url: string | null;
 }
 
@@ -369,11 +371,18 @@ export default function PulseLayout({ children }: Props) {
                                                 {coach.name}
                                             </div>
                                         </Link>
-                                        {coach.specialization && (
-                                            <div style={{ fontSize: 11, color: '#9a8a7a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {coach.specialization}
-                                            </div>
-                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                                            {coach.specialization && (
+                                                <span style={{ fontSize: 11, color: '#9a8a7a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {coach.specialization}
+                                                </span>
+                                            )}
+                                            {coach.rating_count > 0 && (
+                                                <span style={{ fontSize: 11, color: '#c4714a', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                    ★ {coach.rating_avg.toFixed(1)}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <Link
                                         href={`/coaches/${coach.id}`}

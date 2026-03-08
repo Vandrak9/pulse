@@ -21,6 +21,8 @@ interface Stats {
     total_posts: number;
     total_views: number;
     unread_messages: number;
+    rating_avg: number;
+    rating_count: number;
 }
 
 interface RevenuePoint { month: string; net: number; current: boolean; }
@@ -92,7 +94,9 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
                             { label: 'Mesačný zárobok', value: `€${fmt(stats.monthly_revenue)}`, icon: '💰', color: '#c4714a', big: true },
                             { label: 'Predplatitelia', value: stats.subscriber_count.toLocaleString('sk-SK'), icon: '👥', color: '#2d2118' },
                             { label: 'Nových tento týždeň', value: `+${stats.new_subscribers_week}`, icon: '📈', color: '#4a7c59' },
-                            { label: 'Celkové zobrazenia', value: stats.total_views.toLocaleString('sk-SK'), icon: '📊', color: '#9a8a7a' },
+                            stats.rating_count > 0
+                                ? { label: `${stats.rating_count} recenzií`, value: `★ ${stats.rating_avg.toFixed(1)}`, icon: '⭐', color: '#c4714a' }
+                                : { label: 'Celkové zobrazenia', value: stats.total_views.toLocaleString('sk-SK'), icon: '📊', color: '#9a8a7a' },
                         ].map((s, i) => (
                             <div key={i} style={{
                                 background: 'white', borderRadius: 16, padding: '18px 16px',

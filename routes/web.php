@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CoachController;
@@ -31,6 +32,7 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/coaches', [CoachController::class, 'index'])->name('coaches.index');
 Route::get('/coaches/search', [CoachController::class, 'search'])->name('coaches.search');
+Route::get('/coaches/{coachId}/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 Route::get('/coaches/{coach}', [CoachController::class, 'show'])->name('coaches.show');
 
 // Feed — accessible without auth (guest preview)
@@ -94,6 +96,10 @@ Route::middleware('auth')->group(function () {
     // Follow / unfollow
     Route::post('/follow/{userId}', [FollowController::class, 'toggle'])->name('follow.toggle');
 
+    // Reviews
+    Route::post('/coaches/{coachId}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+    Route::delete('/coaches/{coachId}/reviews', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+
     // Subscriptions
     Route::get('/subscribe/{coachId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
     Route::get('/subscription/success', [SubscriptionController::class, 'success'])->name('subscription.success');
@@ -111,6 +117,8 @@ Route::get('/api/coaches/suggested', function () {
             'id'             => $c->id,
             'name'           => $c->user->name,
             'specialization' => $c->specialization,
+            'rating_avg'     => (float) $c->rating_avg,
+            'rating_count'   => (int) $c->rating_count,
             'avatar_url'     => $c->avatar_path
                 ? \Illuminate\Support\Facades\Storage::url($c->avatar_path)
                 : null,
