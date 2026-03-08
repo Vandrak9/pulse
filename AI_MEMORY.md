@@ -576,3 +576,40 @@ POST /dashboard/reels         → PostController@storeReel
 - `new_reel`       → ⚡  ← NEW
 - `new_follower`   → 🔔 (fallback)
 - `tip`            → 💰
+- [2026-03-08 14:05:44] 5297b8a: chore: update AI_MEMORY with session 10 post creation system
+- [2026-03-08 14:11:25] 9c1f4f4: fix: nginx 413 upload limit, broadcast in sidebar
+- [2026-03-08 14:17:44] 5ad5b5e: feat: complete post creation with exclusive video support
+
+---
+
+## Session 11 — 2026-03-08 (cont.)
+
+### Fixes — Complete post creation with exclusive video support
+
+**Frontend rewrite — `Dashboard/Posts/Create.tsx`:**
+- `isExclusive` defaults to `true` (was false)
+- Tab switcher below text editor: `📸 Fotka` | `🎬 Video`
+- Photo tab: images only (jpg/png/webp/heic), max 3, 80MB each; cover badge on first photo
+- Video tab: video only (mp4/mov/webm), max 200MB; preview player + file name/size/duration
+  - exclusive+video: blurred overlay preview with 🔒 badge + info card
+- Audience selector: two large cards SIDE BY SIDE (grid 2-col)
+  - Green border (#4a7c59) = public; terracotta (#c4714a) = exclusive; default = exclusive
+- Earnings estimate: shown when exclusive + subscriber_count > 0 (€X/mes at 85%)
+- Live preview: photos/video blurred in preview if exclusive
+- Submit label: "🔒 Uverejniť exkluzívne" vs "📤 Uverejniť príspevok"
+
+**Backend — `PostController@store`:**
+- Validation raised to 200MB, added heic/heif MIME support
+- Video files now set `video_type='video'` in DB (was null — broke feed video tab)
+- Redirects to `/feed` after publish (was `/dashboard`)
+- `create()`: passes `followers_count` + `monthly_price` to frontend
+
+**Bug fix — `FeedController`:**
+- `media_url` now uses `Storage::url()` — was raw path, breaking uploaded images/videos in feed
+
+**Storage:** `chown -R www-data:www-data storage/ && chmod -R 775`
+
+**Media type rules:**
+- Photo posts: `media_type='image'`, `video_type=null`, multi-file in `post_media`
+- Video posts: `media_type='video'`, `video_type='video'`, single file
+- Reels:       `media_type='video'`, `video_type='reel'`, always `is_exclusive=false`
