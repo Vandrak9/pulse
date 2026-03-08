@@ -640,3 +640,4 @@ POST /dashboard/reels         → PostController@storeReel
   - "+ Nová správa" button added to mobile header (top right) and desktop panel header (top right)
   - Opens modal on click, navigates to `/messages/{user_id}` on coach selection
 - [2026-03-08 14:47:44] fe6a9ce: feat: messages privacy setting visible in coach profile edit
+- [2026-03-08 14:49:41] 1ec71bf: chore: v1.0.0 changelog, scalability report, code cleanup

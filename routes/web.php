@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
 
     // Social profiles
     Route::get('/profile/me', [UserProfileController::class, 'me'])->name('profile.me');
+    Route::get('/profile/subscriptions', [UserProfileController::class, 'mySubscriptions'])->name('profile.subscriptions');
     Route::get('/profile/{userId}', [UserProfileController::class, 'show'])->name('profile.show');
     Route::post('/profile/update', [UserProfileController::class, 'update'])->name('profile.update-social');
 
