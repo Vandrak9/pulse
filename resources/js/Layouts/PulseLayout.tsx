@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut } from 'lucide-react';
+import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut, PlusSquare } from 'lucide-react';
 
 interface Props {
     children: React.ReactNode;
@@ -78,7 +78,10 @@ export default function PulseLayout({ children }: Props) {
         { label: 'Správy',     icon: <MessageCircle size={18} />, href: '/messages',          badge: unreadCount },
         { label: 'Notifikácie',icon: <Bell size={18} />,          href: '/notifications',     badge: 0 },
         { label: 'Profil',     icon: <User size={18} />,          href: '/dashboard/profile', badge: 0 },
-        ...(isCoach ? [{ label: 'Dashboard', icon: <BarChart2 size={18} />, href: '/dashboard', badge: 0 }] : []),
+        ...(isCoach ? [
+            { label: 'Dashboard',    icon: <BarChart2 size={18} />,   href: '/dashboard',          badge: 0 },
+            { label: 'Pridať obsah', icon: <PlusSquare size={18} />,  href: '/dashboard/broadcast', badge: 0 },
+        ] : []),
     ];
 
     // Mobile bottom tab links (keep emoji for mobile — clear at small size)

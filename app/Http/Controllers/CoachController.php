@@ -17,6 +17,7 @@ class CoachController extends Controller
                 'posts as video_count' => fn ($q) => $q->where('media_type', 'video'),
                 'posts as image_count' => fn ($q) => $q->where('media_type', 'image'),
             ])
+            ->when(auth()->check(), fn ($q) => $q->where('user_id', '!=', auth()->id()))
             ->orderByDesc('created_at')
             ->paginate(24)
             ->through(fn ($coach) => [

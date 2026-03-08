@@ -1,4 +1,4 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEvent, useRef, useState } from 'react';
 
@@ -50,20 +50,18 @@ export default function CoachEdit({ coach, flash }: Props) {
     const focusStyle = { '--tw-ring-color': '#c4714a' } as React.CSSProperties;
 
     return (
-        <AuthenticatedLayout
-            header={
-                <h2
-                    className="text-xl font-semibold leading-tight"
-                    style={{ color: '#2d2118' }}
-                >
-                    Edit Coach Profile
-                </h2>
-            }
-        >
-            <Head title="Edit Profile" />
+        <PulseLayout>
+            <Head title="Upraviť profil" />
 
             <div className="py-10" style={{ backgroundColor: '#faf6f0', minHeight: '80vh' }}>
                 <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
+                    <h1
+                        className="mb-6 text-2xl font-bold"
+                        style={{ color: '#2d2118', fontFamily: 'Georgia, serif' }}
+                    >
+                        Upraviť profil kouča
+                    </h1>
+
                     {flash?.success && (
                         <div
                             className="mb-6 rounded-xl px-4 py-3 text-sm font-medium text-white"
@@ -77,6 +75,7 @@ export default function CoachEdit({ coach, flash }: Props) {
                         onSubmit={submit}
                         encType="multipart/form-data"
                         className="rounded-2xl bg-white p-8 shadow-sm"
+                        style={{ border: '1px solid #e8d9c4' }}
                     >
                         {/* Avatar upload */}
                         <div className="mb-6 flex flex-col items-center gap-4">
@@ -88,7 +87,7 @@ export default function CoachEdit({ coach, flash }: Props) {
                                 {avatarPreview ? (
                                     <img
                                         src={avatarPreview}
-                                        alt="Avatar preview"
+                                        alt="Náhľad fotky"
                                         className="h-full w-full object-cover"
                                     />
                                 ) : (
@@ -101,7 +100,7 @@ export default function CoachEdit({ coach, flash }: Props) {
                                 className="text-sm font-medium hover:underline"
                                 style={{ color: '#c4714a' }}
                             >
-                                {avatarPreview ? 'Change photo' : 'Upload photo'}
+                                {avatarPreview ? 'Zmeniť fotku' : 'Nahrať fotku'}
                             </button>
                             <input
                                 ref={fileRef}
@@ -121,13 +120,13 @@ export default function CoachEdit({ coach, flash }: Props) {
                                 className="mb-1.5 block text-sm font-medium"
                                 style={{ color: '#2d2118' }}
                             >
-                                Bio
+                                O mne
                             </label>
                             <textarea
                                 rows={4}
                                 value={data.bio}
                                 onChange={(e) => setData('bio', e.target.value)}
-                                placeholder="Tell your audience about yourself..."
+                                placeholder="Povedz niečo o sebe svojmu publiku..."
                                 className={inputClass + ' resize-none'}
                                 style={{ ...inputStyle, ...focusStyle }}
                             />
@@ -142,13 +141,13 @@ export default function CoachEdit({ coach, flash }: Props) {
                                 className="mb-1.5 block text-sm font-medium"
                                 style={{ color: '#2d2118' }}
                             >
-                                Specialization
+                                Špecializácia
                             </label>
                             <input
                                 type="text"
                                 value={data.specialization}
                                 onChange={(e) => setData('specialization', e.target.value)}
-                                placeholder="e.g. Strength & Conditioning, Yoga, HIIT..."
+                                placeholder="napr. Silový tréning, Joga, HIIT..."
                                 className={inputClass}
                                 style={{ ...inputStyle, ...focusStyle }}
                             />
@@ -165,7 +164,7 @@ export default function CoachEdit({ coach, flash }: Props) {
                                 className="mb-1.5 block text-sm font-medium"
                                 style={{ color: '#2d2118' }}
                             >
-                                Monthly subscription price (€)
+                                Mesačná cena predplatného (€)
                             </label>
                             <div className="relative">
                                 <span
@@ -199,11 +198,11 @@ export default function CoachEdit({ coach, flash }: Props) {
                             className="w-full rounded-xl py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                             style={{ backgroundColor: '#c4714a' }}
                         >
-                            {processing ? 'Saving...' : 'Save Profile'}
+                            {processing ? 'Ukladám...' : 'Uložiť profil'}
                         </button>
                     </form>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </PulseLayout>
     );
 }
