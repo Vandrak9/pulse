@@ -49,6 +49,16 @@ class FeedController extends Controller
             ->pluck('post_id')
             ->all();
 
+        $user = $request->user();
+
+        // Build set of subscribed coach IDs for paywall logic
+        $subscribedCoachIds = \DB::table('subscriptions')
+            ->where('user_id', $userId)
+            ->whereIn('stripe_status', ['active', 'trialing'])
+            ->whereNotNull('coach_id')
+            ->pluck('coach_id')
+            ->toArray();
+
         $mapPost = fn ($post) => [
             'id'             => $post->id,
             'title'          => $post->title,
@@ -65,11 +75,12 @@ class FeedController extends Controller
             'is_liked'       => in_array($post->id, $likedIds),
             'created_at'     => $post->created_at->toIso8601String(),
             'coach' => [
-                'id'             => $post->coach->id,
-                'name'           => $post->coach->user->name,
-                'specialization' => $post->coach->specialization,
-                'monthly_price'  => $post->coach->monthly_price,
-                'avatar_url'     => $post->coach->avatar_path
+                'id'              => $post->coach->id,
+                'name'            => $post->coach->user->name,
+                'specialization'  => $post->coach->specialization,
+                'monthly_price'   => $post->coach->monthly_price,
+                'is_subscribed'   => in_array($post->coach->id, $subscribedCoachIds),
+                'avatar_url'      => $post->coach->avatar_path
                     ? Storage::url($post->coach->avatar_path)
                     : null,
             ],
@@ -90,11 +101,12 @@ class FeedController extends Controller
             ->limit(12)
             ->get()
             ->map(fn ($coach) => [
-                'id'          => $coach->id,
-                'user_id'     => $coach->user_id,
-                'name'        => $coach->user->name,
-                'is_followed' => in_array($coach->user_id, $followedUserIds),
-                'avatar_url'  => $coach->avatar_path
+                'id'            => $coach->id,
+                'user_id'       => $coach->user_id,
+                'name'          => $coach->user->name,
+                'is_followed'   => in_array($coach->user_id, $followedUserIds),
+                'is_subscribed' => $user->subscribed('coach_' . $coach->id),
+                'avatar_url'    => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
             ]);

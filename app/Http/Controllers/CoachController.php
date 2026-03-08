@@ -75,12 +75,16 @@ class CoachController extends Controller
                 'created_at'     => $post->created_at->toDateString(),
             ]);
 
-        $authUserId     = auth()->id();
+        $authUser       = auth()->user();
+        $authUserId     = $authUser?->id;
         $isFollowing    = $authUserId
             ? DB::table('follows')
                 ->where('follower_id', $authUserId)
                 ->where('following_id', $coach->user_id)
                 ->exists()
+            : false;
+        $isSubscribed   = $authUser
+            ? $authUser->subscribed('coach_' . $coach->id)
             : false;
         $followersCount = DB::table('follows')
             ->where('following_id', $coach->user_id)
@@ -105,7 +109,7 @@ class CoachController extends Controller
                     : null,
             ],
             'posts'        => $posts,
-            'isSubscribed' => false,
+            'isSubscribed' => $isSubscribed,
         ]);
     }
 

@@ -96,16 +96,25 @@ class UserProfileController extends Controller
                 ->get();
 
             if ($realSubs->isNotEmpty()) {
-                $subscriptions = $realSubs->map(fn ($s) => [
-                    'user_id'          => $profileUser->id,
-                    'coach_id'         => null,
-                    'name'             => 'Predplatné',
-                    'specialization'   => null,
-                    'monthly_price'    => null,
-                    'avatar_url'       => null,
-                    'subscribed_since' => $s->created_at,
-                    'status'           => $s->stripe_status === 'active' ? 'active' : 'cancelled',
-                ])->all();
+                $coachIds = $realSubs->pluck('coach_id')->filter()->unique();
+                $coachMap = \App\Models\Coach::with('user')->whereIn('id', $coachIds)->get()
+                    ->keyBy('id');
+
+                $subscriptions = $realSubs->map(function ($s) use ($coachMap, $profileUser) {
+                    $coach = $s->coach_id ? $coachMap->get($s->coach_id) : null;
+                    return [
+                        'user_id'          => $profileUser->id,
+                        'coach_id'         => $s->coach_id,
+                        'name'             => $coach?->user?->name ?? 'Kouč',
+                        'specialization'   => $coach?->specialization,
+                        'monthly_price'    => $coach?->monthly_price,
+                        'avatar_url'       => $coach?->avatar_path
+                            ? Storage::url($coach->avatar_path)
+                            : null,
+                        'subscribed_since' => $s->created_at,
+                        'status'           => $s->stripe_status === 'active' ? 'active' : 'cancelled',
+                    ];
+                })->all();
             } else {
                 // Demo: show followed coaches as mock subscriptions
                 $subscriptions = $followingList

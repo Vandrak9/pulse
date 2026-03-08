@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CoachController;
 use App\Http\Controllers\DashboardController;
@@ -83,6 +84,11 @@ Route::middleware('auth')->group(function () {
 
     // Follow / unfollow
     Route::post('/follow/{userId}', [FollowController::class, 'toggle'])->name('follow.toggle');
+
+    // Subscriptions
+    Route::get('/subscribe/{coachId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
+    Route::get('/subscription/success', [SubscriptionController::class, 'success'])->name('subscription.success');
+    Route::post('/subscription/cancel/{coachId}', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
 });
 
 // ── Public API endpoints ───────────────────────────────────────────────────────

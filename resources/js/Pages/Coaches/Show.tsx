@@ -1,6 +1,6 @@
 import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useState } from 'react';
 import { formatDuration, formatFullDate } from '@/lib/utils';
@@ -322,6 +322,26 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
 
 /* ── Subscription box (shared mobile/desktop) ── */
 function SubscriptionBox({ coach, price, isSubscribed }: { coach: CoachData; price: number; isSubscribed: boolean }) {
+    const page = usePage();
+    const { auth } = page.props as { auth: { user: { id: number } | null } };
+    const [cancelling, setCancelling] = useState(false);
+
+    function handleSubscribe() {
+        if (!auth?.user) {
+            router.visit('/login');
+            return;
+        }
+        router.visit(`/subscribe/${coach.id}`);
+    }
+
+    function handleCancel() {
+        if (!confirm('Naozaj chceš zrušiť predplatné?')) return;
+        setCancelling(true);
+        router.post(`/subscription/cancel/${coach.id}`, {}, {
+            onFinish: () => setCancelling(false),
+        });
+    }
+
     return (
         <div className="rounded-2xl bg-white p-6 shadow-md" style={{ border: '1px solid #e8d9c4' }}>
             <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#9a8a7a' }}>Predplatne</p>
@@ -342,20 +362,31 @@ function SubscriptionBox({ coach, price, isSubscribed }: { coach: CoachData; pri
                 ))}
             </ul>
             {isSubscribed ? (
-                <div className="mt-5 w-full rounded-full py-3 text-center text-sm font-semibold text-white" style={{ backgroundColor: '#4a7c59' }}>
-                    &#10003; Predplatene
-                </div>
+                <>
+                    <div className="mt-5 w-full rounded-full py-3 text-center text-sm font-semibold text-white" style={{ backgroundColor: '#4a7c59' }}>
+                        &#10003; Predplatené
+                    </div>
+                    <button
+                        onClick={handleCancel}
+                        disabled={cancelling}
+                        className="mt-2 w-full rounded-full py-2 text-xs font-medium transition"
+                        style={{ color: '#9a8a7a', background: 'none', border: 'none', cursor: 'pointer', opacity: cancelling ? 0.5 : 1 }}
+                    >
+                        {cancelling ? 'Rušim...' : 'Zrušiť predplatné'}
+                    </button>
+                </>
             ) : (
                 <button
+                    onClick={handleSubscribe}
                     className="mt-5 w-full rounded-full py-3 text-sm font-semibold text-white transition-colors"
                     style={{ backgroundColor: '#c4714a' }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
                 >
-                    Predplatit teraz
+                    Predplatiť teraz
                 </button>
             )}
-            <p className="mt-2 text-center text-xs" style={{ color: '#9a8a7a' }}>Zrus kedykolvek</p>
+            <p className="mt-2 text-center text-xs" style={{ color: '#9a8a7a' }}>Zruš kedykoľvek</p>
         </div>
     );
 }
