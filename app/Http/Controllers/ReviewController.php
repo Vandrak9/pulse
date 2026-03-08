@@ -53,21 +53,22 @@ class ReviewController extends Controller
         // Notify coach (only on new review, not edit)
         if ($review->wasRecentlyCreated) {
             $stars   = str_repeat('★', $review->rating) . str_repeat('☆', 5 - $review->rating);
-            $preview = $review->content ? mb_substr($review->content, 0, 80) : '';
+            $preview = $review->content ? ' — "' . mb_substr($review->content, 0, 80) . '"' : '';
 
-            DB::table('notifications')->insert([
-                'id'              => \Illuminate\Support\Str::uuid(),
-                'type'            => 'new_review',
-                'notifiable_type' => 'App\\Models\\User',
-                'notifiable_id'   => $coach->user_id,
-                'data'            => json_encode([
-                    'fan_name'   => $user->name,
-                    'rating'     => $review->rating,
-                    'preview'    => $preview,
-                ]),
-                'created_at'      => now(),
-                'updated_at'      => now(),
-            ]);
+            try {
+                DB::table('notifications')->insert([
+                    'user_id'    => $coach->user_id,
+                    'type'       => 'new_review',
+                    'title'      => $user->name . ' ti zanechal hodnotenie ' . $stars,
+                    'body'       => $user->name . ' (' . $review->rating . '★)' . $preview,
+                    'data'       => json_encode(['fan_name' => $user->name, 'rating' => $review->rating]),
+                    'is_read'    => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Review notification failed: ' . $e->getMessage());
+            }
         }
 
         return response()->json([
