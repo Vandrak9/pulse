@@ -676,3 +676,4 @@ POST /dashboard/reels         → PostController@storeReel
 - [2026-03-08 16:39:05] 03aaacf: chore: update AI_MEMORY with session 13 fan profile
 - [2026-03-08 18:12:16] b02875d: fix: fan 403 bug — remove incorrect role middleware from public routes
 - [2026-03-08 18:19:59] dce4be4: fix: fan 500 on message send — null coach check and error handling
+- [2026-03-08 18:33:27] 901ef5e: feat: Stripe subscription flow with real isSubscribed checks

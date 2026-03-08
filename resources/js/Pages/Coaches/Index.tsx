@@ -1,5 +1,5 @@
 import PulseLayout from '@/Layouts/PulseLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useState } from 'react';
 
@@ -193,8 +193,12 @@ function CoachCard({
 
     return (
         <div
-            className="flex flex-col items-center rounded-2xl bg-white px-4 pb-5 pt-6 shadow-sm"
-            style={{ border: '1px solid #e8d9c4' }}
+            onClick={() => router.visit(`/coaches/${coach.id}`)}
+            role="link"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && router.visit(`/coaches/${coach.id}`)}
+            className="flex flex-col items-center rounded-2xl bg-white px-4 pb-5 pt-6 shadow-sm transition-all duration-150 hover:shadow-lg hover:scale-[1.02]"
+            style={{ border: '1px solid #e8d9c4', cursor: 'pointer' }}
         >
             {/* Avatar */}
             <div
@@ -257,6 +261,7 @@ function CoachCard({
 
             <Link
                 href={`/coaches/${coach.id}`}
+                onClick={(e) => e.stopPropagation()}
                 className="mt-3 w-full rounded-full py-2 text-center text-sm font-semibold text-white transition-colors"
                 style={{ backgroundColor: '#c4714a' }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
@@ -267,7 +272,7 @@ function CoachCard({
 
             {isLoggedIn && (
                 <button
-                    onClick={(e) => onFollow(e, coach.user_id)}
+                    onClick={(e) => { e.stopPropagation(); onFollow(e, coach.user_id); }}
                     className="mt-2 w-full rounded-full py-1.5 text-center text-xs font-semibold transition-all"
                     style={{
                         border: `1px solid ${isFollowing ? '#c4714a' : '#9a8a7a'}`,

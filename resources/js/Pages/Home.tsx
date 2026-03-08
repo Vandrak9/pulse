@@ -58,30 +58,32 @@ export default function Home({ featured }: Props) {
                                 #1 Fitness platforma na Slovensku
                             </span>
 
-                            <h1 className="mt-4 font-serif text-5xl font-bold leading-tight sm:text-6xl" style={{ color: '#2d2118' }}>
+                            <h1 className="mt-4 font-serif text-3xl font-bold leading-tight sm:text-5xl" style={{ color: '#2d2118' }}>
                                 Tvoj fitness journey
                                 <br />
                                 <span style={{ color: '#c4714a' }}>začína tu</span>
                             </h1>
 
-                            <p className="mx-auto mt-5 max-w-lg text-lg leading-relaxed md:mx-0" style={{ color: '#6b5e52' }}>
+                            <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed md:mx-0 md:text-lg" style={{ color: '#6b5e52' }}>
                                 Predplaťte si koučov ktorí vám skutočne pomôžu dosiahnuť vaše ciele — bez zbytočností, len výsledky.
                             </p>
 
-                            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 md:justify-start">
+                            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row md:justify-start">
                                 <Link
                                     href="/coaches"
-                                    className="rounded-full px-8 py-3 text-base font-semibold text-white shadow-sm transition-colors"
+                                    className="w-full rounded-full px-8 py-4 text-lg font-semibold text-white shadow-lg transition-colors sm:w-auto"
                                     style={{ backgroundColor: '#c4714a' }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
+                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#a85e3a')}
                                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
                                 >
                                     Objaviť koučov
                                 </Link>
                                 <Link
                                     href="/register"
-                                    className="rounded-full border px-8 py-3 text-base font-semibold transition hover:bg-white"
-                                    style={{ borderColor: '#c4714a', color: '#c4714a' }}
+                                    className="w-full rounded-full px-8 py-4 text-lg font-semibold transition sm:w-auto"
+                                    style={{ border: '2px solid rgba(196,113,74,0.4)', color: '#c4714a', background: 'transparent' }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#c4714a')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(196,113,74,0.4)')}
                                 >
                                     Staň sa koučom
                                 </Link>

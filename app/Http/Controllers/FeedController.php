@@ -16,7 +16,50 @@ class FeedController extends Controller
 {
     public function index(Request $request): Response
     {
-        $userId = $request->user()->id;
+        $user = $request->user();
+
+        // ── Guest preview ──────────────────────────────────────────────────────
+        if (!$user) {
+            $previewPosts = Post::with(['coach.user'])
+                ->withCount('likes')
+                ->where('is_exclusive', false)
+                ->orderByDesc('created_at')
+                ->limit(6)
+                ->get();
+
+            $mapPreview = fn ($post) => [
+                'id'             => $post->id,
+                'title'          => $post->title,
+                'content'        => $post->content,
+                'media_type'     => $post->media_type,
+                'media_url'      => $post->media_path ? Storage::url($post->media_path) : null,
+                'thumbnail_url'  => $post->thumbnail_path ? Storage::url($post->thumbnail_path) : null,
+                'video_type'     => $post->video_type,
+                'video_duration' => $post->video_duration,
+                'is_exclusive'   => $post->is_exclusive,
+                'like_count'     => $post->likes_count,
+                'is_liked'       => false,
+                'created_at'     => $post->created_at->toIso8601String(),
+                'coach' => [
+                    'id'             => $post->coach->id,
+                    'name'           => $post->coach->user->name,
+                    'specialization' => $post->coach->specialization,
+                    'monthly_price'  => $post->coach->monthly_price,
+                    'is_subscribed'  => false,
+                    'avatar_url'     => $post->coach->avatar_path ? Storage::url($post->coach->avatar_path) : null,
+                ],
+            ];
+
+            return Inertia::render('Feed', [
+                'posts'   => $previewPosts->map($mapPreview)->values(),
+                'reels'   => [],
+                'videos'  => [],
+                'coaches' => [],
+                'isGuest' => true,
+            ]);
+        }
+
+        $userId = $user->id;
 
         // Mixed feed — 20 most recent posts
         $posts = Post::with(['coach.user'])
@@ -48,8 +91,6 @@ class FeedController extends Controller
             ->whereIn('post_id', $allPosts->pluck('id'))
             ->pluck('post_id')
             ->all();
-
-        $user = $request->user();
 
         // Build set of subscribed coach IDs for paywall logic
         $subscribedCoachIds = \DB::table('subscriptions')

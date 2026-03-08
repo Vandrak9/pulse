@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut, PlusSquare, Megaphone } from 'lucide-react';
+import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut, PlusSquare, Megaphone, Dumbbell, Flame, Leaf, Activity, Heart, Zap } from 'lucide-react';
 
 interface Props {
     children: React.ReactNode;
@@ -13,19 +13,19 @@ interface SuggestedCoach {
     avatar_url: string | null;
 }
 
-const TRENDING_CATS = [
-    { emoji: '💪', label: 'Silové',  k: 'silov' },
-    { emoji: '🧘', label: 'Joga',    k: 'joga' },
-    { emoji: '🥗', label: 'Výživa',  k: 'výživ' },
-    { emoji: '🏃', label: 'Beh',     k: 'beh' },
-    { emoji: '🌿', label: 'Wellness',k: 'wellness' },
-    { emoji: '🥊', label: 'Box',     k: 'box' },
+const TRENDING_CATS: { icon: React.ReactNode; label: string; k: string }[] = [
+    { icon: <Dumbbell size={14} />, label: 'Silové',   k: 'silov' },
+    { icon: <Flame size={14} />,    label: 'Joga',     k: 'joga' },
+    { icon: <Leaf size={14} />,     label: 'Výživa',   k: 'výživ' },
+    { icon: <Activity size={14} />, label: 'Beh',      k: 'beh' },
+    { icon: <Heart size={14} />,    label: 'Wellness', k: 'wellness' },
+    { icon: <Zap size={14} />,      label: 'Box',      k: 'box' },
 ];
 
-const HOW_IT_WORKS = [
-    { icon: '🔍', text: 'Nájdi kouča, ktorý ti vyhovuje' },
-    { icon: '💳', text: 'Predplaťte sa — zruš kedykoľvek' },
-    { icon: '💪', text: 'Trénuj s exkluzívnym obsahom' },
+const REVIEWS = [
+    { name: 'Marek B.', text: 'Najlepšia investícia do zdravia!', rating: 5 },
+    { name: 'Zuzana K.', text: 'Lucia mi zmenila pohľad na výživu.', rating: 5 },
+    { name: 'Peter H.', text: 'Konečne tréner ktorý rozumie.', rating: 5 },
 ];
 
 export default function PulseLayout({ children }: Props) {
@@ -412,26 +412,36 @@ export default function PulseLayout({ children }: Props) {
                                     background: '#faf6f0', border: '1px solid #e8d9c4',
                                     fontSize: 12, color: '#2d2118', textDecoration: 'none',
                                     transition: 'all 0.15s',
+                                    display: 'inline-flex', alignItems: 'center', gap: 5,
                                 }}
                                 onMouseEnter={e => { e.currentTarget.style.background = '#fce8de'; e.currentTarget.style.borderColor = '#c4714a'; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = '#faf6f0'; e.currentTarget.style.borderColor = '#e8d9c4'; }}
                             >
-                                {cat.emoji} {cat.label}
+                                {cat.icon} {cat.label}
                             </Link>
                         ))}
                     </div>
                 </div>
 
-                {/* How it works */}
+                {/* Reviews */}
                 <div style={{ borderTop: '1px solid #f0e8df', paddingTop: 20 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', marginBottom: 10, fontFamily: 'Georgia, serif', margin: '0 0 10px 0' }}>
-                        Ako to funguje
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', marginBottom: 12, fontFamily: 'Georgia, serif', margin: '0 0 12px 0' }}>
+                        ⭐ Recenzie
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {HOW_IT_WORKS.map((item, i) => (
-                            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                                <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
-                                <span style={{ fontSize: 12, color: '#6b5e52', lineHeight: '1.45' }}>{item.text}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                        {REVIEWS.map((r, i) => (
+                            <div key={r.name} style={{
+                                paddingBottom: i < REVIEWS.length - 1 ? 10 : 0,
+                                marginBottom: i < REVIEWS.length - 1 ? 10 : 0,
+                                borderBottom: i < REVIEWS.length - 1 ? '1px solid #f0e8dc' : 'none',
+                            }}>
+                                <div style={{ display: 'flex', gap: 2, marginBottom: 3 }}>
+                                    {'★'.repeat(r.rating).split('').map((_, si) => (
+                                        <span key={si} style={{ color: '#c4714a', fontSize: 11 }}>★</span>
+                                    ))}
+                                </div>
+                                <p style={{ fontSize: 12, color: '#5a4a3a', fontStyle: 'italic', lineHeight: 1.4 }}>"{r.text}"</p>
+                                <p style={{ fontSize: 11, color: '#9a8a7a', marginTop: 3 }}>— {r.name}</p>
                             </div>
                         ))}
                     </div>
@@ -510,10 +520,37 @@ export default function PulseLayout({ children }: Props) {
             </nav>
 
             {/* ── MAIN CONTENT — offset by sidebars on desktop ── */}
-            <div className="md:ml-64 lg:mr-72" style={{ minHeight: '100vh', background: '#faf6f0' }}>
-                <main className="animate-fade-in">
+            <div className="md:ml-64 lg:mr-72" style={{ minHeight: '100vh', background: '#faf6f0', display: 'flex', flexDirection: 'column' }}>
+                <main className="animate-fade-in flex-1">
                     {children}
                 </main>
+                <footer style={{ borderTop: '1px solid #e8d9c4', padding: '32px 16px 16px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 16, marginBottom: 8 }}>
+                        {[
+                            { href: '/legal/terms', label: 'Podmienky použitia' },
+                            { href: '/legal/privacy', label: 'Ochrana osobných údajov' },
+                            { href: '/legal/gdpr', label: 'GDPR' },
+                            { href: '/legal/cookies', label: 'Cookies' },
+                        ].map(l => (
+                            <Link key={l.href} href={l.href} style={{ fontSize: 12, color: '#9a8a7a', textDecoration: 'none' }}
+                                onMouseEnter={e => (e.currentTarget.style.color = '#c4714a')}
+                                onMouseLeave={e => (e.currentTarget.style.color = '#9a8a7a')}
+                            >
+                                {l.label}
+                            </Link>
+                        ))}
+                        <a href="mailto:hello@pulsehub.fun" style={{ fontSize: 12, color: '#9a8a7a', textDecoration: 'none' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#c4714a')}
+                            onMouseLeave={e => (e.currentTarget.style.color = '#9a8a7a')}
+                        >
+                            Kontakt
+                        </a>
+                    </div>
+                    <p style={{ fontSize: 12, color: '#9a8a7a' }}>© 2026 PULSE Platform · Všetky práva vyhradené</p>
+                    <p style={{ fontSize: 10, color: '#b0a090', marginTop: 4 }}>
+                        Platby sú spracované bezpečne cez Stripe · PULSE neposkytuje medicínske poradenstvo
+                    </p>
+                </footer>
             </div>
 
             {/* ── MOBILE BOTTOM TAB BAR — hidden on desktop ── */}

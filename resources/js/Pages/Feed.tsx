@@ -41,6 +41,7 @@ interface Props {
     reels: Post[];
     videos: Post[];
     coaches: Coach[];
+    isGuest?: boolean;
 }
 
 // relativeTime, formatDuration → imported from @/lib/utils
@@ -48,7 +49,7 @@ const relativeTime = relativeTimeUtil;
 
 type Tab = 'feed' | 'reels' | 'videos';
 
-export default function Feed({ posts, reels, videos, coaches }: Props) {
+export default function Feed({ posts, reels, videos, coaches, isGuest = false }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { name: string; role?: string } | null } };
     const isCoach = auth?.user?.role === 'coach';
@@ -207,11 +208,10 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
                 {/* Tab bar */}
                 <div className="sticky top-0 z-10 border-b bg-white md:top-0" style={{ borderColor: '#e8d9c4' }}>
                     <div className="mx-auto flex max-w-xl">
-                        {([
-                            ['feed', 'Pre teba'],
-                            ['reels', 'Reels'],
-                            ['videos', 'Videa'],
-                        ] as [Tab, string][]).map(([t, label]) => (
+                        {(isGuest
+                            ? [['feed', 'Pre teba']] as [Tab, string][]
+                            : [['feed', 'Pre teba'], ['reels', 'Reels'], ['videos', 'Videa']] as [Tab, string][]
+                        ).map(([t, label]) => (
                             <button
                                 key={t}
                                 onClick={() => setTab(t)}
@@ -227,6 +227,32 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
                     </div>
                 </div>
 
+                {/* ── Guest banner ── */}
+                {isGuest && (
+                    <div style={{ background: 'linear-gradient(135deg, #c4714a, #5a3e2b)', padding: '20px 16px', textAlign: 'center' }}>
+                        <p style={{ color: 'white', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                            🔒 Prihlás sa pre prístup k celému feedu
+                        </p>
+                        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 14 }}>
+                            Ukážeme ti len 6 verejných príspevkov. Zaregistruj sa zadarmo.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                            <Link
+                                href="/register"
+                                style={{ padding: '10px 24px', borderRadius: 999, backgroundColor: 'white', color: '#c4714a', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
+                            >
+                                Registrovať sa zadarmo
+                            </Link>
+                            <Link
+                                href="/login"
+                                style={{ padding: '10px 24px', borderRadius: 999, border: '2px solid rgba(255,255,255,0.5)', color: 'white', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
+                            >
+                                Prihlásiť sa
+                            </Link>
+                        </div>
+                    </div>
+                )}
+
                 {/* ── Tab: Pre teba (mixed feed) ── */}
                 {tab === 'feed' && (
                     <div className="mx-auto max-w-xl pb-6">
@@ -239,18 +265,39 @@ export default function Feed({ posts, reels, videos, coaches }: Props) {
                             </div>
                         ) : (
                             <div className="divide-y" style={{ borderColor: '#e8d9c4' }}>
-                                {posts.map((post) => (
-                                    <PostCard
-                                        key={post.id}
-                                        post={post}
-                                        isLiked={likedPosts.has(post.id)}
-                                        likeCount={likeCounts[post.id] ?? post.like_count}
-                                        isSaved={saved.has(post.id)}
-                                        onLike={() => toggleLike(post.id)}
-                                        onSave={() => toggleSave(post.id)}
-                                        onPlay={() => setActiveVideo(post)}
-                                    />
-                                ))}
+                                {posts.map((post, idx) => {
+                                    const blurGuest = isGuest && idx >= posts.length - 2;
+                                    return (
+                                        <div key={post.id} style={{ position: 'relative' }}>
+                                            <PostCard
+                                                post={post}
+                                                isLiked={likedPosts.has(post.id)}
+                                                likeCount={likeCounts[post.id] ?? post.like_count}
+                                                isSaved={saved.has(post.id)}
+                                                onLike={() => !isGuest && toggleLike(post.id)}
+                                                onSave={() => !isGuest && toggleSave(post.id)}
+                                                onPlay={() => !isGuest && setActiveVideo(post)}
+                                            />
+                                            {blurGuest && (
+                                                <div style={{
+                                                    position: 'absolute', inset: 0, backdropFilter: 'blur(6px)',
+                                                    backgroundColor: 'rgba(250,246,240,0.6)',
+                                                    display: 'flex', flexDirection: 'column',
+                                                    alignItems: 'center', justifyContent: 'center', gap: 12,
+                                                }}>
+                                                    <span style={{ fontSize: 32 }}>🔒</span>
+                                                    <p style={{ fontWeight: 700, color: '#2d2118', fontSize: 15 }}>Prihlás sa pre plný prístup</p>
+                                                    <Link
+                                                        href="/register"
+                                                        style={{ padding: '10px 24px', borderRadius: 999, backgroundColor: '#c4714a', color: 'white', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
+                                                    >
+                                                        Registrovať sa zadarmo
+                                                    </Link>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

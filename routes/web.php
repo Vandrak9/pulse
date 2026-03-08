@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\MediaStreamController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
@@ -32,6 +33,15 @@ Route::get('/coaches', [CoachController::class, 'index'])->name('coaches.index')
 Route::get('/coaches/search', [CoachController::class, 'search'])->name('coaches.search');
 Route::get('/coaches/{coach}', [CoachController::class, 'show'])->name('coaches.show');
 
+// Feed — accessible without auth (guest preview)
+Route::get('/feed', [FeedController::class, 'index'])->name('feed');
+
+// Legal pages
+Route::get('/legal/privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('/legal/terms', [LegalController::class, 'terms'])->name('legal.terms');
+Route::get('/legal/gdpr', [LegalController::class, 'gdpr'])->name('legal.gdpr');
+Route::get('/legal/cookies', [LegalController::class, 'cookies'])->name('legal.cookies');
+
 // ── Authenticated routes ───────────────────────────────────────────────────────
 
 Route::middleware('auth')->group(function () {
@@ -42,7 +52,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/profile', [CoachController::class, 'edit'])->name('dashboard.profile.edit');
     Route::put('/dashboard/profile', [CoachController::class, 'update'])->name('dashboard.profile.update');
 
-    Route::get('/feed', [FeedController::class, 'index'])->name('feed');
     Route::post('/feed/like/{post}', [FeedController::class, 'like'])
         ->middleware('throttle:likes')
         ->name('feed.like');

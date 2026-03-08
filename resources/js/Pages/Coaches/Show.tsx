@@ -140,6 +140,7 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                                             <span className="flex items-center gap-1">
                                                 <span style={{ color: '#f5a623' }}>&#9733;</span>
                                                 <span className="font-medium" style={{ color: '#2d2118' }}>{rating.toFixed(1)}</span>
+                                                <span style={{ color: '#9a8a7a' }}>({followersCount} hodnotení)</span>
                                             </span>
                                             <span style={{ color: '#e8d9c4' }}>|</span>
                                         </>

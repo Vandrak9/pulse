@@ -19,92 +19,162 @@ export default function Login({
         post(route('login'), { onFinish: () => reset('password') });
     };
 
-    const inputClass = 'w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition focus:ring-2';
-    const inputStyle = { borderColor: '#e8d9c4', color: '#2d2118', '--tw-ring-color': '#c4714a' } as React.CSSProperties;
+    const inputStyle = {
+        width: '100%', padding: '11px 16px', borderRadius: 12,
+        border: '1px solid #e8d9c4', fontSize: 14, color: '#2d2118',
+        outline: 'none', boxSizing: 'border-box' as const,
+        backgroundColor: 'white',
+    };
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center px-4" style={{ backgroundColor: '#faf6f0' }}>
+        <div style={{ display: 'flex', minHeight: '100vh' }}>
             <Head title="Vitaj späť — PULSE" />
 
-            <Link href="/" className="mb-8 font-serif text-3xl font-bold tracking-tight" style={{ color: '#c4714a' }}>
-                PULSE
-            </Link>
+            {/* LEFT — form */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 40px', backgroundColor: '#faf6f0' }}>
+                <Link href="/" style={{ fontFamily: 'Georgia, serif', fontSize: 26, fontWeight: 700, color: '#c4714a', textDecoration: 'none', marginBottom: 40, display: 'inline-block' }}>
+                    PULSE
+                </Link>
 
-            <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm" style={{ border: '1px solid #e8d9c4' }}>
-                <h1 className="mb-6 font-serif text-2xl font-bold" style={{ color: '#2d2118' }}>
-                    Vitaj späť
-                </h1>
+                <div style={{ maxWidth: 360, width: '100%' }}>
+                    <h1 style={{ fontSize: 28, fontWeight: 700, color: '#2d2118', marginBottom: 6, fontFamily: 'Georgia, serif' }}>
+                        Vitaj späť 👋
+                    </h1>
+                    <p style={{ fontSize: 14, color: '#9a8a7a', marginBottom: 28 }}>Prihlás sa do svojho účtu</p>
 
-                {status && (
-                    <div className="mb-4 rounded-lg p-3 text-sm" style={{ backgroundColor: '#f0fdf4', color: '#166534' }}>
-                        {status}
-                    </div>
-                )}
+                    {status && (
+                        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 10, backgroundColor: '#f0fdf4', color: '#166534', fontSize: 13 }}>
+                            {status}
+                        </div>
+                    )}
 
-                <form onSubmit={submit} className="space-y-4">
-                    <div>
-                        <label className="mb-1 block text-sm font-medium" style={{ color: '#2d2118' }}>Email</label>
-                        <input
-                            type="email"
-                            value={data.email}
-                            autoComplete="username"
-                            autoFocus
-                            onChange={(e) => setData('email', e.target.value)}
-                            className={inputClass}
-                            style={inputStyle}
-                        />
-                        {errors.email && <p className="mt-1 text-xs" style={{ color: '#c4714a' }}>{errors.email}</p>}
-                    </div>
+                    <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2d2118', marginBottom: 6 }}>Email</label>
+                            <input
+                                type="email"
+                                value={data.email}
+                                autoComplete="username"
+                                autoFocus
+                                onChange={(e) => setData('email', e.target.value)}
+                                style={inputStyle}
+                                onFocus={e => (e.currentTarget.style.borderColor = '#c4714a')}
+                                onBlur={e => (e.currentTarget.style.borderColor = '#e8d9c4')}
+                            />
+                            {errors.email && <p style={{ marginTop: 4, fontSize: 12, color: '#c4714a' }}>{errors.email}</p>}
+                        </div>
 
-                    <div>
-                        <label className="mb-1 block text-sm font-medium" style={{ color: '#2d2118' }}>Heslo</label>
-                        <input
-                            type="password"
-                            value={data.password}
-                            autoComplete="current-password"
-                            onChange={(e) => setData('password', e.target.value)}
-                            className={inputClass}
-                            style={inputStyle}
-                        />
-                        {errors.password && <p className="mt-1 text-xs" style={{ color: '#c4714a' }}>{errors.password}</p>}
-                    </div>
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                <label style={{ fontSize: 13, fontWeight: 600, color: '#2d2118' }}>Heslo</label>
+                                {canResetPassword && (
+                                    <Link href={route('password.request')} style={{ fontSize: 12, color: '#c4714a', textDecoration: 'none' }}>
+                                        Zabudol si heslo?
+                                    </Link>
+                                )}
+                            </div>
+                            <input
+                                type="password"
+                                value={data.password}
+                                autoComplete="current-password"
+                                onChange={(e) => setData('password', e.target.value)}
+                                style={inputStyle}
+                                onFocus={e => (e.currentTarget.style.borderColor = '#c4714a')}
+                                onBlur={e => (e.currentTarget.style.borderColor = '#e8d9c4')}
+                            />
+                            {errors.password && <p style={{ marginTop: 4, fontSize: 12, color: '#c4714a' }}>{errors.password}</p>}
+                        </div>
 
-                    <div className="flex items-center justify-between">
-                        <label className="flex cursor-pointer items-center gap-2 text-sm" style={{ color: '#9a8a7a' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#9a8a7a', cursor: 'pointer' }}>
                             <input
                                 type="checkbox"
                                 checked={data.remember}
                                 onChange={(e) => setData('remember', (e.target.checked || false) as false)}
-                                className="rounded"
+                                style={{ accentColor: '#c4714a' }}
                             />
                             Zapamätať si ma
                         </label>
-                        {canResetPassword && (
-                            <Link href={route('password.request')} className="text-xs hover:underline" style={{ color: '#c4714a' }}>
-                                Zabudol si heslo?
-                            </Link>
-                        )}
-                    </div>
 
-                    <button
-                        type="submit"
-                        disabled={processing}
-                        className="w-full rounded-full py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
-                        style={{ backgroundColor: '#c4714a' }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
-                    >
-                        Prihlásiť sa
-                    </button>
-                </form>
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            style={{
+                                width: '100%', padding: '13px', borderRadius: 999,
+                                backgroundColor: '#c4714a', color: 'white',
+                                fontSize: 15, fontWeight: 700, border: 'none',
+                                cursor: processing ? 'not-allowed' : 'pointer',
+                                opacity: processing ? 0.6 : 1, marginTop: 4,
+                                transition: 'background-color 0.15s',
+                            }}
+                            onMouseEnter={e => !processing && (e.currentTarget.style.backgroundColor = '#5a3e2b')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#c4714a')}
+                        >
+                            Prihlásiť sa
+                        </button>
+                    </form>
+
+                    <p style={{ marginTop: 24, fontSize: 14, color: '#9a8a7a', textAlign: 'center' }}>
+                        Nemáš účet?{' '}
+                        <Link href={route('register')} style={{ color: '#c4714a', fontWeight: 600, textDecoration: 'none' }}>
+                            Registruj sa
+                        </Link>
+                    </p>
+                </div>
             </div>
 
-            <p className="mt-6 text-sm" style={{ color: '#9a8a7a' }}>
-                Nemáš účet?{' '}
-                <Link href={route('register')} className="font-medium hover:underline" style={{ color: '#c4714a' }}>
-                    Registrovať sa
-                </Link>
-            </p>
+            {/* RIGHT — visual motivation (hidden on mobile) */}
+            <div
+                className="hidden md:flex"
+                style={{
+                    width: '50%', flexDirection: 'column', justifyContent: 'center',
+                    alignItems: 'center', padding: 48,
+                    background: 'linear-gradient(135deg, #c4714a 0%, #2d2118 100%)',
+                    position: 'relative', overflow: 'hidden',
+                }}
+            >
+                {/* Decorative blob */}
+                <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+                <div style={{ position: 'absolute', bottom: -40, left: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+
+                <div style={{ position: 'relative', maxWidth: 340, textAlign: 'center' }}>
+                    <blockquote style={{
+                        fontSize: 26, fontFamily: 'Georgia, serif', color: 'white',
+                        lineHeight: 1.45, marginBottom: 40, fontStyle: 'italic',
+                    }}>
+                        "Investícia do teba je najlepšia investícia."
+                    </blockquote>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 48, alignItems: 'flex-start', paddingLeft: 20 }}>
+                        {['120+ fitness koučov', 'Exkluzívny obsah', 'Zruš kedykoľvek'].map(b => (
+                            <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 15 }}>
+                                <span style={{ fontSize: 18 }}>✅</span>
+                                {b}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Overlapping coach avatars */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                        {[
+                            { initial: 'T', bg: 'rgba(255,255,255,0.25)' },
+                            { initial: 'L', bg: 'rgba(255,255,255,0.20)' },
+                            { initial: 'M', bg: 'rgba(255,255,255,0.15)' },
+                        ].map((a, i) => (
+                            <div key={i} style={{
+                                width: 48, height: 48, borderRadius: '50%',
+                                background: a.bg, border: '2px solid rgba(255,255,255,0.4)',
+                                marginLeft: i > 0 ? -14 : 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'white', fontWeight: 700, fontSize: 16,
+                                backdropFilter: 'blur(4px)',
+                            }}>
+                                {a.initial}
+                            </div>
+                        ))}
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>Pridaj sa k 2 864 fanúšikom</p>
+                </div>
+            </div>
         </div>
     );
 }
