@@ -224,10 +224,47 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
     };
 
     // ── Media upload via axios ─────────────────────────────────────────────────
-    const MAX_SIZE = 50 * 1024 * 1024;
+    const MAX_SIZE_GALLERY = 50 * 1024 * 1024;   // 50MB for gallery picks
+    const MAX_SIZE_CAMERA  = 100 * 1024 * 1024;  // 100MB for camera/HEIC (compressed before upload)
+
+    // Client-side image compression: resize to max 1920px, convert to JPEG 85%
+    const compressImage = (file: File): Promise<File> => {
+        return new Promise((resolve) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                const MAX = 1920;
+                let w = img.width, h = img.height;
+                if (w > MAX || h > MAX) {
+                    if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                    else { w = Math.round(w * MAX / h); h = MAX; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+                canvas.toBlob((blob) => {
+                    URL.revokeObjectURL(url);
+                    if (blob) {
+                        const compressed = new File(
+                            [blob],
+                            file.name.replace(/\.[^.]+$/, '.jpg'),
+                            { type: 'image/jpeg' }
+                        );
+                        console.log(`[compress] ${(file.size/1024/1024).toFixed(2)}MB → ${(compressed.size/1024/1024).toFixed(2)}MB`);
+                        resolve(compressed);
+                    } else {
+                        resolve(file);
+                    }
+                }, 'image/jpeg', 0.85);
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+            img.src = url;
+        });
+    };
 
     const sendMedia = useCallback(async (file: File, type: 'image' | 'video' | 'voice', durationSec?: number) => {
-        if (file.size > MAX_SIZE) { showToast('Súbor je príliš veľký (max 50MB)'); return; }
+        const limit = MAX_SIZE_CAMERA; // already validated before calling sendMedia
+        if (file.size > limit) { showToast(`Súbor je príliš veľký (${Math.round(file.size/1024/1024)}MB, max 100MB)`); return; }
 
         const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
         const formData = new FormData();
@@ -276,22 +313,31 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Debug: log actual size so we can verify the check
-        console.log('[media] file:', file.name, 'type:', file.type, 'size bytes:', file.size, 'MB:', (file.size / 1024 / 1024).toFixed(2));
+        const isImage = file.type.startsWith('image/') || file.type === 'image/heic' || file.type === 'image/heif';
+        const isVideo = file.type.startsWith('video/');
+        const isCamera = file.name.startsWith('IMG_') || file.type === 'image/heic' || file.type === 'image/heif';
+        const sizeLimit = isCamera ? MAX_SIZE_CAMERA : MAX_SIZE_GALLERY;
 
-        if (file.size > MAX_SIZE) {
-            showToast(`Súbor je príliš veľký (${Math.round(file.size / 1024 / 1024)}MB, max 50MB)`);
+        console.log('[media] file:', file.name, 'type:', file.type, 'size:', (file.size/1024/1024).toFixed(2) + 'MB', 'camera:', isCamera);
+
+        if (file.size > sizeLimit) {
+            showToast(`Súbor je príliš veľký (${Math.round(file.size/1024/1024)}MB, max ${isCamera ? 100 : 50}MB)`);
             e.target.value = '';
             return;
         }
 
-        const type: 'image' | 'video' | null =
-            file.type.startsWith('image/') ? 'image' :
-            file.type.startsWith('video/') ? 'video' : null;
+        const type: 'image' | 'video' | null = isImage ? 'image' : isVideo ? 'video' : null;
         if (!type) { showToast('Nepodporovaný formát'); e.target.value = ''; return; }
-        const previewUrl = URL.createObjectURL(file);
+
+        let fileToUpload = file;
+        if (isImage) {
+            showToast('Komprimujem obrázok…', 'info');
+            fileToUpload = await compressImage(file);
+        }
+
+        const previewUrl = URL.createObjectURL(fileToUpload);
         setPreview({ url: previewUrl, type });
-        await sendMedia(file, type);
+        await sendMedia(fileToUpload, type);
         URL.revokeObjectURL(previewUrl);
         e.target.value = '';
     };
