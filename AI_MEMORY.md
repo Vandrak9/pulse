@@ -673,3 +673,4 @@ POST /dashboard/reels         → PostController@storeReel
 
 **Seed data added:**
 - `fan@pulse.sk`: profile_bio set, profile_is_public=true, 5 post_likes inserted
+- [2026-03-08 16:39:05] 03aaacf: chore: update AI_MEMORY with session 13 fan profile
