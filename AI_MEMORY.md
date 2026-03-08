@@ -508,3 +508,71 @@ POST /follow/{userId}   → FollowController@toggle (JSON)
 - `PulseLayout`: Profil link → `/profile/{user.id}`
 
 **Notification:** `new_follower` type added (uses 🔔 fallback in UI)
+- [2026-03-08 13:31:50] 2f24596: chore: update AI_MEMORY with session 6 social features
+- [2026-03-08 13:38:47] 1404f38: fix: follow buttons, profile crash, coach home redirect
+- [2026-03-08 13:47:20] 56a1f22: fix: follow button Inertia router, profile white screen
+- [2026-03-08 13:52:20] 03845b1: fix: follow uses axios not Inertia router, profile crash debug
+- [2026-03-08 14:05:14] 06c66f3: feat: coach post creation with media, rich editor, notifications
+
+---
+
+## Session 10 — 2026-03-08 (cont.)
+
+### What was built — Coach post creation system
+
+**DB:**
+- `post_media` table: id, post_id(FK cascade), media_path, media_type(image|video), media_thumbnail nullable, sort_order unsignedSmallInteger, created_at
+  - index: [post_id, sort_order]
+- `PostMedia` model: fillable, `$timestamps = false`, belongsTo Post
+- `Post` model: added `media()` hasMany PostMedia ordered by sort_order
+
+**Backend:**
+- `PostController`: create(), store(), createReel(), storeReel(), destroy()
+  - store(): validate title/content/is_exclusive/media (max:3 files, max:80MB each, images+videos)
+    - saves to `posts/images/` or `posts/videos/` via `Storage::disk('public')`
+    - creates PostMedia rows + populates legacy media_path/media_type from first file
+    - dispatches SendPostNotificationsJob
+  - storeReel(): validates video (max 200MB, mp4/mov/webm), saves to `posts/reels/`
+    - force is_exclusive=false, video_type='reel'
+    - dispatches SendPostNotificationsJob with type 'new_reel'
+  - destroy(): verifies coach owns post, deletes storage files, deletes post
+- `SendPostNotificationsJob`: queued on 'notifications' queue
+  - Reel → notify all followers (follows table)
+  - Exclusive → notify subscribers only (subscriptions table, stripe_status=active)
+  - Public → notify followers + subscribers merged + deduplicated
+  - Batch insert via collect()->chunk(50)->each()
+  - Notification title/body differ by type (🔒 exclusive, ⚡ reel, 📸 public)
+
+**Routes added (all auth):**
+```
+GET  /dashboard/posts/create  → PostController@create
+POST /dashboard/posts         → PostController@store
+DELETE /dashboard/posts/{post} → PostController@destroy
+GET  /dashboard/reels/create  → PostController@createReel
+POST /dashboard/reels         → PostController@storeReel
+```
+
+**Frontend:**
+- `Dashboard/Posts/Create.tsx`: two-column composer
+  - Left: serif title input, markdown toolbar (B/I/H2/H3/list/quote), textarea with word count
+  - Drag-drop media zone (max 3 files, shows type badge on thumbnails, remove button)
+  - Upload progress bar
+  - Right: audience selector cards (🌍 Verejný / 🔒 Exkluzívny), reach estimate, post preview card (live), submit button
+- `Dashboard/Reels/Create.tsx`: reel composer
+  - 9:16 upload zone → video preview player (with duration display)
+  - Duration warning if >60s
+  - Title + caption inputs
+  - Right: reach stats (followers + subscribers + total), tips panel, ⚡ badge, submit
+- `PulseLayout.tsx`: "Pridať obsah" is now a dropdown button (not a link)
+  - Click toggles dropdown, click outside closes (useEffect + useRef)
+  - Options: 📝 Príspevok → /dashboard/posts/create, ⚡ Reel → /dashboard/reels/create
+- `Notifications/Index.tsx`: added `new_reel: '⚡'` to TYPE_ICONS map
+
+### Notification types (updated)
+- `new_subscriber` → 🎉
+- `new_message`    → 💬
+- `new_like`       → ❤️
+- `new_post`       → 📸
+- `new_reel`       → ⚡  ← NEW
+- `new_follower`   → 🔔 (fallback)
+- `tip`            → 💰
