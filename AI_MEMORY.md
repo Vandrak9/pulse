@@ -677,3 +677,36 @@ POST /dashboard/reels         → PostController@storeReel
 - [2026-03-08 18:12:16] b02875d: fix: fan 403 bug — remove incorrect role middleware from public routes
 - [2026-03-08 18:19:59] dce4be4: fix: fan 500 on message send — null coach check and error handling
 - [2026-03-08 18:33:27] 901ef5e: feat: Stripe subscription flow with real isSubscribed checks
+- [2026-03-08 19:09:39] fad7bb1: feat: UX audit fixes — footer GDPR, login split, clickable cards, mobile hero, reviews sidebar, legal pages
+- [2026-03-08 19:14:57] 6660023: feat: Stripe checkout rewrite — direct StripeClient, EUR currency, robust success handler
+
+---
+
+## Session 14 — 2026-03-08 (cont.)
+
+### What was built — Stripe controller rewrite + EUR currency
+
+**SubscriptionController full rewrite (direct Stripe API):**
+- `checkout()`: creates Stripe customer if needed (`stripe_id`), uses `\Stripe\StripeClient` directly (not Cashier), `Inertia::location($session->url)` for redirect, guards zero price, catches `ApiErrorException` separately
+- `success()`: retrieves Checkout Session from Stripe, upserts `subscriptions` table row with correct `stripe_status`, increments `subscriber_count` only if row is fresh (<5min), inserts `notifications` row to notify coach
+- `cancel()`: direct `$stripe->subscriptions->cancel()` + DB update to `canceled` status
+- `ensureStripePriceExists()`: accepts `StripeClient` as param (no re-instantiation)
+
+**DB queries standardized:**
+- `CoachController::show()`: replaced `subscribed('coach_N')` with direct `DB::table('subscriptions')->whereIn('stripe_status', ['active','trialing'])` check
+- `FeedController`: replaced `$user->subscribed()` call in coaches map with `in_array($coach->id, $subscribedCoachIds)` (already built from DB query)
+
+**Config fix:**
+- `.env`: added `CASHIER_CURRENCY=eur` (was missing, cashier defaulted to `usd`)
+
+### Pending — Stripe keys not configured
+
+Stripe keys (`STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`) are empty in `.env`.
+E2E test cannot be completed until keys are set.
+
+**To configure Stripe:**
+1. Get test keys from https://dashboard.stripe.com/test/apikeys
+2. Set in `.env`: `STRIPE_KEY=pk_test_...`, `STRIPE_SECRET=sk_test_...`
+3. Seed coach prices: `php artisan tinker` → `Coach::all()->each(fn($c) => $c->update(['stripe_price_id' => null]))`
+4. First checkout attempt will auto-create Stripe Product+Price per coach
+5. Test with card `4242 4242 4242 4242`, any future expiry, any CVC
