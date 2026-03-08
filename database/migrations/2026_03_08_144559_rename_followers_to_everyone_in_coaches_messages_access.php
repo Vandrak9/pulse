@@ -7,6 +7,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('coaches', 'messages_access')) {
+            return;
+        }
+
         DB::table('coaches')
             ->where('messages_access', 'followers')
             ->update(['messages_access' => 'everyone']);
@@ -16,6 +20,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('coaches', 'messages_access')) {
+            return;
+        }
+
         DB::table('coaches')
             ->where('messages_access', 'everyone')
             ->update(['messages_access' => 'followers']);
