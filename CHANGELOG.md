@@ -10,7 +10,43 @@ Versioning follows [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.P
 
 ---
 
-## [Unreleased]
+## [1.0.0] — 2026-03-08 — Platform MVP Complete
+
+### Added
+- OnlyFans-style feed with Stories, Reels, Videos tabs and like system (optimistic UI)
+- DM Chat — text, images, video, voice notes with waveform player, read receipts
+- Broadcast messaging — coach sends one message to all subscribers at once
+- Coach Dashboard — earnings chart (recharts), subscriber list, activity feed
+- Notifications system — new posts, messages, likes, subscribers, followers
+- Social follow system — follow coaches without subscribing, optimistic UI with axios
+- Coach post creation — text, images, exclusive video with paywall blur
+- Reel creation — always public, notifies all followers via queue job
+- Messages privacy settings — coaches control who can message (everyone/subscribers/nobody)
+- New conversation flow — search coaches modal, start chat from profile
+- Desktop layout — left sidebar (nav), right sidebar (suggested coaches), two-panel messages
+- Notifications page — read/unread state, mark all read, type icons
+- Fan/User social profiles — bio, avatar, following list, inline edit mode
+- Real Pexels stock content — fitness videos and images via PexelsService
+- SSL certificate — pulsehub.fun with Let's Encrypt (auto-renew)
+- Redis queue worker — background jobs for notifications and broadcasts
+- Avatar component + shared utils (relativeTime, formatDuration, etc.)
+- DB performance indexes — messages, posts, follows, notifications, coaches
+
+### Fixed
+- All 5 critical security audit issues (rate limiting, MIME validation, role checks)
+- N+1 query problems with eager loading in controllers
+- File upload permissions (www-data ownership, 775 permissions)
+- Voice note MIME type detection (iOS audio/mp4 → treated as voice)
+- Image lightbox in chat, category filter with Slovak declension
+- Nginx 413 upload limit (500M), PHP FPM limits (200M)
+- media_url using Storage::url() instead of raw path
+- video_type not set for video posts uploaded via post creation
+
+### Security
+- Rate limiting: messages (30/min), uploads (10/min), likes (60/min), broadcasts (5/min)
+- Server-side MIME validation for all file uploads
+- Role-based access control (coach/fan) enforced in controllers
+- CSRF protection on all forms, Inertia X-XSRF-TOKEN header
 
 ---
 

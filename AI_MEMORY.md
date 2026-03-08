@@ -639,3 +639,4 @@ POST /dashboard/reels         → PostController@storeReel
   - `NewMessageModal` component: debounced search (250ms), axios GET `/coaches/search?q=...`, coach results list
   - "+ Nová správa" button added to mobile header (top right) and desktop panel header (top right)
   - Opens modal on click, navigates to `/messages/{user_id}` on coach selection
+- [2026-03-08 14:47:44] fe6a9ce: feat: messages privacy setting visible in coach profile edit
