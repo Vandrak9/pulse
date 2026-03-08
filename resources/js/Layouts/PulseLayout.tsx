@@ -112,13 +112,24 @@ export default function PulseLayout({ children }: Props) {
                     {user && (
                         <div className="flex items-center gap-3">
                             {/* Notification bell */}
-                            <button className="relative rounded-full p-1.5 transition hover:bg-gray-100">
+                            <a href="/messages" className="relative rounded-full p-1.5 transition hover:bg-gray-100" style={{ display: 'inline-flex' }}>
                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: '#2d2118' }}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
-                                {/* Unread dot */}
-                                <span className="absolute right-1 top-1 h-2 w-2 rounded-full" style={{ backgroundColor: '#c4714a' }} />
-                            </button>
+                                {/* Unread badge — only shown when there are unread messages */}
+                                {unreadCount > 0 && (
+                                    <span style={{
+                                        position: 'absolute', top: 2, right: 2,
+                                        background: '#e53e3e', color: 'white',
+                                        borderRadius: 999, fontSize: 9, fontWeight: 700,
+                                        minWidth: 16, height: 16,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        padding: '0 3px', lineHeight: 1,
+                                    }}>
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+                            </a>
 
                             {/* Avatar */}
                             <Link href="/dashboard/profile">

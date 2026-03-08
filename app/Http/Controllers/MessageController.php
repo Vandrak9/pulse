@@ -56,8 +56,11 @@ class MessageController extends Controller
             ];
         }
 
-        // Sort by last message (most recent first)
+        // Sort: unread conversations first, then by latest message time
         usort($conversations, function ($a, $b) {
+            $aUnread = $a['unread_count'] > 0 ? 1 : 0;
+            $bUnread = $b['unread_count'] > 0 ? 1 : 0;
+            if ($aUnread !== $bUnread) return $bUnread - $aUnread;
             $aTime = $a['last_message']['created_at'] ?? '0';
             $bTime = $b['last_message']['created_at'] ?? '0';
             return strcmp($bTime, $aTime);

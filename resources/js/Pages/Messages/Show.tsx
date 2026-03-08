@@ -177,15 +177,41 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
     const timerRef         = useRef<ReturnType<typeof setInterval> | null>(null);
     const streamRef        = useRef<MediaStream | null>(null);
     const recordingSecRef  = useRef(0);
+    const lastMsgCountRef  = useRef(initialMessages.length);
 
     useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+    // 5-second poll: reload messages + detect new ones for push notification
     useEffect(() => {
         const interval = setInterval(() => {
             if (voiceState === 'idle' && !sending) router.reload({ only: ['messages'] });
         }, 5000);
         return () => clearInterval(interval);
     }, [voiceState, sending]);
+
+    useEffect(() => {
+        const prev = lastMsgCountRef.current;
+        const newMessages = messages.slice(prev);
+        lastMsgCountRef.current = messages.length;
+
+        // Push notification for new incoming messages when tab is hidden
+        if (newMessages.length > 0 && document.hidden) {
+            const incoming = newMessages.filter(m => !m.is_mine);
+            if (incoming.length > 0 && 'Notification' in window && Notification.permission === 'granted') {
+                const last = incoming[incoming.length - 1];
+                const body = last.message_type === 'voice' ? '🎤 Hlasová správa' :
+                             last.message_type === 'image' ? '📷 Fotka' :
+                             last.message_type === 'video' ? '🎥 Video' :
+                             last.content.substring(0, 80);
+                const n = new Notification(`Nová správa od ${partner.name}`, {
+                    body,
+                    icon: '/favicon.ico',
+                    badge: '/favicon.ico',
+                });
+                n.onclick = () => { window.focus(); n.close(); };
+            }
+        }
+    }, [messages]);
 
     useEffect(() => { setMessages(initialMessages); }, [initialMessages]);
 
@@ -203,14 +229,29 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
         return () => window.removeEventListener('keydown', onKey);
     }, []);
 
+    // Request push notification permission once (on mount if not yet decided)
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            // Don't ask immediately — request when user sends first message
+        }
+    }, []);
+
     const showToast = (text: string, type: 'error' | 'info' = 'error') => {
         setToast({ text, type });
         setTimeout(() => setToast(null), 4000);
     };
 
+    // ── Request notification permission (called on first user action) ──────────
+    const requestNotificationPermission = () => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().catch(() => {});
+        }
+    };
+
     // ── Text send ──────────────────────────────────────────────────────────────
     const handleSend = () => {
         if (!input.trim() || sending) return;
+        requestNotificationPermission();
         setSending(true);
         router.post(`/messages/${partner.id}`, { content: input.trim() }, {
             preserveScroll: true,
@@ -272,6 +313,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
         formData.append('message_type', type);
         if (durationSec) formData.append('voice_duration', String(durationSec));
 
+        requestNotificationPermission();
         setSending(true);
         setProgress(0);
 
@@ -554,9 +596,22 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                                             textAlign: msg.is_mine ? 'right' : 'left',
                                             paddingLeft: msg.is_mine ? 0 : 4,
                                             paddingRight: msg.is_mine ? 4 : 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 3,
+                                            justifyContent: msg.is_mine ? 'flex-end' : 'flex-start',
                                         }}>
                                             {formatTime(msg.created_at)}
-                                            {msg.is_mine && msg.is_read && ' ✓✓'}
+                                            {msg.is_mine && (
+                                                <span style={{
+                                                    fontSize: 12,
+                                                    color: msg.is_read ? '#c4714a' : '#9a8a7a',
+                                                    fontWeight: msg.is_read ? 600 : 400,
+                                                    letterSpacing: '-1px',
+                                                }}>
+                                                    {msg.is_read ? '✓✓' : '✓'}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
