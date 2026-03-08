@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -98,7 +99,7 @@ class MessageController extends Controller
                 'read_at'         => $msg->read_at,
                 'created_at'      => $msg->created_at,
                 'message_type'    => $msg->message_type ?? 'text',
-                'media_path'      => $msg->media_path ? Storage::url($msg->media_path) : null,
+                'media_path'      => $msg->media_path ? Storage::disk('public')->url($msg->media_path) : null,
                 'media_thumbnail' => $msg->media_thumbnail ?? null,
                 'media_duration'  => $msg->media_duration ?? null,
                 'media_mime_type' => $msg->media_mime_type ?? null,
@@ -140,6 +141,14 @@ class MessageController extends Controller
             $mediaMime = $file->getMimeType();
             $mediaSize = $file->getSize();
 
+            Log::info('Upload attempt', [
+                'mime'         => $mediaMime,
+                'size'         => $mediaSize,
+                'original'     => $file->getClientOriginalName(),
+                'content_type' => $request->header('Content-Type'),
+                'all_keys'     => array_keys($request->all()),
+            ]);
+
             if (str_starts_with($mediaMime, 'image/')) {
                 $messageType = 'image';
                 $mediaPath   = $file->store('messages/images', 'public');
@@ -154,6 +163,8 @@ class MessageController extends Controller
                 $mediaDuration = $request->integer('voice_duration') ?: null;
                 $content       = '';
             }
+
+            Log::info('Upload stored', ['path' => $mediaPath, 'type' => $messageType]);
         }
 
         $message = Message::create([
@@ -178,6 +189,14 @@ class MessageController extends Controller
             return back();
         }
 
+        $mediaUrl = $mediaPath ? Storage::disk('public')->url($mediaPath) : null;
+
+        Log::info('Returning message', [
+            'id'         => $message->id,
+            'type'       => $messageType,
+            'media_url'  => $mediaUrl,
+        ]);
+
         return response()->json([
             'ok' => true,
             'message' => [
@@ -186,9 +205,9 @@ class MessageController extends Controller
                 'is_mine'         => true,
                 'is_read'         => false,
                 'read_at'         => null,
-                'created_at'      => $message->created_at,
+                'created_at'      => $message->created_at->toISOString(),
                 'message_type'    => $message->message_type,
-                'media_path'      => $mediaPath ? Storage::url($mediaPath) : null,
+                'media_path'      => $mediaUrl,
                 'media_thumbnail' => null,
                 'media_duration'  => $mediaDuration,
                 'media_mime_type' => $mediaMime,

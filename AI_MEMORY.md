@@ -338,3 +338,4 @@ POST /dashboard/broadcast             → BroadcastController@store (coach only)
 - [2026-03-08 07:23:46] 0f0dfab: fix: multimedia upload bugs and HTTP compatibility
 - [2026-03-08 07:27:27] 56b4f44: chore: domain pulsehub.fun with SSL certificate
 - [2026-03-08 07:32:43] fe2edb4: fix: complete multimedia upload rewrite — images, video, voice
+- [2026-03-08 07:38:18] 5e3deb6: fix: unified media upload, CSRF fix, voice playback fix

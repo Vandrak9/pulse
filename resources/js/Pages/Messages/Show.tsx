@@ -131,8 +131,10 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
     };
 
     // ── Media upload via axios ─────────────────────────────────────────────────
+    const MAX_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+
     const sendMedia = useCallback(async (file: File, type: 'image' | 'video' | 'voice', durationSec?: number) => {
-        if (file.size > 52428800) { showToast('Súbor je príliš veľký (max 50MB)'); return; }
+        if (file.size > MAX_SIZE) { showToast('Súbor je príliš veľký (max 50MB)'); return; }
 
         const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
 
@@ -159,6 +161,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     },
                 }
             );
+            console.log('[sendMedia] response:', res.data);
             if (res.data?.ok && res.data.message) {
                 setMessages(prev => [...prev, res.data.message]);
             } else {
@@ -325,7 +328,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                                 }}>
                                     <div style={{ maxWidth: '72%' }}>
                                         <div style={{
-                                            padding: msg.message_type === 'image' ? '4px' : '10px 14px',
+                                            padding: msg.message_type === 'image' && msg.media_path ? '4px' : '10px 14px',
                                             borderRadius: msg.is_mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                                             background: msg.is_mine ? '#c4714a' : 'white',
                                             color: msg.is_mine ? 'white' : '#2d2118',
@@ -333,39 +336,50 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                                             boxShadow: msg.is_mine ? 'none' : '0 1px 2px rgba(0,0,0,0.08)',
                                             wordBreak: 'break-word',
                                         }}>
-                                            {msg.message_type === 'image' && msg.media_path ? (
-                                                <img
-                                                    src={msg.media_path}
-                                                    alt="Obrázok"
-                                                    style={{ maxWidth: 240, maxHeight: 320, borderRadius: 14, display: 'block', objectFit: 'cover' }}
-                                                />
-                                            ) : msg.message_type === 'video' && msg.media_path ? (
-                                                <video
-                                                    src={msg.media_path}
-                                                    controls
-                                                    preload="metadata"
-                                                    style={{ maxWidth: 240, borderRadius: 14, display: 'block' }}
-                                                />
-                                            ) : msg.message_type === 'voice' && msg.media_path ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 200 }}>
-                                                    <span style={{ fontSize: 16 }}>🎤</span>
-                                                    <audio
+                                            {msg.message_type === 'image' ? (
+                                                msg.media_path ? (
+                                                    <img
+                                                        src={msg.media_path}
+                                                        alt="Obrázok"
+                                                        style={{ maxWidth: 240, maxHeight: 320, borderRadius: 14, display: 'block', objectFit: 'cover' }}
+                                                    />
+                                                ) : (
+                                                    <span style={{ fontSize: 13, opacity: 0.7 }}>🖼️ Obrázok</span>
+                                                )
+                                            ) : msg.message_type === 'video' ? (
+                                                msg.media_path ? (
+                                                    <video
+                                                        src={msg.media_path}
                                                         controls
-                                                        preload="auto"
-                                                        style={{ height: 32, flex: 1, minWidth: 160 }}
-                                                    >
-                                                        {/* Provide mime type hint so browser picks the right decoder */}
-                                                        {msg.media_mime_type && (
-                                                            <source src={msg.media_path} type={msg.media_mime_type} />
+                                                        preload="metadata"
+                                                        style={{ maxWidth: 240, borderRadius: 14, display: 'block' }}
+                                                    />
+                                                ) : (
+                                                    <span style={{ fontSize: 13, opacity: 0.7 }}>🎥 Video</span>
+                                                )
+                                            ) : msg.message_type === 'voice' ? (
+                                                msg.media_path ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 200 }}>
+                                                        <span style={{ fontSize: 16 }}>🎤</span>
+                                                        <audio
+                                                            controls
+                                                            preload="auto"
+                                                            style={{ height: 32, flex: 1, minWidth: 160 }}
+                                                        >
+                                                            {msg.media_mime_type && (
+                                                                <source src={msg.media_path} type={msg.media_mime_type} />
+                                                            )}
+                                                            <source src={msg.media_path} />
+                                                        </audio>
+                                                        {msg.media_duration != null && (
+                                                            <span style={{ fontSize: 12, opacity: 0.75, flexShrink: 0 }}>
+                                                                {formatDuration(msg.media_duration)}
+                                                            </span>
                                                         )}
-                                                        <source src={msg.media_path} />
-                                                    </audio>
-                                                    {msg.media_duration != null && (
-                                                        <span style={{ fontSize: 12, opacity: 0.75, flexShrink: 0 }}>
-                                                            {formatDuration(msg.media_duration)}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ fontSize: 13, opacity: 0.7 }}>🎤 Hlasová správa</span>
+                                                )
                                             ) : (
                                                 msg.content
                                             )}
