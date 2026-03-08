@@ -36,21 +36,22 @@ interface Props {
 
 type Tab = 'sleduje' | 'aktivita' | 'predplatne';
 
-function Avatar({ url, name, size }: { url: string | null; name: string; size: number }) {
+function Avatar({ url, name, size }: { url: string | null; name: string | null; size: number }) {
+    const initial = name ? name.charAt(0).toUpperCase() : '?';
     return (
         <div style={{
             width: size, height: size, borderRadius: '50%', overflow: 'hidden',
             background: '#c4714a', flexShrink: 0,
         }}>
             {url ? (
-                <img src={url} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={url} alt={name ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
                 <div style={{
                     width: '100%', height: '100%', display: 'flex',
                     alignItems: 'center', justifyContent: 'center',
                     color: 'white', fontWeight: 700, fontSize: size * 0.35,
                 }}>
-                    {name.charAt(0).toUpperCase()}
+                    {initial}
                 </div>
             )}
         </div>
@@ -63,6 +64,15 @@ export default function ProfileShow({
 }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { id: number; name: string } | null } };
+
+    // Guard: if profileUser is missing (unexpected server error), show loading state
+    if (!profileUser) {
+        return (
+            <PulseLayout>
+                <div style={{ textAlign: 'center', padding: 60, color: '#9a8a7a' }}>Načítavam...</div>
+            </PulseLayout>
+        );
+    }
 
     const [tab, setTab] = useState<Tab>('sleduje');
     const [following, setFollowing] = useState(initFollowing);
@@ -80,7 +90,14 @@ export default function ProfileShow({
 
     function handleFollow() {
         if (!auth?.user || followLoading) return;
+
+        // Optimistic update
+        const prev = following;
+        const prevCount = followersCount;
+        setFollowing(!prev);
+        setFollowersCount(prev ? prevCount - 1 : prevCount + 1);
         setFollowLoading(true);
+
         fetch(`/follow/${profileUser.id}`, {
             method: 'POST',
             headers: {
@@ -90,10 +107,18 @@ export default function ProfileShow({
             },
             credentials: 'same-origin',
         })
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) throw new Error('Request failed');
+                return r.json();
+            })
             .then(d => {
-                setFollowing(d.following);
-                setFollowersCount(d.count);
+                if (typeof d?.following === 'boolean') setFollowing(d.following);
+                if (typeof d?.count === 'number') setFollowersCount(d.count);
+            })
+            .catch(() => {
+                // Revert on error
+                setFollowing(prev);
+                setFollowersCount(prevCount);
             })
             .finally(() => setFollowLoading(false));
     }
@@ -118,7 +143,7 @@ export default function ProfileShow({
         });
     }
 
-    const memberYear = new Date(profileUser.created_at).getFullYear();
+    const memberYear = profileUser.created_at ? new Date(profileUser.created_at).getFullYear() : '—';
 
     return (
         <PulseLayout>
@@ -176,7 +201,7 @@ export default function ProfileShow({
                                     width: '100%', height: '100%', display: 'flex', alignItems: 'center',
                                     justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 36,
                                 }}>
-                                    {profileUser.name.charAt(0).toUpperCase()}
+                                    {profileUser.name?.charAt(0).toUpperCase() ?? '?'}
                                 </div>
                             )}
                             {isOwn && editing && (

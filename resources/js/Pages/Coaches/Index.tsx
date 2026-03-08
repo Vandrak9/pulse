@@ -154,8 +154,14 @@ function CoachCard({ coach, isLoggedIn }: { coach: Coach; isLoggedIn: boolean })
 
     function handleFollow(e: React.MouseEvent) {
         e.preventDefault();
+        e.stopPropagation();
         if (!isLoggedIn || followLoading) return;
+
+        // Optimistic update
+        const prev = following;
+        setFollowing(!prev);
         setFollowLoading(true);
+
         fetch(`/follow/${coach.user_id}`, {
             method: 'POST',
             headers: {
@@ -165,8 +171,12 @@ function CoachCard({ coach, isLoggedIn }: { coach: Coach; isLoggedIn: boolean })
             },
             credentials: 'same-origin',
         })
-            .then(r => r.json())
-            .then(d => setFollowing(d.following))
+            .then(r => {
+                if (!r.ok) throw new Error('Request failed');
+                return r.json();
+            })
+            .then(d => { setFollowing(d.following); })
+            .catch(() => { setFollowing(prev); }) // revert on error
             .finally(() => setFollowLoading(false));
     }
 
@@ -252,16 +262,16 @@ function CoachCard({ coach, isLoggedIn }: { coach: Coach; isLoggedIn: boolean })
                 <button
                     onClick={handleFollow}
                     disabled={followLoading}
-                    className="mt-2 w-full rounded-full py-1.5 text-center text-xs font-semibold transition-colors"
+                    className="mt-2 w-full rounded-full py-1.5 text-center text-xs font-semibold transition-all"
                     style={{
-                        border: `1px solid ${following ? '#4a7c59' : '#c4714a'}`,
-                        color: following ? '#4a7c59' : '#c4714a',
-                        background: following ? 'rgba(74,124,89,0.08)' : 'none',
+                        border: `1px solid ${following ? '#c4714a' : '#9a8a7a'}`,
+                        color: following ? '#c4714a' : '#9a8a7a',
+                        background: following ? '#fce8de' : 'none',
                         cursor: followLoading ? 'default' : 'pointer',
                         opacity: followLoading ? 0.6 : 1,
                     }}
                 >
-                    {following ? '✓ Sledujem' : '+ Sledovať'}
+                    {following ? 'Sledujem ✓' : 'Sledovať'}
                 </button>
             )}
         </div>

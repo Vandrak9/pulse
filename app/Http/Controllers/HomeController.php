@@ -3,14 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coach;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class HomeController extends Controller
 {
-    public function index(): Response
+    public function index(): Response|RedirectResponse
     {
+        // Coaches see their dashboard as their home page
+        if (Auth::check() && Auth::user()->role === 'coach') {
+            return redirect()->route('dashboard');
+        }
+
         $featured = Coach::with('user')
             ->orderByDesc('subscriber_count')
             ->limit(4)

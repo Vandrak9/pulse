@@ -70,19 +70,25 @@ export default function PulseLayout({ children }: Props) {
             .catch(() => {});
     }, []);
 
-    // Desktop sidebar nav links (Lucide icons)
-    const desktopNavLinks: { label: string; icon: React.ReactNode; href: string; badge: number }[] = [
-        { label: 'Domov',       icon: <Home size={18} />,          href: '/',                 badge: 0 },
-        { label: 'Feed',        icon: <Rss size={18} />,           href: '/feed',              badge: 0 },
-        { label: 'Objaviť',    icon: <Search size={18} />,        href: '/coaches',           badge: 0 },
-        { label: 'Správy',     icon: <MessageCircle size={18} />, href: '/messages',          badge: unreadCount },
-        { label: 'Notifikácie',icon: <Bell size={18} />,          href: '/notifications',     badge: 0 },
+    // Desktop sidebar nav links — different order for coaches vs fans
+    const sharedLinks: { label: string; icon: React.ReactNode; href: string; badge: number }[] = [
+        { label: 'Feed',        icon: <Rss size={18} />,           href: '/feed',          badge: 0 },
+        { label: 'Objaviť',    icon: <Search size={18} />,        href: '/coaches',       badge: 0 },
+        { label: 'Správy',     icon: <MessageCircle size={18} />, href: '/messages',      badge: unreadCount },
+        { label: 'Notifikácie',icon: <Bell size={18} />,          href: '/notifications', badge: 0 },
         { label: 'Profil',     icon: <User size={18} />,          href: user ? `/profile/${user.id}` : '/login', badge: 0 },
-        ...(isCoach ? [
-            { label: 'Dashboard',    icon: <BarChart2 size={18} />,   href: '/dashboard',          badge: 0 },
-            { label: 'Pridať obsah', icon: <PlusSquare size={18} />,  href: '/dashboard/broadcast', badge: 0 },
-        ] : []),
     ];
+
+    const desktopNavLinks: { label: string; icon: React.ReactNode; href: string; badge: number }[] = isCoach
+        ? [
+            { label: 'Dashboard',    icon: <BarChart2 size={18} />,  href: '/dashboard',           badge: 0 },
+            ...sharedLinks,
+            { label: 'Pridať obsah', icon: <PlusSquare size={18} />, href: '/dashboard/broadcast', badge: 0 },
+          ]
+        : [
+            { label: 'Domov', icon: <Home size={18} />, href: '/', badge: 0 },
+            ...sharedLinks,
+          ];
 
     // Mobile bottom tab links (keep emoji for mobile — clear at small size)
     const mobileLinks = [
