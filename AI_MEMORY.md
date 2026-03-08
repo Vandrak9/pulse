@@ -389,3 +389,44 @@ GET /dashboard/subscribers → DashboardController@subscribers (auth)
 - `buildTransactions()`: simulated 20 tx (real Stripe later)
 - Subscribers anonymized as `Fan#XXXX` format
 
+- [2026-03-08 08:56:16] dc37b20: chore: update AI_MEMORY with session 3 dashboard work
+
+---
+
+## Session 4 — 2026-03-08 (cont.)
+
+### What was built
+
+**Full desktop layout — v0.9.0**
+
+- **PulseLayout.tsx** — full rewrite with three-zone layout:
+  - Left sidebar (fixed, 256px, `md+`): PULSE logo, nav links with active state + unread badge, user info + logout at bottom, guest login/register CTA
+  - Right sidebar (fixed, 288px, `lg+`): search input, "Odporúčaní kouči" (4 coaches fetched from `/api/coaches/suggested`), trending category pills, "Ako to funguje" bullets
+  - Mobile top nav (`md:hidden`): unchanged logo + bell + avatar
+  - Mobile bottom tab bar (`md:hidden`): unchanged 5-item tab bar
+  - Main content: `md:ml-64 lg:mr-72` margin to account for fixed sidebars
+
+- **routes/web.php** — new `GET /api/coaches/suggested` endpoint (returns 4 coaches ordered by subscriber_count, JSON)
+
+- **Feed.tsx** — coach composer box (desktop only, `hidden md:block`, coaches only), stories row `max-w-2xl mx-auto`, feed posts `max-w-2xl`, tab bar `max-w-2xl mx-auto`
+
+- **Home.tsx** — hero split layout on `md+` (text left + app mockup gradient right), featured coaches 3-col on `md:grid-cols-3 lg:grid-cols-4`, mobile keeps horizontal scroll
+
+- **Coaches/Index.tsx** — grid updated to `grid-cols-2 md:grid-cols-3 lg:grid-cols-4`, sticky filter bar `top-14 md:top-0`
+
+- **Coaches/Show.tsx** — two-column desktop layout: left 60% (cover + avatar + info + content tabs), right 40% sticky (subscription box + 4 stat cards + message button); extracted `SubscriptionBox` component used on both mobile and desktop; avatar position: centered on mobile, left-aligned on desktop
+
+- **Messages/Index.tsx** — WhatsApp Web-style two-panel desktop layout: left 360px conversation list with inline search, right panel shows "Vyber konverzáciu" placeholder; mobile layout unchanged
+
+- **Dashboard/Index.tsx** — stats grid responsive `grid-cols-2 lg:grid-cols-4`, taller chart (220px), max-width expanded to 1100px, bottom row grid responsive
+
+### Routes added
+
+```
+GET /api/coaches/suggested  → JSON array of 4 coaches (public)
+```
+
+### Version: v0.9.0
+
+- [2026-03-08] 0f63924: feat: full desktop layout with sidebars and responsive design
+- [2026-03-08 12:57:24] 0f63924: feat: full desktop layout with sidebars and responsive design
