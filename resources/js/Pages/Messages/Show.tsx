@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
 import PulseLayout from '@/Layouts/PulseLayout';
+import Avatar from '@/Components/Avatar';
+import { getInitials, formatChatDate, formatTime, formatDuration, isSameDay } from '@/lib/utils';
 
 interface Message {
     id: number;
@@ -33,36 +35,7 @@ interface Props {
 type VoiceState = 'idle' | 'recording' | 'uploading';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function formatTime(dateStr: string): string {
-    return new Intl.DateTimeFormat('sk-SK', { hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr));
-}
-
-function formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today.getTime() - 86400000);
-    const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    if (msgDate.getTime() === today.getTime()) return 'Dnes';
-    if (msgDate.getTime() === yesterday.getTime()) return 'Včera';
-    return new Intl.DateTimeFormat('sk-SK', { day: 'numeric', month: 'long' }).format(date);
-}
-
-function isSameDay(a: string, b: string): boolean {
-    const da = new Date(a); const db = new Date(b);
-    return da.getFullYear() === db.getFullYear() &&
-           da.getMonth() === db.getMonth() &&
-           da.getDate() === db.getDate();
-}
-
-function getInitials(name: string): string {
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-}
-
-function formatDuration(sec: number): string {
-    return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-}
+// formatTime, formatChatDate, isSameDay, getInitials, formatDuration → imported from @/lib/utils
 
 function getSupportedMimeType(): string {
     const types = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
@@ -265,8 +238,8 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
     };
 
     // ── Media upload via axios ─────────────────────────────────────────────────
-    const MAX_SIZE_GALLERY = 50 * 1024 * 1024;   // 50MB for gallery picks
-    const MAX_SIZE_CAMERA  = 100 * 1024 * 1024;  // 100MB for camera/HEIC (compressed before upload)
+    const MAX_SIZE_GALLERY = 80 * 1024 * 1024;   // 80MB for gallery picks
+    const MAX_SIZE_CAMERA  = 80 * 1024 * 1024;   // 80MB for camera/HEIC (compressed before upload, matches server max:81920)
 
     // Client-side image compression: resize to max 1920px, convert to JPEG 85%
     const compressImage = (file: File): Promise<File> => {
@@ -291,7 +264,6 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                             file.name.replace(/\.[^.]+$/, '.jpg'),
                             { type: 'image/jpeg' }
                         );
-                        console.log(`[compress] ${(file.size/1024/1024).toFixed(2)}MB → ${(compressed.size/1024/1024).toFixed(2)}MB`);
                         resolve(compressed);
                     } else {
                         resolve(file);
@@ -332,7 +304,6 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     },
                 }
             );
-            console.log('[sendMedia] response:', res.data);
             if (res.data?.ok && res.data.message) {
                 setMessages(prev => [...prev, res.data.message]);
             } else {
@@ -360,10 +331,9 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
         const isCamera = file.name.startsWith('IMG_') || file.type === 'image/heic' || file.type === 'image/heif';
         const sizeLimit = isCamera ? MAX_SIZE_CAMERA : MAX_SIZE_GALLERY;
 
-        console.log('[media] file:', file.name, 'type:', file.type, 'size:', (file.size/1024/1024).toFixed(2) + 'MB', 'camera:', isCamera);
 
         if (file.size > sizeLimit) {
-            showToast(`Súbor je príliš veľký (${Math.round(file.size/1024/1024)}MB, max ${isCamera ? 100 : 50}MB)`);
+            showToast(`Súbor je príliš veľký (${Math.round(file.size/1024/1024)}MB, max 80MB)`);
             e.target.value = '';
             return;
         }
@@ -504,19 +474,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     gap: 12, flexShrink: 0, zIndex: 10,
                 }}>
                     <a href="/messages" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
-                    {partner.avatar ? (
-                        <img src={partner.avatar} alt={partner.name}
-                            style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
-                    ) : (
-                        <div style={{
-                            width: 40, height: 40, borderRadius: '50%',
-                            background: '#fce8de', color: '#c4714a',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 700, fontSize: 14,
-                        }}>
-                            {getInitials(partner.name)}
-                        </div>
-                    )}
+                    <Avatar src={partner.avatar} name={partner.name} size={40} />
                     <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 15, color: '#2d2118' }}>{partner.name}</div>
                         {partner.is_verified && (
@@ -539,7 +497,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                             <React.Fragment key={msg.id}>
                                 {showDateSep && (
                                     <div style={{ textAlign: 'center', margin: '16px 0 8px', color: '#9a8a7a', fontSize: 12 }}>
-                                        {formatDate(msg.created_at)}
+                                        {formatChatDate(msg.created_at)}
                                     </div>
                                 )}
                                 <div style={{

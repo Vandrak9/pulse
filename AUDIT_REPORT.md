@@ -3,13 +3,13 @@
 **Date:** 2026-03-08
 **Auditor:** Claude Sonnet 4.6
 **Codebase:** `/opt/pulse` — Laravel 11 + React 18 + TypeScript + Inertia.js
-**Overall Health Score: 6.5 / 10**
+**Overall Health Score: 8.5 / 10** *(was 6.5 — all critical + most important issues resolved 2026-03-08)*
 
 ---
 
 ## CRITICAL ISSUES (fix immediately — security/bugs)
 
-### C1. No rate limiting on file upload + message routes
+### ✅ C1. No rate limiting on file upload + message routes
 **Risk:** DoS / spam attack — any authenticated user can flood the server with uploads.
 **Location:** `routes/web.php`
 **Fix:**
@@ -22,7 +22,7 @@ Route::post('/feed/like/{post}', ...)->middleware(['auth', 'throttle:60,1']);
 
 ---
 
-### C2. Client-side `message_type` trusted over server-side MIME detection
+### ✅ C2. Client-side `message_type` trusted over server-side MIME detection
 **Risk:** A malicious client can send `message_type=image` with an executable file, bypassing server categorization logic.
 **Location:** `app/Http/Controllers/MessageController.php` line 159
 **Context:** Added as iOS audio/mp4 workaround. The trust check runs before MIME validation.
@@ -36,7 +36,7 @@ if ($clientType === 'voice' && (str_starts_with($mediaMime, 'audio/') || str_sta
 
 ---
 
-### C3. File size mismatch — client allows 100MB, server validates max 50MB
+### ✅ C3. File size mismatch — client allows 100MB, server validates max 50MB
 **Risk:** Camera photos being compressed client-side still hit Laravel's `max:51200` (50MB) validation before compression, causing spurious 422 errors.
 **Location:** `MessageController.php` line 127 vs `Show.tsx` `MAX_SIZE_CAMERA = 100MB`
 **Fix:** Bump server validation to `max:102400` (100MB) to match client. Server gets the _compressed_ file anyway.
@@ -44,7 +44,7 @@ if ($clientType === 'voice' && (str_starts_with($mediaMime, 'audio/') || str_sta
 
 ---
 
-### C4. N+1 query problem in `MessageController::index()`
+### ✅ C4. N+1 query problem in `MessageController::index()`
 **Risk:** With 50 conversation partners → ~150 DB queries per page load. Will cause serious slowdowns at scale.
 **Location:** `app/Http/Controllers/MessageController.php` lines 18–57
 **Current pattern:**
@@ -60,7 +60,7 @@ foreach ($partnerIds as $partnerId) {
 
 ---
 
-### C5. BroadcastController — no coach role check
+### ✅ C5. BroadcastController — no coach role check
 **Risk:** Any authenticated user (including fans) can send broadcasts.
 **Location:** `app/Http/Controllers/BroadcastController.php` `store()`
 **Fix:** Add at top of method:
@@ -73,7 +73,7 @@ if (auth()->user()->role !== 'coach') abort(403);
 
 ## IMPORTANT ISSUES (UX/performance — fix soon)
 
-### I1. Debug `console.log()` statements left in production
+### ✅ I1. Debug `console.log()` statements left in production
 **Location:** `resources/js/Pages/Messages/Show.tsx`
 - Line 294: `console.log('[compress] ...')` — image compression sizes
 - Line 335: `console.log('[sendMedia] response:', res.data)` — full API response
@@ -84,7 +84,7 @@ if (auth()->user()->role !== 'coach') abort(403);
 
 ---
 
-### I2. Debug `Log::info()` statements left in production controller
+### ✅ I2. Debug `Log::info()` statements left in production controller
 **Location:** `app/Http/Controllers/MessageController.php`
 - Line 148: Logs MIME type, file size, original name, all request keys
 - Line 179: Logs stored media path
@@ -95,14 +95,14 @@ if (auth()->user()->role !== 'coach') abort(403);
 
 ---
 
-### I3. Bell notification icon always shows red dot (was fixed in badge but not dot)
+### ✅ I3. Bell notification icon always shows red dot (was fixed in badge but not dot)
 **Status:** Fixed in last commit — badge is now conditional. Verify the static `<span>` dot is fully removed.
 **Location:** `resources/js/Layouts/PulseLayout.tsx`
 **Estimate:** 5 min (verify only)
 
 ---
 
-### I4. Duplicate avatar rendering across 6+ components
+### ✅ I4. Duplicate avatar rendering across 6+ components
 **Pattern repeated in:** `Feed.tsx` (×3), `Coaches/Index.tsx`, `Coaches/Show.tsx`, `Home.tsx`, `Messages/Index.tsx`, `Messages/Show.tsx`
 ```tsx
 {avatar ? <img src={avatar} ... /> : <div style={{ background: '#c4714a' }}>{initials}</div>}
@@ -112,7 +112,7 @@ if (auth()->user()->role !== 'coach') abort(403);
 
 ---
 
-### I5. Duplicate utility functions across components
+### ✅ I5. Duplicate utility functions across components
 | Function | Duplicated in |
 |---|---|
 | `getInitials()` | `Messages/Show.tsx`, `Messages/Index.tsx` |
@@ -124,7 +124,7 @@ if (auth()->user()->role !== 'coach') abort(403);
 
 ---
 
-### I6. `.env.example` incomplete
+### ✅ I6. `.env.example` incomplete
 **Missing keys:**
 - `PEXELS_API_KEY=` (required for ContentSeeder)
 - `SESSION_SECURE_COOKIE=true` (required for production HTTPS)
@@ -135,7 +135,7 @@ if (auth()->user()->role !== 'coach') abort(403);
 
 ---
 
-### I7. Missing explicit database indexes on high-traffic columns
+### ✅ I7. Missing explicit database indexes on high-traffic columns
 **PostgreSQL creates implicit indexes for FK constraints, but explicit composite indexes are missing:**
 | Table | Missing Index | Used in query |
 |---|---|---|
@@ -149,7 +149,7 @@ if (auth()->user()->role !== 'coach') abort(403);
 
 ---
 
-### I8. TypeScript `any` type in error handler
+### ✅ I8. TypeScript `any` type in error handler
 **Location:** `resources/js/Pages/Messages/Show.tsx` line 341
 ```ts
 } catch (err: any) {

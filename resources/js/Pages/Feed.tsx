@@ -2,6 +2,7 @@ import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import { formatDuration, relativeTime as relativeTimeUtil } from '@/lib/utils';
 
 interface Coach {
     id: number;
@@ -40,24 +41,8 @@ interface Props {
     coaches: Coach[];
 }
 
-function relativeTime(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    const hrs = Math.floor(mins / 60);
-    const days = Math.floor(hrs / 24);
-
-    if (mins < 1) return 'prave teraz';
-    if (mins < 60) return `pred ${mins} min`;
-    if (hrs < 24) return `pred ${hrs} ${hrs === 1 ? 'hodinou' : 'hodinami'}`;
-    if (days < 7) return `pred ${days} ${days === 1 ? 'dnom' : 'dnami'}`;
-    return new Intl.DateTimeFormat('sk-SK', { day: 'numeric', month: 'long' }).format(new Date(iso));
-}
-
-function formatDuration(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
+// relativeTime, formatDuration → imported from @/lib/utils
+const relativeTime = relativeTimeUtil;
 
 type Tab = 'feed' | 'reels' | 'videos';
 

@@ -2,6 +2,7 @@ import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
+import { formatDuration, formatFullDate } from '@/lib/utils';
 
 interface CoachData {
     id: number;
@@ -38,19 +39,7 @@ type Tab = 'all' | 'reels' | 'videos' | 'photos';
 
 const BENEFITS = ['Exkluzivny obsah', 'Priame spravy', 'Personalizovane plany'];
 
-function formatDate(dateStr: string): string {
-    return new Intl.DateTimeFormat('sk-SK', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    }).format(new Date(dateStr));
-}
-
-function formatDuration(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
+// formatDate, formatDuration → imported from @/lib/utils
 
 export default function CoachShow({ coach, posts, isSubscribed }: Props) {
     const price = parseFloat(coach.monthly_price);
@@ -335,7 +324,7 @@ function VideoListCard({ post, isSubscribed, onPlay }: { post: Post; isSubscribe
                     <p className="line-clamp-2 text-sm font-semibold leading-snug" style={{ color: '#2d2118' }}>
                         {post.title || post.content}
                     </p>
-                    <p className="mt-1 text-xs" style={{ color: '#9a8a7a' }}>{formatDate(post.created_at)}</p>
+                    <p className="mt-1 text-xs" style={{ color: '#9a8a7a' }}>{formatFullDate(post.created_at)}</p>
                     {post.is_exclusive && (
                         <span className="mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ backgroundColor: '#c4714a' }}>
                             Exkluzivne
@@ -446,7 +435,7 @@ function PostCard({ post, isSubscribed, onPlay }: { post: Post; isSubscribed: bo
                 {post.media_type === 'none' && (
                     <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed" style={{ color: '#9a8a7a' }}>{post.content}</p>
                 )}
-                <p className="mt-3 text-xs" style={{ color: '#c4b8a8' }}>{formatDate(post.created_at)}</p>
+                <p className="mt-3 text-xs" style={{ color: '#c4b8a8' }}>{formatFullDate(post.created_at)}</p>
             </div>
 
             {locked && post.media_type === 'none' && (

@@ -14,6 +14,7 @@ class BroadcastController extends Controller
     public function index()
     {
         $user = auth()->user();
+        if ($user->role !== 'coach') abort(403, 'Len kouči môžu pristupovať k broadcastom.');
 
         $broadcasts = Broadcast::where('coach_id', $user->id)
             ->withCount('recipients')
@@ -58,9 +59,10 @@ class BroadcastController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate(['content' => 'required|string|max:1000']);
-
         $user = auth()->user();
+        if ($user->role !== 'coach') abort(403, 'Len kouči môžu posielať broadcast správy.');
+
+        $request->validate(['content' => 'required|string|max:1000']);
 
         $broadcast = Broadcast::create([
             'coach_id' => $user->id,

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -15,44 +14,58 @@ class MessageController extends Controller
     {
         $user = auth()->user();
 
-        // Get all unique conversation partners
-        $sentIds = Message::where('sender_id', $user->id)->pluck('receiver_id');
-        $receivedIds = Message::where('receiver_id', $user->id)->pluck('sender_id');
-        $partnerIds = $sentIds->merge($receivedIds)->unique()->values();
+        // Load last 500 messages — 1 query, avoids N+1
+        $allMessages = Message::where('sender_id', $user->id)
+            ->orWhere('receiver_id', $user->id)
+            ->orderByDesc('id')
+            ->limit(500)
+            ->get();
+
+        if ($allMessages->isEmpty()) {
+            return Inertia::render('Messages/Index', ['conversations' => []]);
+        }
+
+        // Group by partner + compute unread count — pure PHP, no extra queries
+        $conversationMap = [];
+        foreach ($allMessages as $msg) {
+            $partnerId = $msg->sender_id === $user->id ? $msg->receiver_id : $msg->sender_id;
+            if (!isset($conversationMap[$partnerId])) {
+                $conversationMap[$partnerId] = ['last' => $msg, 'unread' => 0];
+            }
+            if ($msg->receiver_id === $user->id && !$msg->is_read) {
+                $conversationMap[$partnerId]['unread']++;
+            }
+        }
+
+        // Load all partners + coaches in 1 eager-loaded query
+        $partners = User::with('coach')
+            ->whereIn('id', array_keys($conversationMap))
+            ->get()
+            ->keyBy('id');
 
         $conversations = [];
-        foreach ($partnerIds as $partnerId) {
-            $partner = User::find($partnerId);
+        foreach ($conversationMap as $partnerId => $data) {
+            $partner = $partners->get($partnerId);
             if (!$partner) continue;
 
-            $lastMessage = Message::where(function ($q) use ($user, $partnerId) {
-                $q->where('sender_id', $user->id)->where('receiver_id', $partnerId);
-            })->orWhere(function ($q) use ($user, $partnerId) {
-                $q->where('sender_id', $partnerId)->where('receiver_id', $user->id);
-            })->orderByDesc('id')->first();
-
-            $unreadCount = Message::where('sender_id', $partnerId)
-                ->where('receiver_id', $user->id)
-                ->where('is_read', false)
-                ->count();
-
-            $coach = $partner->coach ?? null;
+            $coach     = $partner->coach ?? null;
             $avatarUrl = $coach && $coach->avatar_path
                 ? '/storage/' . $coach->avatar_path
                 : null;
 
+            $lastMsg = $data['last'];
             $conversations[] = [
-                'partner_id' => $partnerId,
-                'partner_name' => $partner->name,
-                'partner_role' => $partner->role,
+                'partner_id'     => $partnerId,
+                'partner_name'   => $partner->name,
+                'partner_role'   => $partner->role,
                 'partner_avatar' => $avatarUrl,
-                'last_message' => $lastMessage ? [
-                    'content' => $lastMessage->content,
-                    'created_at' => $lastMessage->created_at,
-                    'is_mine' => $lastMessage->sender_id === $user->id,
-                    'message_type' => $lastMessage->message_type ?? 'text',
-                ] : null,
-                'unread_count' => $unreadCount,
+                'last_message'   => [
+                    'content'      => $lastMsg->content,
+                    'created_at'   => $lastMsg->created_at,
+                    'is_mine'      => $lastMsg->sender_id === $user->id,
+                    'message_type' => $lastMsg->message_type ?? 'text',
+                ],
+                'unread_count' => $data['unread'],
             ];
         }
 
@@ -61,8 +74,8 @@ class MessageController extends Controller
             $aUnread = $a['unread_count'] > 0 ? 1 : 0;
             $bUnread = $b['unread_count'] > 0 ? 1 : 0;
             if ($aUnread !== $bUnread) return $bUnread - $aUnread;
-            $aTime = $a['last_message']['created_at'] ?? '0';
-            $bTime = $b['last_message']['created_at'] ?? '0';
+            $aTime = (string) ($a['last_message']['created_at'] ?? '0');
+            $bTime = (string) ($b['last_message']['created_at'] ?? '0');
             return strcmp($bTime, $aTime);
         });
 
@@ -73,7 +86,7 @@ class MessageController extends Controller
 
     public function show($userId)
     {
-        $user = auth()->user();
+        $user    = auth()->user();
         $partner = User::findOrFail($userId);
 
         $messages = Message::where(function ($q) use ($user, $userId) {
@@ -82,13 +95,13 @@ class MessageController extends Controller
             $q->where('sender_id', $userId)->where('receiver_id', $user->id);
         })->orderBy('id')->get();
 
-        // Mark messages as read
+        // Mark received messages as read
         Message::where('sender_id', $userId)
             ->where('receiver_id', $user->id)
             ->where('is_read', false)
             ->update(['is_read' => true, 'read_at' => now()]);
 
-        $coach = $partner->coach ?? null;
+        $coach     = $partner->coach ?? null;
         $avatarUrl = $coach && $coach->avatar_path
             ? '/storage/' . $coach->avatar_path
             : null;
@@ -111,10 +124,10 @@ class MessageController extends Controller
 
         return Inertia::render('Messages/Show', [
             'partner' => [
-                'id' => $partner->id,
-                'name' => $partner->name,
-                'role' => $partner->role,
-                'avatar' => $avatarUrl,
+                'id'          => $partner->id,
+                'name'        => $partner->name,
+                'role'        => $partner->role,
+                'avatar'      => $avatarUrl,
                 'is_verified' => $coach ? $coach->is_verified : false,
             ],
             'messages' => $formattedMessages,
@@ -124,39 +137,31 @@ class MessageController extends Controller
     public function store(Request $request, $userId)
     {
         $request->validate([
-            'content'      => 'required_without:media|string|max:1000|nullable',
-            'media'        => 'nullable|file|max:51200|mimetypes:image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm,audio/mp4,audio/webm,audio/ogg,audio/mpeg,audio/wav',
+            'content'        => 'required_without:media|string|max:1000|nullable',
+            'media'          => 'nullable|file|max:81920|mimetypes:image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm,audio/mp4,audio/webm,audio/ogg,audio/mpeg,audio/wav',
             'voice_duration' => 'nullable|integer|min:1|max:3600',
         ]);
 
         $user = auth()->user();
         User::findOrFail($userId);
 
-        $messageType  = 'text';
-        $mediaPath    = null;
-        $mediaMime    = null;
+        $messageType   = 'text';
+        $mediaPath     = null;
+        $mediaMime     = null;
         $mediaDuration = null;
-        $mediaSize    = null;
-        $content      = $request->input('content', '');
+        $mediaSize     = null;
+        $content       = $request->input('content', '');
 
         if ($request->hasFile('media')) {
-            $file        = $request->file('media');
-            $mediaMime   = $file->getMimeType();
-            $mediaSize   = $file->getSize();
-            $clientType  = $request->input('message_type'); // trust client for voice (iOS audio/mp4 detected as video/mp4)
+            $file       = $request->file('media');
+            $mediaMime  = $file->getMimeType();
+            $mediaSize  = $file->getSize();
+            $clientType = $request->input('message_type');
 
-            Log::info('Upload attempt', [
-                'mime'         => $mediaMime,
-                'client_type'  => $clientType,
-                'size'         => $mediaSize,
-                'original'     => $file->getClientOriginalName(),
-                'content_type' => $request->header('Content-Type'),
-                'all_keys'     => array_keys($request->all()),
-            ]);
-
-            // If client explicitly marks as voice, honour it regardless of MIME detection
-            // (iOS records audio/mp4 which PHP often misdetects as video/mp4)
-            if ($clientType === 'voice') {
+            // Determine message type server-side from MIME.
+            // Exception: trust client voice flag only when file is audio or video
+            // (iOS records audio/mp4 which PHP misdetects as video/mp4).
+            if ($clientType === 'voice' && (str_starts_with($mediaMime, 'audio/') || str_starts_with($mediaMime, 'video/'))) {
                 $messageType   = 'voice';
                 $mediaPath     = $file->store('messages/voice', 'public');
                 $mediaDuration = $request->integer('voice_duration') ?: null;
@@ -175,8 +180,6 @@ class MessageController extends Controller
                 $mediaDuration = $request->integer('voice_duration') ?: null;
                 $content       = '';
             }
-
-            Log::info('Upload stored', ['path' => $mediaPath, 'type' => $messageType]);
         }
 
         $message = Message::create([
@@ -203,14 +206,8 @@ class MessageController extends Controller
 
         $mediaUrl = $mediaPath ? Storage::disk('public')->url($mediaPath) : null;
 
-        Log::info('Returning message', [
-            'id'         => $message->id,
-            'type'       => $messageType,
-            'media_url'  => $mediaUrl,
-        ]);
-
         return response()->json([
-            'ok' => true,
+            'ok'      => true,
             'message' => [
                 'id'              => $message->id,
                 'content'         => $message->content,

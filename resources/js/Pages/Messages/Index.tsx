@@ -1,6 +1,8 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import PulseLayout from '@/Layouts/PulseLayout';
+import Avatar from '@/Components/Avatar';
+import { relativeTime } from '@/lib/utils';
 
 interface LastMessage {
     content: string;
@@ -22,25 +24,7 @@ interface Props {
     conversations: Conversation[];
 }
 
-function timeAgo(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return 'Práve teraz';
-    if (diffMins < 60) return `${diffMins} min`;
-    if (diffHours < 24) return `${diffHours} hod`;
-    if (diffDays === 1) return 'Včera';
-    if (diffDays < 7) return `${diffDays} dní`;
-    return new Intl.DateTimeFormat('sk-SK', { day: 'numeric', month: 'short' }).format(date);
-}
-
-function getInitials(name: string): string {
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-}
+// timeAgo, getInitials → imported from @/lib/utils
 
 export default function MessagesIndex({ conversations }: Props) {
     return (
@@ -110,22 +94,7 @@ export default function MessagesIndex({ conversations }: Props) {
                                 >
                                     {/* Avatar */}
                                     <div style={{ position: 'relative', flexShrink: 0 }}>
-                                        {conv.partner_avatar ? (
-                                            <img
-                                                src={conv.partner_avatar}
-                                                alt={conv.partner_name}
-                                                style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }}
-                                            />
-                                        ) : (
-                                            <div style={{
-                                                width: 48, height: 48, borderRadius: '50%',
-                                                background: '#fce8de', color: '#c4714a',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontWeight: 700, fontSize: 16,
-                                            }}>
-                                                {getInitials(conv.partner_name)}
-                                            </div>
-                                        )}
+                                        <Avatar src={conv.partner_avatar} name={conv.partner_name} size={48} />
                                         {conv.unread_count > 0 && (
                                             <div style={{
                                                 position: 'absolute', bottom: 0, right: -2,
@@ -147,7 +116,7 @@ export default function MessagesIndex({ conversations }: Props) {
                                             </span>
                                             {conv.last_message && (
                                                 <span style={{ fontSize: 12, color: '#9a8a7a', flexShrink: 0 }}>
-                                                    {timeAgo(conv.last_message.created_at)}
+                                                    {relativeTime(conv.last_message.created_at)}
                                                 </span>
                                             )}
                                         </div>
