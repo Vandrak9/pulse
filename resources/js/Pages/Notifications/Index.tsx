@@ -22,6 +22,7 @@ const TYPE_ICONS: Record<string, string> = {
     new_message:    '💬',
     new_like:       '❤️',
     new_post:       '📸',
+    new_reel:       '⚡',
     tip:            '💰',
 };
 

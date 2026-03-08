@@ -37,4 +37,9 @@ class Post extends Model
     {
         return $this->hasMany(PostLike::class);
     }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(PostMedia::class)->orderBy('sort_order');
+    }
 }

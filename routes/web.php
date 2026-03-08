@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\CoachController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeedController;
@@ -75,6 +76,13 @@ Route::middleware('auth')->group(function () {
 
     // Media streaming
     Route::get('/media/message/{message}', [MediaStreamController::class, 'stream'])->name('media.message');
+
+    // Post creation (coach only — enforced in controller)
+    Route::get('/dashboard/posts/create', [PostController::class, 'create'])->name('posts.create');
+    Route::post('/dashboard/posts', [PostController::class, 'store'])->name('posts.store');
+    Route::delete('/dashboard/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+    Route::get('/dashboard/reels/create', [PostController::class, 'createReel'])->name('reels.create');
+    Route::post('/dashboard/reels', [PostController::class, 'storeReel'])->name('reels.store');
 
     // Broadcast (coach only — enforced in controller)
     Route::get('/dashboard/broadcast', [BroadcastController::class, 'index'])->name('broadcast.index');

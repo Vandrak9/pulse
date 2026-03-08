@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut, PlusSquare } from 'lucide-react';
 
@@ -36,6 +36,20 @@ export default function PulseLayout({ children }: Props) {
     const url = page.url;
     const [unreadCount, setUnreadCount] = useState(0);
     const [suggestedCoaches, setSuggestedCoaches] = useState<SuggestedCoach[]>([]);
+    const [addMenuOpen, setAddMenuOpen] = useState(false);
+    const addMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close "Pridať obsah" menu when clicking outside
+    useEffect(() => {
+        if (!addMenuOpen) return;
+        function handleClick(e: MouseEvent) {
+            if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+                setAddMenuOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [addMenuOpen]);
 
     function isActive(href: string) {
         if (href === '/') return url === '/';
@@ -79,11 +93,11 @@ export default function PulseLayout({ children }: Props) {
         { label: 'Profil',     icon: <User size={18} />,          href: user ? `/profile/${user.id}` : '/login', badge: 0 },
     ];
 
-    const desktopNavLinks: { label: string; icon: React.ReactNode; href: string; badge: number }[] = isCoach
+    const desktopNavLinks: { label: string; icon: React.ReactNode; href: string; badge: number; isAddMenu?: boolean }[] = isCoach
         ? [
             { label: 'Dashboard',    icon: <BarChart2 size={18} />,  href: '/dashboard',           badge: 0 },
             ...sharedLinks,
-            { label: 'Pridať obsah', icon: <PlusSquare size={18} />, href: '/dashboard/broadcast', badge: 0 },
+            { label: 'Pridať obsah', icon: <PlusSquare size={18} />, href: '#',                    badge: 0, isAddMenu: true },
           ]
         : [
             { label: 'Domov', icon: <Home size={18} />, href: '/', badge: 0 },
@@ -131,6 +145,68 @@ export default function PulseLayout({ children }: Props) {
                 {/* Nav links */}
                 <nav style={{ flex: 1 }}>
                     {desktopNavLinks.map((link) => {
+                        if (link.isAddMenu) {
+                            return (
+                                <div key="add-menu" ref={addMenuRef} style={{ position: 'relative', marginBottom: 2 }}>
+                                    <button
+                                        onClick={() => setAddMenuOpen(v => !v)}
+                                        style={{
+                                            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                                            padding: '11px 14px', borderRadius: 12,
+                                            background: addMenuOpen ? '#fce8de' : 'transparent',
+                                            border: 'none', cursor: 'pointer',
+                                            fontWeight: addMenuOpen ? 600 : 400, fontSize: 14,
+                                            color: addMenuOpen ? '#c4714a' : '#2d2118',
+                                            transition: 'background 0.15s, color 0.15s', textAlign: 'left',
+                                        }}
+                                        onMouseEnter={e => { if (!addMenuOpen) e.currentTarget.style.background = '#faf6f0'; }}
+                                        onMouseLeave={e => { if (!addMenuOpen) e.currentTarget.style.background = addMenuOpen ? '#fce8de' : 'transparent'; }}
+                                    >
+                                        <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{link.icon}</span>
+                                        <span style={{ flex: 1 }}>{link.label}</span>
+                                        <span style={{ fontSize: 10, color: '#9a8a7a' }}>{addMenuOpen ? '▲' : '▼'}</span>
+                                    </button>
+                                    {addMenuOpen && (
+                                        <div style={{
+                                            position: 'absolute', left: 0, right: 0, top: '100%',
+                                            background: 'white', border: '1px solid #e8d9c4',
+                                            borderRadius: 12, overflow: 'hidden', zIndex: 50,
+                                            boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                                        }}>
+                                            <Link
+                                                href="/dashboard/posts/create"
+                                                onClick={() => setAddMenuOpen(false)}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: 10,
+                                                    padding: '12px 16px', textDecoration: 'none',
+                                                    fontSize: 14, color: '#2d2118',
+                                                    transition: 'background 0.12s',
+                                                }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                <span>📝</span> Príspevok
+                                            </Link>
+                                            <div style={{ height: 1, background: '#f0e8df', margin: '0 12px' }} />
+                                            <Link
+                                                href="/dashboard/reels/create"
+                                                onClick={() => setAddMenuOpen(false)}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: 10,
+                                                    padding: '12px 16px', textDecoration: 'none',
+                                                    fontSize: 14, color: '#2d2118',
+                                                    transition: 'background 0.12s',
+                                                }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                <span>⚡</span> Reel
+                                            </Link>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }
                         const active = isActive(link.href);
                         return (
                             <Link
