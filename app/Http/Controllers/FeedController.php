@@ -54,7 +54,7 @@ class FeedController extends Controller
             'title'          => $post->title,
             'content'        => $post->content,
             'media_type'     => $post->media_type,
-            'media_url'      => $post->media_path ?: null,
+            'media_url'      => $post->media_path ? Storage::url($post->media_path) : null,
             'thumbnail_url'  => $post->thumbnail_path
                 ? Storage::url($post->thumbnail_path)
                 : null,

@@ -22,10 +22,16 @@ class PostController extends Controller
             return redirect()->route('dashboard.profile.edit');
         }
 
+        $followersCount = \Illuminate\Support\Facades\DB::table('follows')
+            ->where('following_id', Auth::user()->id)
+            ->count();
+
         return Inertia::render('Dashboard/Posts/Create', [
             'coach' => [
                 'id'               => $coach->id,
                 'subscriber_count' => $coach->subscriber_count,
+                'followers_count'  => $followersCount,
+                'monthly_price'    => $coach->monthly_price,
             ],
         ]);
     }
@@ -44,7 +50,7 @@ class PostController extends Controller
             'content'      => 'nullable|string|max:50000',
             'is_exclusive' => 'boolean',
             'media'        => 'nullable|array|max:3',
-            'media.*'      => 'file|max:81920|mimes:jpg,jpeg,png,gif,webp,mp4,mov,webm',
+            'media.*'      => 'file|max:204800|mimes:jpg,jpeg,png,gif,webp,heic,heif,mp4,mov,webm',
         ]);
 
         $post = Post::create([
@@ -77,6 +83,8 @@ class PostController extends Controller
                     $post->update([
                         'media_path' => $path,
                         'media_type' => $type,
+                        // For video posts, set video_type so the feed shows them correctly
+                        'video_type' => $isVideo ? 'video' : null,
                     ]);
                 }
                 $sortOrder++;
@@ -85,7 +93,7 @@ class PostController extends Controller
 
         SendPostNotificationsJob::dispatch($post->id, 'new_post');
 
-        return redirect()->route('dashboard')->with('success', 'Príspevok bol uverejnený.');
+        return redirect()->route('feed')->with('success', 'Príspevok bol uverejnený.');
     }
 
     // ── Reel creation form ─────────────────────────────────────────────────────
