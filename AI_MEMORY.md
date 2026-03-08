@@ -473,3 +473,38 @@ index: [user_id, is_read]
 - `new_like`       → ❤️
 - `new_post`       → 📸
 - `tip`            → 💰
+- [2026-03-08 13:17:46] f34daf4: chore: update AI_MEMORY with session 5 fixes
+- [2026-03-08 13:30:34] c2c1996: feat: social follow system, fan profiles, coach-to-coach interaction
+
+---
+
+## Session 6 — 2026-03-08 (cont.)
+
+### What was built — Social follow system & fan profiles
+
+**DB schema additions:**
+- `follows`: follower_id, following_id (both FK users), unique constraint, index on following_id
+- `users`: profile_bio (text), profile_avatar (string), profile_is_public (bool default true)
+
+**Backend:**
+- `FollowController::toggle($userId)`: toggle follow/unfollow, creates `new_follower` notification, JSON response
+- `UserProfileController`: show (social profile), me (redirect to own), update (bio/avatar/visibility)
+- `CoachController`: show() + index() now include user_id, is_following, followers_count
+- `FeedController`: coaches now include user_id + is_followed for story ring color
+
+**Routes added:**
+```
+GET  /profile/{userId}  → UserProfileController@show
+GET  /profile/me        → UserProfileController@me
+POST /profile/update    → UserProfileController@update
+POST /follow/{userId}   → FollowController@toggle (JSON)
+```
+
+**Frontend:**
+- `Profile/Show.tsx`: full social profile — cover, overlapping avatar, stats, inline edit mode, follow button, "Sleduje" tab
+- `Coaches/Show.tsx`: Follow/Sledujem toggle + followers_count in stats
+- `Coaches/Index.tsx`: secondary Sledovať button on every coach card
+- `Feed.tsx`: story rings = terracotta if followed, grey if not
+- `PulseLayout`: Profil link → `/profile/{user.id}`
+
+**Notification:** `new_follower` type added (uses 🔔 fallback in UI)
