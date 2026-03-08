@@ -348,3 +348,6 @@ POST /dashboard/broadcast             → BroadcastController@store (coach only)
 - [2026-03-08 08:13:44] 26779c8: fix: file size check and voice bubble final fix
 - [2026-03-08 08:19:44] 7d28bd0: fix: iPhone HEIC camera photo compression before upload
 - [2026-03-08 08:24:39] 8ffbe02: feat: read receipts, unread badges and browser notifications
+- [2026-03-08 08:25:30] fa2918d: chore: update AI_MEMORY with messaging features and schema
+- [2026-03-08 08:34:06] 3749e86: chore: full project audit report
+- [2026-03-08 08:42:29] 12f4b9e: fix: all critical and important audit issues resolved
