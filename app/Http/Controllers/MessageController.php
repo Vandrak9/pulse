@@ -119,57 +119,77 @@ class MessageController extends Controller
     public function store(Request $request, $userId)
     {
         $request->validate([
-            'content' => 'required_without:file|string|max:1000|nullable',
-            'file' => 'nullable|file|max:51200',
+            'content'      => 'required_without:media|string|max:1000|nullable',
+            'media'        => 'nullable|file|max:51200|mimes:jpg,jpeg,png,gif,webp,mp4,mov,webm,mp3,ogg,wav',
+            'voice_duration' => 'nullable|integer|min:1|max:3600',
         ]);
 
         $user = auth()->user();
         User::findOrFail($userId);
 
         $messageType = 'text';
-        $mediaPath = null;
-        $mediaThumbnail = null;
+        $mediaPath   = null;
         $mediaDuration = null;
-        $mediaSize = null;
-        $content = $request->content ?? '';
+        $mediaSize   = null;
+        $content     = $request->input('content', '');
 
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $mime = $file->getMimeType();
+        if ($request->hasFile('media')) {
+            $file      = $request->file('media');
+            $mime      = $file->getMimeType();
             $mediaSize = $file->getSize();
 
             if (str_starts_with($mime, 'image/')) {
                 $messageType = 'image';
-                $mediaPath = Storage::disk('public')->put('messages/images', $file);
-                $content = '';
+                $mediaPath   = $file->store('messages/images', 'public');
+                $content     = '';
             } elseif (str_starts_with($mime, 'video/')) {
                 $messageType = 'video';
-                $mediaPath = Storage::disk('public')->put('messages/videos', $file);
-                $content = '';
+                $mediaPath   = $file->store('messages/videos', 'public');
+                $content     = '';
             } elseif (str_starts_with($mime, 'audio/')) {
-                $messageType = 'voice';
-                $mediaPath = Storage::disk('public')->put('messages/voice', $file);
-                $content = '';
+                $messageType   = 'voice';
+                $mediaPath     = $file->store('messages/voice', 'public');
+                $mediaDuration = $request->integer('voice_duration') ?: null;
+                $content       = '';
             }
         }
 
-        Message::create([
-            'sender_id' => $user->id,
-            'receiver_id' => $userId,
-            'content' => $content,
-            'price_paid' => 0,
-            'is_paid' => false,
-            'is_read' => false,
+        $message = Message::create([
+            'sender_id'    => $user->id,
+            'receiver_id'  => $userId,
+            'content'      => $content,
+            'price_paid'   => 0,
+            'is_paid'      => false,
+            'is_read'      => false,
             'message_type' => $messageType,
-            'media_path' => $mediaPath,
-            'media_thumbnail' => $mediaThumbnail,
-            'media_duration' => $mediaDuration,
-            'media_size' => $mediaSize,
-            'is_broadcast' => false,
-            'created_at' => now(),
+            'media_path'   => $mediaPath,
+            'media_thumbnail' => null,
+            'media_duration'  => $mediaDuration,
+            'media_size'      => $mediaSize,
+            'is_broadcast'    => false,
+            'created_at'      => now(),
         ]);
 
-        return back();
+        // Axios file uploads expect JSON; Inertia text posts expect redirect
+        if ($request->header('X-Inertia') && !$request->hasFile('media')) {
+            return back();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => [
+                'id'             => $message->id,
+                'content'        => $message->content,
+                'is_mine'        => true,
+                'is_read'        => false,
+                'read_at'        => null,
+                'created_at'     => $message->created_at,
+                'message_type'   => $message->message_type,
+                'media_path'     => $mediaPath ? Storage::url($mediaPath) : null,
+                'media_thumbnail'=> null,
+                'media_duration' => $mediaDuration,
+            ],
+        ]);
     }
 
     public function unreadCount()
