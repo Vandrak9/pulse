@@ -325,7 +325,8 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
             }
         } catch (err: any) {
             const status = err?.response?.status;
-            if (status === 422) showToast('Nepodporovaný formát súboru');
+            if (status === 403) showToast(err.response?.data?.error ?? 'Nemáš povolenie písať tejto osobe');
+            else if (status === 422) showToast('Nepodporovaný formát súboru');
             else if (status === 413) showToast('Súbor je príliš veľký (max 50MB)');
             else showToast('Nahrávanie zlyhalo, skús znova');
         } finally {
