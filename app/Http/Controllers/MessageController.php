@@ -98,7 +98,7 @@ class MessageController extends Controller
                 'read_at' => $msg->read_at,
                 'created_at' => $msg->created_at,
                 'message_type' => $msg->message_type ?? 'text',
-                'media_path' => $msg->media_path ?? null,
+                'media_path' => $msg->media_path ? '/storage/' . $msg->media_path : null,
                 'media_thumbnail' => $msg->media_thumbnail ?? null,
                 'media_duration' => $msg->media_duration ?? null,
             ];

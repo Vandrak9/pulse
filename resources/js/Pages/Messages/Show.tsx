@@ -61,8 +61,13 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
+
+    const canRecordVoice = typeof window !== 'undefined' && typeof (window as any).MediaRecorder !== 'undefined';
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -104,6 +109,42 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
             e.preventDefault();
             handleSend();
         }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || sending) return;
+        setUploadError(null);
+        setSending(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('_token', (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '');
+        fetch(`/messages/${partner.id}`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Inertia': 'true',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-XSRF-TOKEN': decodeURIComponent(document.cookie.split('; ').find(r => r.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? ''),
+            },
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Upload failed');
+            router.reload({ only: ['messages'] });
+        })
+        .catch(() => setUploadError('Nahrávanie zlyhalo. Skúste znova.'))
+        .finally(() => {
+            setSending(false);
+            e.target.value = '';
+        });
+    };
+
+    const handleVoiceClick = () => {
+        if (!canRecordVoice) {
+            setUploadError('Hlasové správy vyžadujú HTTPS pripojenie');
+            setTimeout(() => setUploadError(null), 4000);
+        }
+        // Voice recording UI will be added once HTTPS is configured
     };
 
     return (
@@ -224,6 +265,33 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     <div ref={bottomRef} />
                 </div>
 
+                {/* Upload error toast */}
+                {uploadError && (
+                    <div style={{
+                        background: '#fff3cd', border: '1px solid #ffc107',
+                        padding: '8px 16px', fontSize: 13, color: '#856404',
+                        textAlign: 'center', flexShrink: 0,
+                    }}>
+                        {uploadError}
+                    </div>
+                )}
+
+                {/* Hidden file inputs */}
+                <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleFileUpload}
+                />
+                <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/*"
+                    style={{ display: 'none' }}
+                    onChange={handleFileUpload}
+                />
+
                 {/* Bottom input bar */}
                 <div style={{
                     background: 'white',
@@ -231,20 +299,56 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     padding: '10px 16px',
                     display: 'flex',
                     alignItems: 'flex-end',
-                    gap: 10,
+                    gap: 8,
                     flexShrink: 0,
                 }}>
-                    {/* Attach media button placeholder */}
+                    {/* Image button */}
                     <button
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={sending}
                         style={{
                             width: 36, height: 36, borderRadius: '50%',
                             background: '#faf6f0', border: '1px solid #e8d9c4',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', flexShrink: 0, fontSize: 16,
+                            cursor: sending ? 'default' : 'pointer', flexShrink: 0, fontSize: 16,
+                            opacity: sending ? 0.5 : 1,
                         }}
-                        title="Priložiť médium (čoskoro)"
+                        title="Poslať obrázok"
                     >
-                        📎
+                        📷
+                    </button>
+
+                    {/* Video button */}
+                    <button
+                        onClick={() => videoInputRef.current?.click()}
+                        disabled={sending}
+                        style={{
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: '#faf6f0', border: '1px solid #e8d9c4',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: sending ? 'default' : 'pointer', flexShrink: 0, fontSize: 16,
+                            opacity: sending ? 0.5 : 1,
+                        }}
+                        title="Poslať video"
+                    >
+                        🎥
+                    </button>
+
+                    {/* Voice button */}
+                    <button
+                        onClick={handleVoiceClick}
+                        style={{
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: canRecordVoice ? '#faf6f0' : '#f5f5f5',
+                            border: '1px solid #e8d9c4',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: canRecordVoice ? 'pointer' : 'not-allowed',
+                            flexShrink: 0, fontSize: 16,
+                            opacity: canRecordVoice ? 1 : 0.5,
+                        }}
+                        title={canRecordVoice ? 'Nahrať hlasovú správu' : 'Hlasové správy vyžadujú HTTPS'}
+                    >
+                        🎤
                     </button>
 
                     {/* Text input */}
