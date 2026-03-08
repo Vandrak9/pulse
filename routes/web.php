@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BroadcastController;
 use App\Http\Controllers\CoachController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MediaStreamController;
@@ -34,9 +35,8 @@ RateLimiter::for('broadcasts', function (Request $request) {
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -50,6 +50,10 @@ Route::get('/coaches/{coach}', [CoachController::class, 'show'])->name('coaches.
 // ── Authenticated routes ───────────────────────────────────────────────────────
 
 Route::middleware('auth')->group(function () {
+    // Coach dashboard
+    Route::get('/dashboard/earnings', [DashboardController::class, 'earnings'])->name('dashboard.earnings');
+    Route::get('/dashboard/subscribers', [DashboardController::class, 'subscribers'])->name('dashboard.subscribers');
+
     Route::get('/dashboard/profile', [CoachController::class, 'edit'])->name('dashboard.profile.edit');
     Route::put('/dashboard/profile', [CoachController::class, 'update'])->name('dashboard.profile.update');
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 
 interface Props {
@@ -14,10 +14,23 @@ const NAV_LINKS = [
 
 export default function PulseLayout({ children }: Props) {
     const page = usePage();
-    const { auth } = page.props as { auth: { user: { name: string } | null } };
+    const { auth } = page.props as { auth: { user: { name: string; role?: string } | null } };
     const user = auth?.user ?? null;
+    const isCoach = user?.role === 'coach';
     const url = page.url;
     const [unreadCount, setUnreadCount] = useState(0);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
 
     function isActive(href: string) {
         if (href === '/') return url === '/';
@@ -131,15 +144,59 @@ export default function PulseLayout({ children }: Props) {
                                 )}
                             </a>
 
-                            {/* Avatar */}
-                            <Link href="/dashboard/profile">
-                                <div
-                                    className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white"
-                                    style={{ backgroundColor: '#c4714a' }}
+                            {/* Avatar with dropdown */}
+                            <div ref={dropdownRef} style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setDropdownOpen(o => !o)}
+                                    style={{
+                                        width: 32, height: 32, borderRadius: '50%',
+                                        background: '#c4714a', color: 'white',
+                                        fontWeight: 700, fontSize: 14, border: 'none',
+                                        cursor: 'pointer', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
+                                    }}
                                 >
                                     {user.name.charAt(0).toUpperCase()}
-                                </div>
-                            </Link>
+                                </button>
+                                {dropdownOpen && (
+                                    <div style={{
+                                        position: 'absolute', top: 40, right: 0,
+                                        background: 'white', border: '1px solid #e8d9c4',
+                                        borderRadius: 12, minWidth: 180,
+                                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                                        zIndex: 100, overflow: 'hidden',
+                                    }}>
+                                        <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0e8df' }}>
+                                            <div style={{ fontWeight: 700, fontSize: 14, color: '#2d2118' }}>{user.name}</div>
+                                            <div style={{ fontSize: 12, color: '#9a8a7a' }}>{isCoach ? 'Kouč' : 'Fanúšik'}</div>
+                                        </div>
+                                        {isCoach && (
+                                            <Link href="/dashboard" onClick={() => setDropdownOpen(false)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', textDecoration: 'none', color: '#2d2118', fontSize: 14 }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                <span>📊</span> Dashboard
+                                            </Link>
+                                        )}
+                                        <Link href="/dashboard/profile" onClick={() => setDropdownOpen(false)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', textDecoration: 'none', color: '#2d2118', fontSize: 14 }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <span>👤</span> Profil
+                                        </Link>
+                                        <Link href="/logout" method="post" as="button"
+                                            onClick={() => setDropdownOpen(false)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', width: '100%', textDecoration: 'none', color: '#9a8a7a', fontSize: 14, background: 'none', border: 'none', cursor: 'pointer', borderTop: '1px solid #f0e8df' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                        >
+                                            <span>🚪</span> Odhlásiť sa
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>

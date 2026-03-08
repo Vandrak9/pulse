@@ -18,6 +18,7 @@ class Post extends Model
         'video_type',
         'media_type',
         'is_exclusive',
+        'views',
     ];
 
     protected function casts(): array
