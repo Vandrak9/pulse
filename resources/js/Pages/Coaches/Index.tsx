@@ -1,5 +1,6 @@
 import PulseLayout from '@/Layouts/PulseLayout';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { useState } from 'react';
 
 interface Coach {
@@ -49,23 +50,20 @@ export default function CoachesIndex({ coaches }: Props) {
         () => Object.fromEntries(coaches.data.map(c => [c.user_id, c.is_following]))
     );
 
-    function handleFollow(e: React.MouseEvent, coachUserId: number) {
+    async function handleFollow(e: React.MouseEvent, coachUserId: number) {
         e.preventDefault();
         e.stopPropagation();
         if (!isLoggedIn) return;
 
-        // Optimistic update
-        setFollowState(prev => ({ ...prev, [coachUserId]: !prev[coachUserId] }));
+        const current = followState[coachUserId] ?? false;
+        setFollowState(prev => ({ ...prev, [coachUserId]: !current })); // optimistic
 
-        router.post(`/follow/${coachUserId}`, {}, {
-            preserveScroll: true,
-            preserveState: true,
-            only: [],
-            onError: () => {
-                // Revert on error
-                setFollowState(prev => ({ ...prev, [coachUserId]: !prev[coachUserId] }));
-            },
-        });
+        try {
+            const res = await axios.post(`/follow/${coachUserId}`);
+            setFollowState(prev => ({ ...prev, [coachUserId]: res.data.following }));
+        } catch {
+            setFollowState(prev => ({ ...prev, [coachUserId]: current })); // revert
+        }
     }
 
     const filtered = activeKeyword

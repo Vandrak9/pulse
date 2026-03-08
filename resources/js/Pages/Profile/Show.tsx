@@ -1,5 +1,6 @@
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { useRef, useState } from 'react';
 
 interface ProfileUser {
@@ -88,27 +89,24 @@ export default function ProfileShow({
     const [saving, setSaving] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
 
-    function handleFollow(e: React.MouseEvent) {
+    async function handleFollow(e: React.MouseEvent) {
         e.preventDefault();
         e.stopPropagation();
         if (!auth?.user || followLoading) return;
 
-        // Optimistic update
         const prev = following;
-        setFollowing(!prev);
-        setFollowersCount(prev ? followersCount - 1 : followersCount + 1);
+        setFollowing(!prev); // optimistic
         setFollowLoading(true);
 
-        router.post(`/follow/${profileUser.id}`, {}, {
-            preserveScroll: true,
-            preserveState: true,
-            only: [],
-            onError: () => {
-                setFollowing(prev);
-                setFollowersCount(prev ? followersCount + 1 : followersCount - 1);
-            },
-            onFinish: () => setFollowLoading(false),
-        });
+        try {
+            const res = await axios.post(`/follow/${profileUser.id}`);
+            setFollowing(res.data.following);
+            setFollowersCount(res.data.count);
+        } catch {
+            setFollowing(prev); // revert
+        } finally {
+            setFollowLoading(false);
+        }
     }
 
     function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {

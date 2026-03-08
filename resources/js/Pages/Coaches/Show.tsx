@@ -1,6 +1,7 @@
 import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { useState } from 'react';
 import { formatDuration, formatFullDate } from '@/lib/utils';
 
@@ -56,21 +57,22 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
     const [followersCount, setFollowersCount] = useState(coach.followers_count);
     const [followLoading, setFollowLoading] = useState(false);
 
-    function handleFollow() {
+    async function handleFollow() {
         if (!auth?.user || followLoading) return;
+
+        const prev = following;
+        setFollowing(!prev); // optimistic
         setFollowLoading(true);
-        fetch(`/follow/${coach.user_id}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            credentials: 'same-origin',
-        })
-            .then(r => r.json())
-            .then(d => { setFollowing(d.following); setFollowersCount(d.count); })
-            .finally(() => setFollowLoading(false));
+
+        try {
+            const res = await axios.post(`/follow/${coach.user_id}`);
+            setFollowing(res.data.following);
+            setFollowersCount(res.data.count);
+        } catch {
+            setFollowing(prev); // revert
+        } finally {
+            setFollowLoading(false);
+        }
     }
 
     const reels = posts.filter((p) => p.video_type === 'reel');
