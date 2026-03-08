@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
 import PulseLayout from '@/Layouts/PulseLayout';
@@ -31,6 +31,8 @@ interface Props {
 }
 
 type VoiceState = 'idle' | 'recording' | 'uploading';
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function formatTime(dateStr: string): string {
     return new Intl.DateTimeFormat('sk-SK', { hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr));
@@ -73,6 +75,89 @@ function mimeToExtension(mime: string): string {
     return 'webm';
 }
 
+// Deterministic pseudo-random heights for waveform bars (seeded by message id)
+function waveformBars(seed: number, count = 24): number[] {
+    return Array.from({ length: count }, (_, i) => {
+        const n = Math.abs(Math.sin(seed * 9301 + i * 49297 + 233));
+        return Math.round(n * 16 + 4); // 4–20 px
+    });
+}
+
+// ── VoiceBubble component ─────────────────────────────────────────────────────
+
+function VoiceBubble({ msg }: { msg: Message }) {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const bars = useMemo(() => waveformBars(msg.id), [msg.id]);
+
+    const toggle = () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        if (isPlaying) {
+            audio.pause();
+            setIsPlaying(false);
+        } else {
+            audio.play().catch(() => {});
+            setIsPlaying(true);
+        }
+    };
+
+    const btnBg  = msg.is_mine ? 'rgba(255,255,255,0.2)' : '#fce8de';
+    const barCol = msg.is_mine ? 'rgba(255,255,255,0.75)' : '#c4714a';
+    const metaCol = msg.is_mine ? 'rgba(255,255,255,0.65)' : '#9a8a7a';
+    const iconCol = msg.is_mine ? 'white' : '#c4714a';
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 220 }}>
+            {/* Play / Pause button */}
+            <button
+                onClick={toggle}
+                style={{
+                    width: 38, height: 38, borderRadius: '50%',
+                    background: btnBg, border: 'none', cursor: 'pointer',
+                    flexShrink: 0, display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: 14, color: iconCol,
+                }}
+            >
+                {isPlaying ? '⏸' : '▶'}
+            </button>
+
+            {/* Waveform + duration */}
+            <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', gap: 2, alignItems: 'center', height: 24 }}>
+                    {bars.map((h, i) => (
+                        <div key={i} style={{
+                            width: 3, borderRadius: 2,
+                            background: barCol,
+                            height: h,
+                            flexShrink: 0,
+                        }} />
+                    ))}
+                </div>
+                {msg.media_duration != null && (
+                    <div style={{ fontSize: 11, color: metaCol, marginTop: 3 }}>
+                        {formatDuration(msg.media_duration)}
+                    </div>
+                )}
+            </div>
+
+            {/* Hidden audio element */}
+            <audio
+                ref={audioRef}
+                preload="none"
+                onEnded={() => setIsPlaying(false)}
+            >
+                {msg.media_mime_type && msg.media_path && (
+                    <source src={msg.media_path} type={msg.media_mime_type} />
+                )}
+                {msg.media_path && <source src={msg.media_path} />}
+            </audio>
+        </div>
+    );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 export default function MessagesShow({ partner, messages: initialMessages }: Props) {
     const [messages, setMessages]         = useState<Message[]>(initialMessages);
     const [input, setInput]               = useState('');
@@ -82,15 +167,16 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
     const [voiceState, setVoiceState]     = useState<VoiceState>('idle');
     const [recordingSec, setRecordingSec] = useState(0);
     const [preview, setPreview]           = useState<{ url: string; type: 'image' | 'video' } | null>(null);
+    const [lightbox, setLightbox]         = useState<string | null>(null);
 
     const bottomRef        = useRef<HTMLDivElement>(null);
     const inputRef         = useRef<HTMLTextAreaElement>(null);
-    const mediaFileRef     = useRef<HTMLInputElement>(null);   // single input for image+video
+    const mediaFileRef     = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef        = useRef<Blob[]>([]);
     const timerRef         = useRef<ReturnType<typeof setInterval> | null>(null);
     const streamRef        = useRef<MediaStream | null>(null);
-    const recordingSecRef  = useRef(0);  // shadow ref so onstop can read latest value
+    const recordingSecRef  = useRef(0);
 
     useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -108,6 +194,13 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
             streamRef.current?.getTracks().forEach(t => t.stop());
             if (timerRef.current) clearInterval(timerRef.current);
         };
+    }, []);
+
+    // Close lightbox on Escape
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
     }, []);
 
     const showToast = (text: string, type: 'error' | 'info' = 'error') => {
@@ -131,13 +224,12 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
     };
 
     // ── Media upload via axios ─────────────────────────────────────────────────
-    const MAX_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+    const MAX_SIZE = 50 * 1024 * 1024;
 
     const sendMedia = useCallback(async (file: File, type: 'image' | 'video' | 'voice', durationSec?: number) => {
         if (file.size > MAX_SIZE) { showToast('Súbor je príliš veľký (max 50MB)'); return; }
 
         const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
-
         const formData = new FormData();
         formData.append('media', file);
         formData.append('message_type', type);
@@ -154,7 +246,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json',
-                        // Content-Type intentionally omitted — axios sets multipart/form-data with boundary
+                        // Content-Type omitted — axios sets multipart/form-data with boundary
                     },
                     onUploadProgress: (e) => {
                         if (e.total) setProgress(Math.round((e.loaded / e.total) * 100));
@@ -169,13 +261,9 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
             }
         } catch (err: any) {
             const status = err?.response?.status;
-            if (status === 422) {
-                showToast('Nepodporovaný formát súboru');
-            } else if (status === 413) {
-                showToast('Súbor je príliš veľký (max 50MB)');
-            } else {
-                showToast('Nahrávanie zlyhalo, skús znova');
-            }
+            if (status === 422) showToast('Nepodporovaný formát súboru');
+            else if (status === 413) showToast('Súbor je príliš veľký (max 50MB)');
+            else showToast('Nahrávanie zlyhalo, skús znova');
         } finally {
             setSending(false);
             setProgress(0);
@@ -183,20 +271,16 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
         }
     }, [partner.id]);
 
-    // ── Unified image + video picker ───────────────────────────────────────────
+    // ── Image + video picker ───────────────────────────────────────────────────
     const handleMediaFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         const type: 'image' | 'video' | null =
             file.type.startsWith('image/') ? 'image' :
             file.type.startsWith('video/') ? 'video' : null;
-
         if (!type) { showToast('Nepodporovaný formát'); e.target.value = ''; return; }
-
         const previewUrl = URL.createObjectURL(file);
         setPreview({ url: previewUrl, type });
-
         await sendMedia(file, type);
         URL.revokeObjectURL(previewUrl);
         e.target.value = '';
@@ -208,7 +292,6 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
             showToast('Tvoj prehliadač nepodporuje nahrávanie');
             return;
         }
-
         let stream: MediaStream;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -216,19 +299,13 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
             showToast('Povoľ mikrofón v nastaveniach prehliadača');
             return;
         }
-
         streamRef.current = stream;
         chunksRef.current = [];
         recordingSecRef.current = 0;
-
         const mimeType = getSupportedMimeType();
         const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
         mediaRecorderRef.current = recorder;
-
-        recorder.ondataavailable = (e) => {
-            if (e.data.size > 0) chunksRef.current.push(e.data);
-        };
-
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
         recorder.onstop = async () => {
             stream.getTracks().forEach(t => t.stop());
             const actualMime = mimeType || 'audio/webm';
@@ -241,11 +318,9 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
             setRecordingSec(0);
             recordingSecRef.current = 0;
         };
-
         recorder.start(200);
         setVoiceState('recording');
         setRecordingSec(0);
-
         timerRef.current = setInterval(() => {
             recordingSecRef.current += 1;
             setRecordingSec(recordingSecRef.current);
@@ -272,9 +347,56 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
         recordingSecRef.current = 0;
     };
 
+    // ── Render ─────────────────────────────────────────────────────────────────
     return (
         <PulseLayout>
             <Head title={`Správy — ${partner.name}`} />
+
+            {/* Lightbox */}
+            {lightbox && (
+                <div
+                    onClick={() => setLightbox(null)}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)',
+                        zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                >
+                    <img
+                        src={lightbox}
+                        onClick={e => e.stopPropagation()}
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        alt="Náhľad"
+                    />
+                    {/* Close */}
+                    <button
+                        onClick={() => setLightbox(null)}
+                        style={{
+                            position: 'absolute', top: 16, right: 16,
+                            background: 'rgba(255,255,255,0.15)', border: 'none',
+                            color: 'white', fontSize: 26, width: 44, height: 44,
+                            borderRadius: '50%', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                    >
+                        ✕
+                    </button>
+                    {/* Download */}
+                    <a
+                        href={lightbox}
+                        download
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            position: 'absolute', bottom: 20, right: 20,
+                            background: 'rgba(255,255,255,0.18)', color: 'white',
+                            padding: '8px 18px', borderRadius: 24, fontSize: 13,
+                            textDecoration: 'none',
+                        }}
+                    >
+                        Stiahnuť
+                    </a>
+                </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', background: '#faf6f0' }}>
 
                 {/* Top bar */}
@@ -314,6 +436,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     )}
                     {messages.map((msg, idx) => {
                         const showDateSep = idx === 0 || !isSameDay(messages[idx - 1].created_at, msg.created_at);
+                        const isImage = msg.message_type === 'image' && !!msg.media_path;
                         return (
                             <React.Fragment key={msg.id}>
                                 {showDateSep && (
@@ -328,14 +451,17 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                                 }}>
                                     <div style={{ maxWidth: '72%' }}>
                                         <div style={{
-                                            padding: msg.message_type === 'image' && msg.media_path ? '4px' : '10px 14px',
+                                            padding: isImage ? '4px' : '10px 14px',
                                             borderRadius: msg.is_mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                                             background: msg.is_mine ? '#c4714a' : 'white',
                                             color: msg.is_mine ? 'white' : '#2d2118',
                                             fontSize: 15, lineHeight: '1.45',
                                             boxShadow: msg.is_mine ? 'none' : '0 1px 2px rgba(0,0,0,0.08)',
                                             wordBreak: 'break-word',
-                                        }}>
+                                            cursor: isImage ? 'zoom-in' : 'default',
+                                        }}
+                                            onClick={isImage ? () => setLightbox(msg.media_path!) : undefined}
+                                        >
                                             {msg.message_type === 'image' ? (
                                                 msg.media_path ? (
                                                     <img
@@ -359,24 +485,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                                                 )
                                             ) : msg.message_type === 'voice' ? (
                                                 msg.media_path ? (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 200 }}>
-                                                        <span style={{ fontSize: 16 }}>🎤</span>
-                                                        <audio
-                                                            controls
-                                                            preload="auto"
-                                                            style={{ height: 32, flex: 1, minWidth: 160 }}
-                                                        >
-                                                            {msg.media_mime_type && (
-                                                                <source src={msg.media_path} type={msg.media_mime_type} />
-                                                            )}
-                                                            <source src={msg.media_path} />
-                                                        </audio>
-                                                        {msg.media_duration != null && (
-                                                            <span style={{ fontSize: 12, opacity: 0.75, flexShrink: 0 }}>
-                                                                {formatDuration(msg.media_duration)}
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    <VoiceBubble msg={msg} />
                                                 ) : (
                                                     <span style={{ fontSize: 13, opacity: 0.7 }}>🎤 Hlasová správa</span>
                                                 )
@@ -438,7 +547,7 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                     </div>
                 )}
 
-                {/* Hidden unified media input */}
+                {/* Hidden file input */}
                 <input
                     ref={mediaFileRef}
                     type="file"
@@ -499,7 +608,6 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                         </div>
                     ) : (
                         <>
-                            {/* Single media button (image + video) */}
                             <button
                                 onClick={() => mediaFileRef.current?.click()}
                                 disabled={sending}
@@ -515,7 +623,6 @@ export default function MessagesShow({ partner, messages: initialMessages }: Pro
                                 🖼️
                             </button>
 
-                            {/* Voice button */}
                             <button
                                 onClick={startRecording}
                                 disabled={sending}
