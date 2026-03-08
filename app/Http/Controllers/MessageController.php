@@ -91,16 +91,17 @@ class MessageController extends Controller
 
         $formattedMessages = $messages->map(function ($msg) use ($user) {
             return [
-                'id' => $msg->id,
-                'content' => $msg->content,
-                'is_mine' => $msg->sender_id === $user->id,
-                'is_read' => $msg->is_read,
-                'read_at' => $msg->read_at,
-                'created_at' => $msg->created_at,
-                'message_type' => $msg->message_type ?? 'text',
-                'media_path' => $msg->media_path ? '/storage/' . $msg->media_path : null,
+                'id'              => $msg->id,
+                'content'         => $msg->content,
+                'is_mine'         => $msg->sender_id === $user->id,
+                'is_read'         => $msg->is_read,
+                'read_at'         => $msg->read_at,
+                'created_at'      => $msg->created_at,
+                'message_type'    => $msg->message_type ?? 'text',
+                'media_path'      => $msg->media_path ? Storage::url($msg->media_path) : null,
                 'media_thumbnail' => $msg->media_thumbnail ?? null,
-                'media_duration' => $msg->media_duration ?? null,
+                'media_duration'  => $msg->media_duration ?? null,
+                'media_mime_type' => $msg->media_mime_type ?? null,
             ];
         });
 
@@ -120,33 +121,34 @@ class MessageController extends Controller
     {
         $request->validate([
             'content'      => 'required_without:media|string|max:1000|nullable',
-            'media'        => 'nullable|file|max:51200|mimes:jpg,jpeg,png,gif,webp,mp4,mov,webm,mp3,ogg,wav',
+            'media'        => 'nullable|file|max:51200|mimetypes:image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm,audio/mp4,audio/webm,audio/ogg,audio/mpeg,audio/wav',
             'voice_duration' => 'nullable|integer|min:1|max:3600',
         ]);
 
         $user = auth()->user();
         User::findOrFail($userId);
 
-        $messageType = 'text';
-        $mediaPath   = null;
+        $messageType  = 'text';
+        $mediaPath    = null;
+        $mediaMime    = null;
         $mediaDuration = null;
-        $mediaSize   = null;
-        $content     = $request->input('content', '');
+        $mediaSize    = null;
+        $content      = $request->input('content', '');
 
         if ($request->hasFile('media')) {
             $file      = $request->file('media');
-            $mime      = $file->getMimeType();
+            $mediaMime = $file->getMimeType();
             $mediaSize = $file->getSize();
 
-            if (str_starts_with($mime, 'image/')) {
+            if (str_starts_with($mediaMime, 'image/')) {
                 $messageType = 'image';
                 $mediaPath   = $file->store('messages/images', 'public');
                 $content     = '';
-            } elseif (str_starts_with($mime, 'video/')) {
+            } elseif (str_starts_with($mediaMime, 'video/')) {
                 $messageType = 'video';
                 $mediaPath   = $file->store('messages/videos', 'public');
                 $content     = '';
-            } elseif (str_starts_with($mime, 'audio/')) {
+            } elseif (str_starts_with($mediaMime, 'audio/')) {
                 $messageType   = 'voice';
                 $mediaPath     = $file->store('messages/voice', 'public');
                 $mediaDuration = $request->integer('voice_duration') ?: null;
@@ -155,14 +157,15 @@ class MessageController extends Controller
         }
 
         $message = Message::create([
-            'sender_id'    => $user->id,
-            'receiver_id'  => $userId,
-            'content'      => $content,
-            'price_paid'   => 0,
-            'is_paid'      => false,
-            'is_read'      => false,
-            'message_type' => $messageType,
-            'media_path'   => $mediaPath,
+            'sender_id'       => $user->id,
+            'receiver_id'     => $userId,
+            'content'         => $content,
+            'price_paid'      => 0,
+            'is_paid'         => false,
+            'is_read'         => false,
+            'message_type'    => $messageType,
+            'media_path'      => $mediaPath,
+            'media_mime_type' => $mediaMime,
             'media_thumbnail' => null,
             'media_duration'  => $mediaDuration,
             'media_size'      => $mediaSize,
@@ -170,7 +173,7 @@ class MessageController extends Controller
             'created_at'      => now(),
         ]);
 
-        // Axios file uploads expect JSON; Inertia text posts expect redirect
+        // Inertia text posts get a redirect; axios file uploads get JSON
         if ($request->header('X-Inertia') && !$request->hasFile('media')) {
             return back();
         }
@@ -178,16 +181,17 @@ class MessageController extends Controller
         return response()->json([
             'ok' => true,
             'message' => [
-                'id'             => $message->id,
-                'content'        => $message->content,
-                'is_mine'        => true,
-                'is_read'        => false,
-                'read_at'        => null,
-                'created_at'     => $message->created_at,
-                'message_type'   => $message->message_type,
-                'media_path'     => $mediaPath ? Storage::url($mediaPath) : null,
-                'media_thumbnail'=> null,
-                'media_duration' => $mediaDuration,
+                'id'              => $message->id,
+                'content'         => $message->content,
+                'is_mine'         => true,
+                'is_read'         => false,
+                'read_at'         => null,
+                'created_at'      => $message->created_at,
+                'message_type'    => $message->message_type,
+                'media_path'      => $mediaPath ? Storage::url($mediaPath) : null,
+                'media_thumbnail' => null,
+                'media_duration'  => $mediaDuration,
+                'media_mime_type' => $mediaMime,
             ],
         ]);
     }
