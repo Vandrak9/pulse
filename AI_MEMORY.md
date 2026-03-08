@@ -704,9 +704,53 @@ POST /dashboard/reels         → PostController@storeReel
 Stripe keys (`STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`) are empty in `.env`.
 E2E test cannot be completed until keys are set.
 
-**To configure Stripe:**
-1. Get test keys from https://dashboard.stripe.com/test/apikeys
-2. Set in `.env`: `STRIPE_KEY=pk_test_...`, `STRIPE_SECRET=sk_test_...`
-3. Seed coach prices: `php artisan tinker` → `Coach::all()->each(fn($c) => $c->update(['stripe_price_id' => null]))`
-4. First checkout attempt will auto-create Stripe Product+Price per coach
-5. Test with card `4242 4242 4242 4242`, any future expiry, any CVC
+**Stripe keys configured (test mode):**
+- `STRIPE_KEY=rk_test_51T8m...` (restricted), `STRIPE_SECRET=sk_test_51T8m...`
+- `CASHIER_CURRENCY=eur`
+- All 11 coaches have Stripe Products + recurring EUR Prices seeded
+- Test card: `4242 4242 4242 4242`, any future expiry, any CVC
+- [2026-03-08 19:15:18] ff319c3: chore: update AI_MEMORY with session 14 Stripe rewrite notes
+- [2026-03-08 19:20:26] 9541d4c: feat: Stripe checkout tested and working end-to-end
+- [2026-03-08 19:30:25] 123be6f: feat: coach review and rating system with star picker
+
+---
+
+## Session 15 — 2026-03-08 (cont.)
+
+### What was built — Coach review & rating system
+
+**DB:**
+- `reviews`: id, user_id(FK), coach_id(FK), rating(tinyint 1-5), content(text nullable),
+  is_visible(bool default true), timestamps — unique:[user_id,coach_id], index:[coach_id,rating]
+- `coaches`: added `rating_avg` (decimal 3,2 default 0), `rating_count` (int default 0)
+- `Coach.$fillable`: added `rating_avg`, `rating_count`, `stripe_product_id`, `stripe_price_id`
+
+**Backend:**
+- `Review` model: fillable, belongsTo User/Coach
+- `ReviewController`: store/destroy (auth), index (public JSON paginated 10/page)
+  — subscription check, updateOrCreate pattern, recalculate avg after every write
+  — DB notification for coach on first review (not edits)
+- `CoachController::show()`: adds `reviews` (last 10), `user_review`, `rating_avg`, `rating_count`
+- `CoachController::index()`: returns `rating_avg` + `rating_count` (replaced old `rating`)
+- `DashboardController`: rating stats + reviews in `buildRecentActivity()`
+- `/api/coaches/suggested`: now includes `rating_avg` + `rating_count`
+
+**Routes:**
+```
+GET    /coaches/{coachId}/reviews  → public
+POST   /coaches/{coachId}/reviews  → auth
+DELETE /coaches/{coachId}/reviews  → auth
+```
+
+**Frontend:**
+- `Show.tsx`: 5th tab "⭐ Recenzie (N)" — rating bar chart, star picker, write/edit/delete,
+  ReviewCard with "✓ Overený predplatiteľ" badge, load more via axios pagination
+- `Index.tsx`: `rating_avg`/`rating_count`, "Nové" badge when 0 reviews
+- `PulseLayout.tsx` right sidebar: ★ avg shown below specialization
+- `Dashboard/Index.tsx`: reviews stat card replaces views when rating_count > 0
+
+**Business rules:**
+- Only subscribers can review (stripe_status active/trialing)
+- One review per user per coach (editable)
+- Coach cannot review themselves
+- Seeded: 3–6 reviews per coach, real avg stored in rating_avg/rating_count
