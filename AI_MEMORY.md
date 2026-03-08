@@ -430,3 +430,46 @@ GET /api/coaches/suggested  → JSON array of 4 coaches (public)
 
 - [2026-03-08] 0f63924: feat: full desktop layout with sidebars and responsive design
 - [2026-03-08 12:57:24] 0f63924: feat: full desktop layout with sidebars and responsive design
+- [2026-03-08 12:57:59] 79468d0: chore: update AI_MEMORY with session 4 desktop layout work
+- [2026-03-08 13:07:21] 321c68e: feat: desktop polish — lucide icons, feed layout, messages panels
+- [2026-03-08 13:17:19] a518404: feat: notifications page, fix coach edit layout and grid
+
+---
+
+## Session 5 — 2026-03-08 (cont.)
+
+### What was fixed
+
+**FIX 1 — Notifications system (new feature)**
+- `database/migrations/…_create_notifications_table.php`: id, user_id, type, title, body, data(json), is_read, read_at, timestamps + compound index (user_id, is_read)
+- `app/Models/Notification.php`: fillable + casts
+- `app/Http/Controllers/NotificationController.php`: index() / markAllRead() / markOneRead()
+- `resources/js/Pages/Notifications/Index.tsx`: type icons map, unread styling (white bg + terracotta left border), read styling (cream bg), empty state, "Označiť všetky" button, relative time
+- Routes: `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/{id}/read` (all auth)
+- Seeded 5 sample notifications (4 unread + 1 read) per user via tinker
+
+**FIX 2 — Coach Edit Profile → PulseLayout + Slovak**
+- `Coaches/Edit.tsx`: replaced `AuthenticatedLayout` with `PulseLayout`
+- All labels/buttons translated: "Upraviť profil kouča", "Nahrať fotku" / "Zmeniť fotku", "O mne", "Povedz niečo o sebe...", "Špecializácia", "napr. Silový tréning...", "Mesačná cena predplatného (€)", "Ukladám..." / "Uložiť profil"
+
+**FIX 3 — Hide own profile from coaches grid**
+- `CoachController::index()`: added `.when(auth()->check(), fn($q) => $q->where('user_id', '!=', auth()->id()))` — safe guard for public route
+
+**FIX 4 — Sidebar "Pridať obsah" link for coaches**
+- `PulseLayout.tsx`: added `PlusSquare` to lucide imports
+- Added "Pridať obsah" link (href: `/dashboard/broadcast`) in `desktopNavLinks` — only shown when `isCoach === true`
+- Dashboard link was already working correctly (isCoach conditional since session 4)
+
+### Notifications table schema
+```
+notifications: id, user_id(FK), type(string), title(string), body(text nullable),
+               data(json nullable), is_read(bool default false), read_at(timestamp nullable), timestamps
+index: [user_id, is_read]
+```
+
+### Notification types
+- `new_subscriber` → 🎉
+- `new_message`    → 💬
+- `new_like`       → ❤️
+- `new_post`       → 📸
+- `tip`            → 💰
