@@ -1,5 +1,5 @@
 import PulseLayout from '@/Layouts/PulseLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface Coach {
@@ -43,6 +43,30 @@ export default function CoachesIndex({ coaches }: Props) {
     const isLoggedIn = !!auth?.user;
 
     const [activeKeyword, setActiveKeyword] = useState<string | null>(null);
+
+    // Page-level follow state so Inertia re-renders don't reset per-card state
+    const [followState, setFollowState] = useState<Record<number, boolean>>(
+        () => Object.fromEntries(coaches.data.map(c => [c.user_id, c.is_following]))
+    );
+
+    function handleFollow(e: React.MouseEvent, coachUserId: number) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isLoggedIn) return;
+
+        // Optimistic update
+        setFollowState(prev => ({ ...prev, [coachUserId]: !prev[coachUserId] }));
+
+        router.post(`/follow/${coachUserId}`, {}, {
+            preserveScroll: true,
+            preserveState: true,
+            only: [],
+            onError: () => {
+                // Revert on error
+                setFollowState(prev => ({ ...prev, [coachUserId]: !prev[coachUserId] }));
+            },
+        });
+    }
 
     const filtered = activeKeyword
         ? coaches.data.filter((c) =>
@@ -119,7 +143,15 @@ export default function CoachesIndex({ coaches }: Props) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                            {filtered.map((coach) => <CoachCard key={coach.id} coach={coach} isLoggedIn={isLoggedIn} />)}
+                            {filtered.map((coach) => (
+                                <CoachCard
+                                    key={coach.id}
+                                    coach={coach}
+                                    isLoggedIn={isLoggedIn}
+                                    isFollowing={followState[coach.user_id] ?? coach.is_following}
+                                    onFollow={handleFollow}
+                                />
+                            ))}
                         </div>
                     )}
 
@@ -146,39 +178,16 @@ export default function CoachesIndex({ coaches }: Props) {
     );
 }
 
-function CoachCard({ coach, isLoggedIn }: { coach: Coach; isLoggedIn: boolean }) {
+function CoachCard({
+    coach, isLoggedIn, isFollowing, onFollow,
+}: {
+    coach: Coach;
+    isLoggedIn: boolean;
+    isFollowing: boolean;
+    onFollow: (e: React.MouseEvent, userId: number) => void;
+}) {
     const price = parseFloat(coach.monthly_price);
     const rating = coach.rating ? parseFloat(coach.rating) : null;
-    const [following, setFollowing] = useState(coach.is_following);
-    const [followLoading, setFollowLoading] = useState(false);
-
-    function handleFollow(e: React.MouseEvent) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!isLoggedIn || followLoading) return;
-
-        // Optimistic update
-        const prev = following;
-        setFollowing(!prev);
-        setFollowLoading(true);
-
-        fetch(`/follow/${coach.user_id}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            credentials: 'same-origin',
-        })
-            .then(r => {
-                if (!r.ok) throw new Error('Request failed');
-                return r.json();
-            })
-            .then(d => { setFollowing(d.following); })
-            .catch(() => { setFollowing(prev); }) // revert on error
-            .finally(() => setFollowLoading(false));
-    }
 
     const contentBadges: string[] = [];
     if (coach.video_count > 0) contentBadges.push(`🎬 ${coach.video_count} videí`);
@@ -260,18 +269,16 @@ function CoachCard({ coach, isLoggedIn }: { coach: Coach; isLoggedIn: boolean })
 
             {isLoggedIn && (
                 <button
-                    onClick={handleFollow}
-                    disabled={followLoading}
+                    onClick={(e) => onFollow(e, coach.user_id)}
                     className="mt-2 w-full rounded-full py-1.5 text-center text-xs font-semibold transition-all"
                     style={{
-                        border: `1px solid ${following ? '#c4714a' : '#9a8a7a'}`,
-                        color: following ? '#c4714a' : '#9a8a7a',
-                        background: following ? '#fce8de' : 'none',
-                        cursor: followLoading ? 'default' : 'pointer',
-                        opacity: followLoading ? 0.6 : 1,
+                        border: `1px solid ${isFollowing ? '#c4714a' : '#9a8a7a'}`,
+                        color: isFollowing ? '#c4714a' : '#9a8a7a',
+                        background: isFollowing ? '#fce8de' : 'none',
+                        cursor: 'pointer',
                     }}
                 >
-                    {following ? 'Sledujem ✓' : 'Sledovať'}
+                    {isFollowing ? 'Sledujem ✓' : 'Sledovať'}
                 </button>
             )}
         </div>

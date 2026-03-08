@@ -88,39 +88,27 @@ export default function ProfileShow({
     const [saving, setSaving] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
 
-    function handleFollow() {
+    function handleFollow(e: React.MouseEvent) {
+        e.preventDefault();
+        e.stopPropagation();
         if (!auth?.user || followLoading) return;
 
         // Optimistic update
         const prev = following;
-        const prevCount = followersCount;
         setFollowing(!prev);
-        setFollowersCount(prev ? prevCount - 1 : prevCount + 1);
+        setFollowersCount(prev ? followersCount - 1 : followersCount + 1);
         setFollowLoading(true);
 
-        fetch(`/follow/${profileUser.id}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            credentials: 'same-origin',
-        })
-            .then(r => {
-                if (!r.ok) throw new Error('Request failed');
-                return r.json();
-            })
-            .then(d => {
-                if (typeof d?.following === 'boolean') setFollowing(d.following);
-                if (typeof d?.count === 'number') setFollowersCount(d.count);
-            })
-            .catch(() => {
-                // Revert on error
+        router.post(`/follow/${profileUser.id}`, {}, {
+            preserveScroll: true,
+            preserveState: true,
+            only: [],
+            onError: () => {
                 setFollowing(prev);
-                setFollowersCount(prevCount);
-            })
-            .finally(() => setFollowLoading(false));
+                setFollowersCount(prev ? followersCount + 1 : followersCount - 1);
+            },
+            onFinish: () => setFollowLoading(false),
+        });
     }
 
     function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
