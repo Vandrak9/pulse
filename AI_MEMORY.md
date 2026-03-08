@@ -613,3 +613,29 @@ POST /dashboard/reels         → PostController@storeReel
 - Photo posts: `media_type='image'`, `video_type=null`, multi-file in `post_media`
 - Video posts: `media_type='video'`, `video_type='video'`, single file
 - Reels:       `media_type='video'`, `video_type='reel'`, always `is_exclusive=false`
+- [2026-03-08 14:18:16] 7cc841f: chore: update AI_MEMORY with session 11 post creation fixes
+- [2026-03-08 14:29:49] bddf621: feat: new conversation from profile, message privacy settings
+
+---
+
+## Session 12 — 2026-03-08 (cont.)
+
+### What was built — Message privacy + new conversation flow
+
+**DB:**
+- `coaches.messages_access` column: string, default `'followers'`, values: `followers` | `subscribers` | `nobody`
+
+**Backend:**
+- `CoachController::search()`: GET `/coaches/search?q=...` → JSON (id, user_id, name, specialization, avatar_url), max 8 results, name LIKE query
+- `CoachController::show/edit/update()`: include/save `messages_access`
+- `MessageController::store()`: access policy check before saving — `nobody` → 403, `subscribers` → check `subscriptions` table, `followers` → check `follows` table; handles both Inertia (back()->withErrors) and axios (JSON 403) requests
+- Route: `GET /coaches/search` placed BEFORE `/coaches/{coach}` to avoid route conflict
+
+**Frontend:**
+- `Coaches/Show.tsx`: "Napísať správu" button links to `/messages/{coach.user_id}`; access badge shows for non-followers policy; button hidden when access='nobody' or not logged in
+- `Coaches/Edit.tsx`: `messages_access` radio selector (3 options) added to coach profile edit form
+- `Messages/Show.tsx`: `handleSend` error handler reads `errs.access` first for toast display
+- `Messages/Index.tsx`:
+  - `NewMessageModal` component: debounced search (250ms), axios GET `/coaches/search?q=...`, coach results list
+  - "+ Nová správa" button added to mobile header (top right) and desktop panel header (top right)
+  - Opens modal on click, navigates to `/messages/{user_id}` on coach selection

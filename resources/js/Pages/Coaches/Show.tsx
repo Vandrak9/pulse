@@ -17,7 +17,7 @@ interface CoachData {
     followers_count: number;
     is_verified: boolean;
     is_following: boolean;
-    messages_access: 'followers' | 'subscribers' | 'nobody';
+    messages_access: 'everyone' | 'followers' | 'subscribers' | 'nobody';
     avatar_url: string | null;
 }
 
@@ -158,7 +158,7 @@ export default function CoachShow({ coach, posts, isSubscribed }: Props) {
                                     <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed md:mx-0" style={{ color: '#6b5e52' }}>{coach.bio}</p>
                                 )}
                                 {/* Message access badge */}
-                                {coach.messages_access !== 'followers' && (
+                                {coach.messages_access !== 'everyone' && coach.messages_access !== 'followers' && (
                                     <p className="mt-2 text-xs" style={{ color: '#9a8a7a' }}>
                                         {coach.messages_access === 'subscribers'
                                             ? '💬 Píše len predplatiteľom'

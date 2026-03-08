@@ -7,7 +7,7 @@ interface CoachData {
     bio: string | null;
     specialization: string | null;
     monthly_price: string;
-    messages_access: 'followers' | 'subscribers' | 'nobody';
+    messages_access: 'everyone' | 'followers' | 'subscribers' | 'nobody';
     avatar_url: string | null;
 }
 
@@ -21,7 +21,7 @@ export default function CoachEdit({ coach, flash }: Props) {
         bio: coach?.bio ?? '',
         specialization: coach?.specialization ?? '',
         monthly_price: coach?.monthly_price ?? '0',
-        messages_access: (coach?.messages_access ?? 'followers') as 'followers' | 'subscribers' | 'nobody',
+        messages_access: (coach?.messages_access ?? 'everyone') as 'everyone' | 'followers' | 'subscribers' | 'nobody',
         avatar: null as File | null,
         _method: 'PUT',
     });
@@ -195,40 +195,46 @@ export default function CoachEdit({ coach, flash }: Props) {
                         </div>
 
                         {/* Messages access */}
-                        <div className="mb-8">
-                            <label className="mb-3 block text-sm font-medium" style={{ color: '#2d2118' }}>
-                                Kto mi môže písať správy
-                            </label>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div className="mt-6 border-t pt-6 mb-8" style={{ borderColor: '#e8d9c4' }}>
+                            <h3 className="mb-1 text-lg font-bold" style={{ color: '#2d2118', fontFamily: 'Georgia, serif' }}>
+                                Súkromie správ
+                            </h3>
+                            <p className="mb-4 text-sm" style={{ color: '#9a8a7a' }}>
+                                Kto ti môže posielať správy
+                            </p>
+                            <div className="space-y-3">
                                 {([
-                                    { value: 'followers',    icon: '👥', title: 'Všetci sledovatelia', desc: 'Ktokoľvek kto ťa sleduje' },
-                                    { value: 'subscribers',  icon: '💳', title: 'Len predplatitelia',   desc: 'Len platení predplatitelia' },
-                                    { value: 'nobody',       icon: '🔒', title: 'Nikto',               desc: 'Správy vypnuté' },
+                                    { value: 'everyone',    icon: '🌍', title: 'Všetci sledovatelia', desc: 'Ktokoľvek kto ťa sleduje' },
+                                    { value: 'subscribers', icon: '💳', title: 'Len predplatitelia',   desc: 'Len platení predplatitelia' },
+                                    { value: 'nobody',      icon: '🔒', title: 'Nikto',               desc: 'Správy sú vypnuté' },
                                 ] as const).map(opt => (
                                     <label
                                         key={opt.value}
                                         onClick={() => setData('messages_access', opt.value)}
+                                        className="flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all"
                                         style={{
-                                            display: 'flex', alignItems: 'center', gap: 12,
-                                            padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
-                                            border: `1.5px solid ${data.messages_access === opt.value ? '#c4714a' : '#e8d9c4'}`,
+                                            borderColor: data.messages_access === opt.value ? '#c4714a' : '#e8d9c4',
                                             background: data.messages_access === opt.value ? '#fce8de' : 'white',
-                                            transition: 'all 0.15s',
                                         }}
                                     >
-                                        <span style={{ fontSize: 20 }}>{opt.icon}</span>
-                                        <div style={{ flex: 1 }}>
-                                            <p style={{ fontSize: 13, fontWeight: 600, color: '#2d2118', margin: 0 }}>{opt.title}</p>
-                                            <p style={{ fontSize: 11, color: '#9a8a7a', margin: '2px 0 0' }}>{opt.desc}</p>
-                                        </div>
                                         <input
                                             type="radio"
                                             name="messages_access"
                                             value={opt.value}
                                             checked={data.messages_access === opt.value}
                                             onChange={() => setData('messages_access', opt.value)}
-                                            style={{ flexShrink: 0 }}
+                                            className="hidden"
                                         />
+                                        <span className="text-xl">{opt.icon}</span>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold" style={{ color: '#2d2118', margin: 0 }}>{opt.title}</p>
+                                            <p className="text-xs" style={{ color: '#9a8a7a', margin: '2px 0 0' }}>{opt.desc}</p>
+                                        </div>
+                                        {data.messages_access === opt.value && (
+                                            <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full" style={{ background: '#c4714a' }}>
+                                                <span className="text-xs text-white">✓</span>
+                                            </div>
+                                        )}
                                     </label>
                                 ))}
                             </div>

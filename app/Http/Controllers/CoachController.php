@@ -99,7 +99,7 @@ class CoachController extends Controller
                 'followers_count' => $followersCount,
                 'is_verified'     => $coach->is_verified,
                 'is_following'    => $isFollowing,
-                'messages_access' => $coach->messages_access ?? 'followers',
+                'messages_access' => $coach->messages_access ?? 'everyone',
                 'avatar_url'      => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
@@ -119,7 +119,7 @@ class CoachController extends Controller
                 'bio'             => $coach->bio,
                 'specialization'  => $coach->specialization,
                 'monthly_price'   => $coach->monthly_price,
-                'messages_access' => $coach->messages_access ?? 'followers',
+                'messages_access' => $coach->messages_access ?? 'everyone',
                 'avatar_url'      => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
@@ -134,7 +134,7 @@ class CoachController extends Controller
             'specialization'  => ['nullable', 'string', 'max:255'],
             'monthly_price'   => ['required', 'numeric', 'min:0'],
             'avatar'          => ['nullable', 'image', 'max:2048'],
-            'messages_access' => ['nullable', 'in:followers,subscribers,nobody'],
+            'messages_access' => ['nullable', 'in:everyone,followers,subscribers,nobody'],
         ]);
 
         $user = $request->user();
@@ -143,7 +143,7 @@ class CoachController extends Controller
         $coach->bio             = $validated['bio'] ?? null;
         $coach->specialization  = $validated['specialization'] ?? null;
         $coach->monthly_price   = $validated['monthly_price'];
-        $coach->messages_access = $validated['messages_access'] ?? 'followers';
+        $coach->messages_access = $validated['messages_access'] ?? 'everyone';
 
         if ($request->hasFile('avatar')) {
             if ($coach->avatar_path) {

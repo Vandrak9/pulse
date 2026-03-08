@@ -139,7 +139,7 @@ class MessageController extends Controller
 
         // ── Message access policy ────────────────────────────────────────────────
         if ($receiver->role === 'coach' && $receiver->coach) {
-            $access   = $receiver->coach->messages_access ?? 'followers';
+            $access   = $receiver->coach->messages_access ?? 'everyone';
             $senderId = $user->id;
 
             $deny = function (string $msg) use ($request) {
