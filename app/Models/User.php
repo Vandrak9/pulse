@@ -21,6 +21,10 @@ class User extends Authenticatable
         'profile_bio',
         'profile_avatar',
         'profile_is_public',
+        'notif_new_subscriber',
+        'notif_new_message',
+        'notif_new_review',
+        'notif_new_like',
     ];
 
     protected $hidden = [

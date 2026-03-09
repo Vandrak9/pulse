@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\Review;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -142,20 +143,76 @@ class UserProfileController extends Controller
                 ? Storage::url($profileUser->coach->avatar_path)
                 : null);
 
+        // ── Coach-specific data (own coach profile only) ───────────────────────
+        $ownPosts    = [];
+        $coachReviews = [];
+        $postsCount  = 0;
+        $coach       = $profileUser->coach;
+
+        if ($isOwn && $profileUser->role === 'coach' && $coach) {
+            $postsCount = Post::where('coach_id', $coach->id)->count();
+
+            $ownPosts = Post::where('coach_id', $coach->id)
+                ->withCount('likes')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(fn ($p) => [
+                    'id'           => $p->id,
+                    'title'        => $p->title,
+                    'body'         => mb_substr($p->content ?? '', 0, 100),
+                    'is_exclusive' => $p->is_exclusive,
+                    'media_type'   => $p->media_type,
+                    'media_path'   => $p->thumbnail_path
+                        ? Storage::url($p->thumbnail_path)
+                        : ($p->media_path ? Storage::url($p->media_path) : null),
+                    'views'        => $p->views ?? 0,
+                    'likes_count'  => $p->likes_count,
+                    'created_at'   => $p->created_at->diffForHumans(),
+                ]);
+
+            $coachReviews = Review::where('coach_id', $coach->id)
+                ->with('user:id,name,profile_avatar')
+                ->latest()
+                ->take(20)
+                ->get()
+                ->map(fn ($r) => [
+                    'id'         => $r->id,
+                    'rating'     => $r->rating,
+                    'content'    => $r->content,
+                    'created_at' => $r->created_at->diffForHumans(),
+                    'user'       => [
+                        'id'         => $r->user->id,
+                        'name'       => $r->user->name,
+                        'avatar_url' => $r->user->profile_avatar
+                            ? Storage::url($r->user->profile_avatar)
+                            : null,
+                    ],
+                ]);
+        }
+
         return Inertia::render('Profile/Show', [
             'profileUser' => [
-                'id'             => $profileUser->id,
-                'name'           => $profileUser->name,
-                'email'          => $isOwn ? $profileUser->email : null,
-                'role'           => $profileUser->role,
-                'bio'            => $profileUser->profile_bio,
-                'avatar_url'     => $avatarUrl,
-                'is_public'      => $profileUser->profile_is_public,
-                'created_at'     => $profileUser->created_at->toDateString(),
-                'member_since'   => $memberSince,
-                'coach_id'       => $profileUser->coach?->id,
-                'specialization' => $profileUser->coach?->specialization,
-                'is_verified'    => $profileUser->coach?->is_verified ?? false,
+                'id'                    => $profileUser->id,
+                'name'                  => $profileUser->name,
+                'email'                 => $isOwn ? $profileUser->email : null,
+                'role'                  => $profileUser->role,
+                'bio'                   => $profileUser->profile_bio,
+                'avatar_url'            => $avatarUrl,
+                'is_public'             => $profileUser->profile_is_public,
+                'created_at'            => $profileUser->created_at->toDateString(),
+                'member_since'          => $memberSince,
+                'coach_id'              => $coach?->id,
+                'specialization'        => $coach?->specialization,
+                'is_verified'           => $coach?->is_verified ?? false,
+                'subscriber_count'      => $coach?->subscriber_count ?? 0,
+                'rating_avg'            => (float) ($coach?->rating_avg ?? 0),
+                'rating_count'          => (int) ($coach?->rating_count ?? 0),
+                'monthly_price'         => $coach ? (float) $coach->monthly_price : null,
+                // Notification prefs (own profile only)
+                'notif_new_subscriber'  => $isOwn ? (bool) $profileUser->notif_new_subscriber : null,
+                'notif_new_message'     => $isOwn ? (bool) $profileUser->notif_new_message : null,
+                'notif_new_review'      => $isOwn ? (bool) $profileUser->notif_new_review : null,
+                'notif_new_like'        => $isOwn ? (bool) $profileUser->notif_new_like : null,
             ],
             'isOwn'              => $isOwn,
             'isFollowing'        => $isFollowing,
@@ -166,6 +223,10 @@ class UserProfileController extends Controller
             'likedPosts'         => $likedPosts,
             'subscriptions'      => $subscriptions,
             'subscriptionsCount' => $subscriptionsCount,
+            // Coach-only
+            'ownPosts'           => $ownPosts,
+            'coachReviews'       => $coachReviews,
+            'postsCount'         => $postsCount,
         ]);
     }
 
@@ -209,15 +270,32 @@ class UserProfileController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $request->validate([
-            'bio'       => 'nullable|string|max:300',
-            'avatar'    => 'nullable|image|max:2048',
-            'is_public' => 'boolean',
+            'bio'                   => 'nullable|string|max:300',
+            'avatar'                => 'nullable|image|max:2048',
+            'is_public'             => 'boolean',
+            'notif_new_subscriber'  => 'boolean',
+            'notif_new_message'     => 'boolean',
+            'notif_new_review'      => 'boolean',
+            'notif_new_like'        => 'boolean',
         ]);
 
         $user = $request->user();
 
         $user->profile_bio       = $request->input('bio');
         $user->profile_is_public = $request->boolean('is_public', true);
+
+        if ($request->has('notif_new_subscriber')) {
+            $user->notif_new_subscriber = $request->boolean('notif_new_subscriber');
+        }
+        if ($request->has('notif_new_message')) {
+            $user->notif_new_message = $request->boolean('notif_new_message');
+        }
+        if ($request->has('notif_new_review')) {
+            $user->notif_new_review = $request->boolean('notif_new_review');
+        }
+        if ($request->has('notif_new_like')) {
+            $user->notif_new_like = $request->boolean('notif_new_like');
+        }
 
         if ($request->hasFile('avatar')) {
             if ($user->profile_avatar) {

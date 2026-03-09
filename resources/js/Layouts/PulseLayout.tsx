@@ -32,7 +32,7 @@ const REVIEWS = [
 
 export default function PulseLayout({ children }: Props) {
     const page = usePage();
-    const { auth } = page.props as { auth: { user: { id: number; name: string; role?: string } | null } };
+    const { auth } = page.props as { auth: { user: { id: number; name: string; role?: string; coach_id?: number | null } | null } };
     const user = auth?.user ?? null;
     const isCoach = user?.role === 'coach';
     const url = page.url;
@@ -113,7 +113,7 @@ export default function PulseLayout({ children }: Props) {
         { label: 'Feed',    icon: '📱', href: '/feed' },
         { label: 'Objaviť',icon: '🔍', href: '/coaches' },
         { label: 'Správy', icon: '💬', href: '/messages' },
-        { label: 'Profil', icon: '👤', href: '/dashboard/profile' },
+        { label: 'Profil', icon: '👤', href: user ? `/profile/${user.id}` : '/login' },
     ];
 
     return (
@@ -266,6 +266,25 @@ export default function PulseLayout({ children }: Props) {
                                     </div>
                                 </div>
                             </div>
+                            {/* Profile links */}
+                            <Link
+                                href={`/profile/${user.id}`}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', textDecoration: 'none', color: '#2d2118', fontSize: 13, borderRadius: 10, transition: 'background 0.15s' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            >
+                                <User size={15} style={{ flexShrink: 0, color: '#9a8a7a' }} /> 👤 Môj profil
+                            </Link>
+                            {isCoach && user.coach_id && (
+                                <Link
+                                    href={`/coaches/${user.coach_id}`}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', textDecoration: 'none', color: '#2d2118', fontSize: 13, borderRadius: 10, transition: 'background 0.15s' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                    <span style={{ fontSize: 15, flexShrink: 0 }}>🏋️</span> Verejný profil
+                                </Link>
+                            )}
                             <Link
                                 href="/logout" method="post" as="button"
                                 style={{

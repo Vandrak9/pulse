@@ -19,6 +19,14 @@ interface ProfileUser {
     coach_id: number | null;
     specialization: string | null;
     is_verified: boolean;
+    subscriber_count: number;
+    rating_avg: number;
+    rating_count: number;
+    monthly_price: number | null;
+    notif_new_subscriber: boolean | null;
+    notif_new_message: boolean | null;
+    notif_new_review: boolean | null;
+    notif_new_like: boolean | null;
 }
 
 interface FollowingUser {
@@ -47,6 +55,26 @@ interface LikedPost {
     created_at: string | null;
 }
 
+interface OwnPost {
+    id: number;
+    title: string;
+    body: string;
+    is_exclusive: boolean;
+    media_type: string;
+    media_path: string | null;
+    views: number;
+    likes_count: number;
+    created_at: string;
+}
+
+interface CoachReview {
+    id: number;
+    rating: number;
+    content: string | null;
+    created_at: string;
+    user: { id: number; name: string; avatar_url: string | null };
+}
+
 interface Props {
     profileUser: ProfileUser;
     isOwn: boolean;
@@ -58,12 +86,26 @@ interface Props {
     likedPosts: LikedPost[];
     subscriptions: Subscription[];
     subscriptionsCount: number;
+    ownPosts: OwnPost[];
+    coachReviews: CoachReview[];
+    postsCount: number;
     flash?: { success?: string };
 }
 
-type Tab = 'predplatne' | 'sleduje' | 'lajky' | 'nastavenia';
+type FanTab   = 'predplatne' | 'sleduje' | 'lajky' | 'nastavenia';
+type CoachTab = 'prehlad' | 'obsah' | 'recenzie' | 'nastavenia';
 
-// ── Delete confirmation modal ──────────────────────────────────────────────────
+// ── Stars helper ───────────────────────────────────────────────────────────────
+
+function Stars({ rating }: { rating: number }) {
+    return (
+        <span style={{ color: '#f59e0b', fontSize: 13 }}>
+            {'★'.repeat(Math.round(rating))}{'☆'.repeat(5 - Math.round(rating))}
+        </span>
+    );
+}
+
+// ── Delete account modal ───────────────────────────────────────────────────────
 
 function DeleteModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
     return (
@@ -88,28 +130,72 @@ function DeleteModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (
                     Táto akcia je nenávratná. Všetky tvoje dáta, správy a história budú trvalo vymazané.
                 </p>
                 <div style={{ display: 'flex', gap: 10 }}>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            flex: 1, padding: '11px 0', borderRadius: 999,
-                            border: '1px solid #e8d9c4', background: 'none',
-                            fontSize: 14, fontWeight: 600, color: '#2d2118', cursor: 'pointer',
-                        }}
-                    >
+                    <button onClick={onClose} style={{ flex: 1, padding: '11px 0', borderRadius: 999, border: '1px solid #e8d9c4', background: 'none', fontSize: 14, fontWeight: 600, color: '#2d2118', cursor: 'pointer' }}>
                         Zrušiť
                     </button>
-                    <button
-                        onClick={onConfirm}
-                        style={{
-                            flex: 1, padding: '11px 0', borderRadius: 999,
-                            border: 'none', background: '#d32f2f',
-                            fontSize: 14, fontWeight: 600, color: 'white', cursor: 'pointer',
-                        }}
-                    >
+                    <button onClick={onConfirm} style={{ flex: 1, padding: '11px 0', borderRadius: 999, border: 'none', background: '#d32f2f', fontSize: 14, fontWeight: 600, color: 'white', cursor: 'pointer' }}>
                         Zmazať účet
                     </button>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// ── Delete post modal ──────────────────────────────────────────────────────────
+
+function DeletePostModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+    return (
+        <div
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 100,
+                background: 'rgba(0,0,0,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 20,
+            }}
+        >
+            <div style={{ background: 'white', borderRadius: 18, padding: 28, maxWidth: 360, width: '100%', border: '1px solid #e8d9c4', boxShadow: '0 8px 40px rgba(0,0,0,0.15)' }}>
+                <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 10 }}>🗑️</div>
+                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700, color: '#2d2118', textAlign: 'center', margin: '0 0 10px' }}>
+                    Zmazať príspevok?
+                </h3>
+                <p style={{ fontSize: 13, color: '#9a8a7a', textAlign: 'center', lineHeight: 1.6, margin: '0 0 22px' }}>
+                    Naozaj chceš zmazať tento príspevok? Akcia je nevratná.
+                </p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 999, border: '1px solid #e8d9c4', background: 'none', fontSize: 14, fontWeight: 600, color: '#2d2118', cursor: 'pointer' }}>
+                        Zrušiť
+                    </button>
+                    <button onClick={onConfirm} style={{ flex: 1, padding: '10px 0', borderRadius: 999, border: 'none', background: '#d32f2f', fontSize: 14, fontWeight: 600, color: 'white', cursor: 'pointer' }}>
+                        Zmazať
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Notification toggle ────────────────────────────────────────────────────────
+
+function NotifToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f0e8df' }}>
+            <span style={{ fontSize: 14, color: '#2d2118' }}>{label}</span>
+            <button
+                onClick={() => onChange(!checked)}
+                style={{
+                    width: 44, height: 24, borderRadius: 999, border: 'none',
+                    background: checked ? '#c4714a' : '#e8d9c4',
+                    cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                }}
+            >
+                <div style={{
+                    position: 'absolute', top: 3, left: checked ? 23 : 3,
+                    width: 18, height: 18, borderRadius: '50%', background: 'white',
+                    transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                }} />
+            </button>
         </div>
     );
 }
@@ -127,6 +213,9 @@ export default function ProfileShow({
     likedPosts,
     subscriptions,
     subscriptionsCount,
+    ownPosts: initOwnPosts,
+    coachReviews,
+    postsCount,
     flash,
 }: Props) {
     const { auth } = usePage().props as { auth: { user: { id: number; name: string } | null } };
@@ -139,24 +228,41 @@ export default function ProfileShow({
         );
     }
 
-    // Default tab: own profile shows 'predplatne', others show 'sleduje'
-    const [tab, setTab] = useState<Tab>(isOwn ? 'predplatne' : 'sleduje');
-    const [following, setFollowing] = useState(initFollowing);
+    const isCoachOwnProfile = isOwn && profileUser.role === 'coach';
+
+    // Tabs
+    const [coachTab, setCoachTab] = useState<CoachTab>('prehlad');
+    const [fanTab, setFanTab]     = useState<FanTab>(isOwn ? 'predplatne' : 'sleduje');
+
+    // Follow state
+    const [following, setFollowing]         = useState(initFollowing);
     const [followersCount, setFollowersCount] = useState(initFollowersCount);
     const [followLoading, setFollowLoading] = useState(false);
     const [followingState, setFollowingState] = useState<Record<number, boolean>>({});
 
-    // Edit mode
-    const [editing, setEditing] = useState(false);
-    const [bio, setBio] = useState(profileUser.bio ?? '');
-    const [isPublic, setIsPublic] = useState(profileUser.is_public);
+    // Edit mode (fan social profile)
+    const [editing, setEditing]         = useState(false);
+    const [bio, setBio]                 = useState(profileUser.bio ?? '');
+    const [isPublic, setIsPublic]       = useState(profileUser.is_public);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(profileUser.avatar_url);
-    const [avatarFile, setAvatarFile] = useState<File | null>(null);
-    const [saving, setSaving] = useState(false);
+    const [avatarFile, setAvatarFile]   = useState<File | null>(null);
+    const [saving, setSaving]           = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
 
-    // Delete modal
-    const [showDelete, setShowDelete] = useState(false);
+    // Delete account modal
+    const [showDelete, setShowDelete]   = useState(false);
+
+    // Delete post modal
+    const [deletePostId, setDeletePostId] = useState<number | null>(null);
+    const [ownPosts, setOwnPosts]         = useState<OwnPost[]>(initOwnPosts);
+    const [deletingPost, setDeletingPost] = useState(false);
+
+    // Notification preferences (local state for toggles)
+    const [notifSubscriber, setNotifSubscriber] = useState(profileUser.notif_new_subscriber ?? true);
+    const [notifMessage, setNotifMessage]       = useState(profileUser.notif_new_message ?? true);
+    const [notifReview, setNotifReview]         = useState(profileUser.notif_new_review ?? true);
+    const [notifLike, setNotifLike]             = useState(profileUser.notif_new_like ?? false);
+    const [notifSaving, setNotifSaving]         = useState(false);
 
     // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -207,14 +313,49 @@ export default function ProfileShow({
         });
     }
 
+    async function saveNotifPrefs() {
+        setNotifSaving(true);
+        try {
+            await axios.post('/profile/update', {
+                notif_new_subscriber: notifSubscriber ? 1 : 0,
+                notif_new_message:    notifMessage    ? 1 : 0,
+                notif_new_review:     notifReview     ? 1 : 0,
+                notif_new_like:       notifLike       ? 1 : 0,
+            });
+        } finally {
+            setNotifSaving(false);
+        }
+    }
+
     function handleDeleteAccount() {
         router.delete('/profile');
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────────────────
+    async function handleDeletePost(postId: number) {
+        setDeletingPost(true);
+        try {
+            await axios.delete(`/dashboard/posts/${postId}`);
+            setOwnPosts(prev => prev.filter(p => p.id !== postId));
+        } finally {
+            setDeletingPost(false);
+            setDeletePostId(null);
+        }
+    }
 
-    const isCoachFollowed = (userId: number) =>
-        followingState[userId] !== false; // default = followed
+    const isCoachFollowed = (userId: number) => followingState[userId] !== false;
+
+    // ── Profile completeness (coach only) ─────────────────────────────────────
+
+    const completeness = isCoachOwnProfile ? [
+        { done: !!profileUser.avatar_url,                    label: 'Profilová fotka' },
+        { done: !!profileUser.bio,                           label: 'Bio' },
+        { done: !!profileUser.specialization,                label: 'Špecializácia' },
+        { done: (profileUser.monthly_price ?? 0) > 0,       label: 'Cena predplatného' },
+        { done: postsCount > 0,                              label: 'Aspoň 1 príspevok' },
+    ] : [];
+    const completePct = completeness.length
+        ? Math.round((completeness.filter(c => c.done).length / completeness.length) * 100)
+        : 100;
 
     // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -223,9 +364,13 @@ export default function ProfileShow({
             <Head title={profileUser.name} />
 
             {showDelete && (
-                <DeleteModal
-                    onClose={() => setShowDelete(false)}
-                    onConfirm={handleDeleteAccount}
+                <DeleteModal onClose={() => setShowDelete(false)} onConfirm={handleDeleteAccount} />
+            )}
+
+            {deletePostId !== null && (
+                <DeletePostModal
+                    onClose={() => setDeletePostId(null)}
+                    onConfirm={() => handleDeletePost(deletePostId)}
                 />
             )}
 
@@ -261,10 +406,7 @@ export default function ProfileShow({
                     </Link>
 
                     {/* Avatar overlapping cover */}
-                    <div style={{
-                        position: 'absolute', bottom: -50, left: '50%',
-                        transform: 'translateX(-50%)',
-                    }}>
+                    <div style={{ position: 'absolute', bottom: -50, left: '50%', transform: 'translateX(-50%)' }}>
                         <div
                             onClick={() => isOwn && fileRef.current?.click()}
                             style={{
@@ -277,27 +419,15 @@ export default function ProfileShow({
                             {avatarPreview ? (
                                 <img src={avatarPreview} alt={profileUser.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
-                                <div style={{
-                                    width: '100%', height: '100%', display: 'flex', alignItems: 'center',
-                                    justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 36,
-                                }}>
+                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 36 }}>
                                     {profileUser.name?.charAt(0).toUpperCase() ?? '?'}
                                 </div>
                             )}
                             {isOwn && (
-                                <div style={{
-                                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: 'transparent', fontSize: 22, transition: 'all 0.2s',
-                                }}
-                                    onMouseEnter={e => {
-                                        (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.35)';
-                                        (e.currentTarget as HTMLDivElement).style.color = 'white';
-                                    }}
-                                    onMouseLeave={e => {
-                                        (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0)';
-                                        (e.currentTarget as HTMLDivElement).style.color = 'transparent';
-                                    }}
+                                <div
+                                    style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'transparent', fontSize: 22, transition: 'all 0.2s' }}
+                                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0.35)'; (e.currentTarget as HTMLDivElement).style.color = 'white'; }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(0,0,0,0)'; (e.currentTarget as HTMLDivElement).style.color = 'transparent'; }}
                                 >
                                     📷
                                 </div>
@@ -309,18 +439,13 @@ export default function ProfileShow({
 
                 <div className="mx-auto max-w-xl px-4" style={{ paddingTop: 64 }}>
 
-                    {/* ── Name + role + badges ── */}
+                    {/* ── Name + role ── */}
                     <div style={{ textAlign: 'center' }}>
                         <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 700, color: '#2d2118', margin: 0 }}>
                             {profileUser.name}
                         </h1>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                            <span style={{
-                                padding: '3px 12px', borderRadius: 999,
-                                background: profileUser.role === 'coach' ? '#fce8de' : '#e8f4ec',
-                                color: profileUser.role === 'coach' ? '#c4714a' : '#4a7c59',
-                                fontSize: 12, fontWeight: 600,
-                            }}>
+                            <span style={{ padding: '3px 12px', borderRadius: 999, background: profileUser.role === 'coach' ? '#fce8de' : '#e8f4ec', color: profileUser.role === 'coach' ? '#c4714a' : '#4a7c59', fontSize: 12, fontWeight: 600 }}>
                                 {profileUser.role === 'coach' ? '💪 Kouč' : '👤 Člen'}
                             </span>
                             {profileUser.specialization && (
@@ -330,517 +455,641 @@ export default function ProfileShow({
                                 <span style={{ color: '#4a7c59', fontSize: 12, fontWeight: 600 }}>✓ Overený</span>
                             )}
                         </div>
-                        <p style={{ fontSize: 12, color: '#9a8a7a', marginTop: 4 }}>{profileUser.member_since}</p>
+                        <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 6 }}>{profileUser.member_since}</div>
                     </div>
 
                     {/* ── Stats row ── */}
-                    <div style={{
-                        display: 'flex', justifyContent: 'center', gap: 32,
-                        marginTop: 14, paddingBottom: 16,
-                        borderBottom: '1px solid #e8d9c4',
-                    }}>
-                        {[
-                            { value: followingCount, label: 'Sleduje' },
-                            { value: subscriptionsCount, label: 'Predplatné' },
-                            { value: likedPostsCount, label: 'Lajky' },
-                        ].map((s, i) => (
-                            <div key={i} style={{ textAlign: 'center' }}>
-                                <div style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 700, color: '#2d2118' }}>
-                                    {s.value}
+                    {isCoachOwnProfile ? (
+                        /* Coach stats */
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginTop: 20, flexWrap: 'wrap' }}>
+                            {[
+                                { icon: '👥', value: profileUser.subscriber_count, label: 'predplatitelia' },
+                                { icon: '❤️', value: followersCount, label: 'sledovatelia' },
+                                { icon: '⭐', value: profileUser.rating_avg > 0 ? profileUser.rating_avg.toFixed(1) : '—', label: 'hodnotenie' },
+                                { icon: '📝', value: postsCount, label: 'príspevky' },
+                            ].map(stat => (
+                                <div key={stat.label} style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: 18, fontWeight: 700, color: '#2d2118' }}>
+                                        {stat.icon} {stat.value}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#9a8a7a', marginTop: 2 }}>{stat.label}</div>
                                 </div>
-                                <div style={{ fontSize: 11, color: '#9a8a7a', marginTop: 2 }}>{s.label}</div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                    ) : (
+                        /* Fan / other user stats */
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 32, marginTop: 20 }}>
+                            {[
+                                { value: followingCount, label: 'Sleduje' },
+                                { value: profileUser.role !== 'coach' ? subscriptionsCount : 0, label: 'Predplatné' },
+                                { value: likedPostsCount, label: 'Lajky' },
+                            ].map(stat => (
+                                <div key={stat.label} style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: 20, fontWeight: 700, color: '#2d2118' }}>{stat.value}</div>
+                                    <div style={{ fontSize: 11, color: '#9a8a7a', marginTop: 2 }}>{stat.label}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* ── Action buttons ── */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+                        {isCoachOwnProfile ? (
+                            /* Coach action buttons */
+                            <>
+                                {profileUser.coach_id && (
+                                    <Link
+                                        href={`/coaches/${profileUser.coach_id}`}
+                                        style={{ padding: '9px 18px', borderRadius: 999, border: '1.5px solid #e8d9c4', background: 'white', fontSize: 13, fontWeight: 600, color: '#2d2118', textDecoration: 'none' }}
+                                    >
+                                        👁️ Verejný profil
+                                    </Link>
+                                )}
+                                <Link
+                                    href="/dashboard/profile"
+                                    style={{ padding: '9px 18px', borderRadius: 999, border: 'none', background: '#c4714a', fontSize: 13, fontWeight: 600, color: 'white', textDecoration: 'none' }}
+                                >
+                                    ✏️ Upraviť profil
+                                </Link>
+                            </>
+                        ) : isOwn ? (
+                            /* Fan own profile: edit toggle */
+                            <button
+                                onClick={() => setEditing(!editing)}
+                                style={{ padding: '9px 20px', borderRadius: 999, border: '1.5px solid #c4714a', background: editing ? '#c4714a' : 'white', fontSize: 13, fontWeight: 600, color: editing ? 'white' : '#c4714a', cursor: 'pointer' }}
+                            >
+                                {editing ? '✕ Zrušiť' : '✏️ Upraviť profil'}
+                            </button>
+                        ) : (
+                            /* Other user: follow + message */
+                            <>
+                                {auth?.user && (
+                                    <button
+                                        onClick={handleFollow}
+                                        disabled={followLoading}
+                                        style={{ padding: '9px 20px', borderRadius: 999, border: 'none', background: following ? '#e8f4ec' : '#c4714a', fontSize: 13, fontWeight: 600, color: following ? '#4a7c59' : 'white', cursor: 'pointer' }}
+                                    >
+                                        {following ? '✓ Sledujem' : '+ Sledovať'}
+                                    </button>
+                                )}
+                                {auth?.user && (
+                                    <Link href={`/messages/${profileUser.id}`} style={{ padding: '9px 20px', borderRadius: 999, border: '1.5px solid #e8d9c4', background: 'white', fontSize: 13, fontWeight: 600, color: '#2d2118', textDecoration: 'none' }}>
+                                        💬 Správa
+                                    </Link>
+                                )}
+                            </>
+                        )}
                     </div>
 
-                    {/* ── Bio ── */}
-                    {!editing && profileUser.bio && (
-                        <p style={{ textAlign: 'center', fontSize: 14, color: '#6b5e52', margin: '14px 0 0', lineHeight: 1.6 }}>
+                    {/* ── Fan inline edit ── */}
+                    {isOwn && !isCoachOwnProfile && editing && (
+                        <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4', marginTop: 16 }}>
+                            <textarea
+                                value={bio}
+                                onChange={e => setBio(e.target.value)}
+                                placeholder="Napíš niečo o sebe..."
+                                maxLength={300}
+                                style={{ width: '100%', border: '1px solid #e8d9c4', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#2d2118', background: '#faf6f0', resize: 'none', minHeight: 80, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+                            />
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 10 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#2d2118', cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={isPublic} onChange={e => setIsPublic(e.target.checked)} style={{ accentColor: '#c4714a' }} />
+                                    Verejný profil
+                                </label>
+                                <button
+                                    onClick={saveProfile}
+                                    disabled={saving}
+                                    style={{ padding: '9px 22px', borderRadius: 999, border: 'none', background: '#c4714a', fontSize: 13, fontWeight: 600, color: 'white', cursor: 'pointer' }}
+                                >
+                                    {saving ? 'Ukladám...' : 'Uložiť'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Bio display ── */}
+                    {profileUser.bio && !editing && (
+                        <p style={{ textAlign: 'center', fontSize: 14, color: '#2d2118', lineHeight: 1.6, margin: '14px 0 0', padding: '0 8px' }}>
                             {profileUser.bio}
                         </p>
                     )}
 
-                    {/* ── Action buttons ── */}
-                    <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
-                        {isOwn ? (
-                            editing ? (
-                                <>
-                                    <button
-                                        onClick={saveProfile}
-                                        disabled={saving}
-                                        style={{
-                                            padding: '9px 24px', borderRadius: 999,
-                                            background: '#c4714a', color: 'white',
-                                            fontSize: 14, fontWeight: 600, border: 'none',
-                                            cursor: 'pointer', opacity: saving ? 0.6 : 1,
-                                        }}
-                                    >
-                                        {saving ? 'Ukladám...' : 'Uložiť'}
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setEditing(false);
-                                            setBio(profileUser.bio ?? '');
-                                            setIsPublic(profileUser.is_public);
-                                            setAvatarPreview(profileUser.avatar_url);
-                                            setAvatarFile(null);
-                                        }}
-                                        style={{
-                                            padding: '9px 24px', borderRadius: 999,
-                                            border: '1px solid #e8d9c4', color: '#2d2118',
-                                            fontSize: 14, fontWeight: 600, background: 'none', cursor: 'pointer',
-                                        }}
-                                    >
-                                        Zrušiť
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    onClick={() => setEditing(true)}
-                                    style={{
-                                        padding: '9px 24px', borderRadius: 999,
-                                        border: '1px solid #c4714a', color: '#c4714a',
-                                        fontSize: 14, fontWeight: 600, background: 'none', cursor: 'pointer',
-                                    }}
-                                >
-                                    ✏️ Upraviť profil
-                                </button>
-                            )
-                        ) : auth?.user ? (
-                            <>
-                                <button
-                                    onClick={handleFollow}
-                                    disabled={followLoading}
-                                    style={{
-                                        padding: '9px 24px', borderRadius: 999,
-                                        background: following ? '#4a7c59' : 'none',
-                                        border: `1px solid ${following ? '#4a7c59' : '#c4714a'}`,
-                                        color: following ? 'white' : '#c4714a',
-                                        fontSize: 14, fontWeight: 600,
-                                        cursor: 'pointer', transition: 'all 0.2s',
-                                        opacity: followLoading ? 0.6 : 1,
-                                    }}
-                                >
-                                    {following ? '✓ Sledujem' : '+ Sledovať'}
-                                </button>
-                                {profileUser.coach_id && (
-                                    <Link
-                                        href={`/coaches/${profileUser.coach_id}`}
-                                        style={{
-                                            padding: '9px 24px', borderRadius: 999,
-                                            background: '#c4714a', color: 'white',
-                                            fontSize: 14, fontWeight: 600, textDecoration: 'none',
-                                        }}
-                                    >
-                                        Profil kouča
-                                    </Link>
-                                )}
-                                <Link
-                                    href={`/messages/${profileUser.id}`}
-                                    style={{
-                                        padding: '9px 20px', borderRadius: 999,
-                                        border: '1px solid #e8d9c4', color: '#2d2118',
-                                        fontSize: 14, fontWeight: 600, textDecoration: 'none',
-                                    }}
-                                >
-                                    💬
-                                </Link>
-                            </>
-                        ) : null}
-                    </div>
-
-                    {/* ── Inline edit form ── */}
-                    {editing && (
-                        <div style={{
-                            marginTop: 20, background: 'white', borderRadius: 16,
-                            padding: 20, border: '1px solid #e8d9c4',
-                        }}>
-                            <div style={{ marginBottom: 16 }}>
-                                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2d2118', marginBottom: 6 }}>
-                                    O mne
-                                </label>
-                                <textarea
-                                    rows={3}
-                                    value={bio}
-                                    onChange={e => setBio(e.target.value)}
-                                    maxLength={300}
-                                    placeholder="Povedz niečo o sebe..."
-                                    style={{
-                                        width: '100%', padding: '10px 14px', borderRadius: 12,
-                                        border: '1px solid #e8d9c4', fontSize: 14, color: '#2d2118',
-                                        resize: 'none', outline: 'none', boxSizing: 'border-box',
-                                    }}
-                                />
-                                <div style={{ textAlign: 'right', fontSize: 11, color: '#9a8a7a', marginTop: 3 }}>
-                                    {bio.length}/300
-                                </div>
+                    {/* ── Profile completeness (coach only) ── */}
+                    {isCoachOwnProfile && completePct < 100 && (
+                        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 16, padding: 16, marginTop: 18 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                <span style={{ fontWeight: 600, color: '#92400e', fontSize: 14 }}>Profil {completePct}% kompletný</span>
+                                <span style={{ fontSize: 12, color: '#b45309' }}>{completePct}/100%</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div
-                                    onClick={() => setIsPublic(p => !p)}
-                                    style={{
-                                        width: 44, height: 24, borderRadius: 999,
-                                        background: isPublic ? '#c4714a' : '#e8d9c4',
-                                        position: 'relative', transition: 'background 0.2s', cursor: 'pointer',
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <div style={{
-                                        position: 'absolute', top: 3,
-                                        left: isPublic ? 23 : 3,
-                                        width: 18, height: 18, borderRadius: '50%',
-                                        background: 'white', transition: 'left 0.2s',
-                                    }} />
-                                </div>
-                                <span style={{ fontSize: 14, color: '#2d2118' }}>Profil je verejný</span>
+                            <div style={{ width: '100%', background: '#fde68a', borderRadius: 999, height: 6, marginBottom: 10 }}>
+                                <div style={{ width: `${completePct}%`, background: '#f59e0b', height: 6, borderRadius: 999, transition: 'width 0.4s' }} />
                             </div>
-                            <p style={{ fontSize: 11, color: '#9a8a7a', marginTop: 8 }}>
-                                Klikni na fotku vyššie pre zmenu avatara
-                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {completeness.filter(c => !c.done).map(c => (
+                                    <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#92400e' }}>
+                                        <span>○</span> {c.label}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
 
-                    {/* ── Tabs ── */}
-                    <div style={{ display: 'flex', marginTop: 24, borderBottom: '1px solid #e8d9c4', overflowX: 'auto' }}>
-                        {(isOwn
-                            ? [
-                                ['predplatne', '📋 Predplatné'],
-                                ['sleduje',    '👥 Sleduje'],
-                                ['lajky',      '❤️ Páčilo sa mi'],
-                                ['nastavenia', '⚙️ Nastavenia'],
-                              ] as const
-                            : [
-                                ['sleduje', '👥 Sleduje'],
-                              ] as const
-                        ).map(([t, label]) => (
-                            <button
-                                key={t}
-                                onClick={() => setTab(t as Tab)}
-                                style={{
-                                    flex: '0 0 auto', padding: '10px 18px', fontSize: 13, fontWeight: 600,
-                                    background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
-                                    color: tab === t ? '#c4714a' : '#9a8a7a',
-                                    borderBottom: tab === t ? '2px solid #c4714a' : '2px solid transparent',
-                                    transition: 'color 0.15s',
-                                }}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* ── Tab content ── */}
-                    <div style={{ marginTop: 20, paddingBottom: 40 }}>
-
-                        {/* ── PREDPLATNÉ tab ── */}
-                        {tab === 'predplatne' && isOwn && (
-                            subscriptions.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                                    <div style={{ fontSize: 56, marginBottom: 14 }}>💳</div>
-                                    <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 18, fontWeight: 700, color: '#2d2118', margin: '0 0 8px' }}>
-                                        Zatiaľ žiadne predplatné
-                                    </h3>
-                                    <p style={{ fontSize: 14, color: '#9a8a7a', margin: '0 0 20px', maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>
-                                        Objavte koučov a predplaťte si exkluzívny obsah
-                                    </p>
-                                    <Link
-                                        href="/coaches"
+                    {/* ═══════════════════════════════════════════════════════════
+                        COACH OWN PROFILE TABS
+                    ═══════════════════════════════════════════════════════════ */}
+                    {isCoachOwnProfile && (
+                        <div style={{ marginTop: 24 }}>
+                            {/* Tab bar */}
+                            <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e8d9c4', marginBottom: 20, overflowX: 'auto' }}>
+                                {([
+                                    { key: 'prehlad',    label: '📊 Prehľad' },
+                                    { key: 'obsah',      label: '📝 Môj obsah' },
+                                    { key: 'recenzie',   label: `⭐ Recenzie (${coachReviews.length})` },
+                                    { key: 'nastavenia', label: '⚙️ Nastavenia' },
+                                ] as { key: CoachTab; label: string }[]).map(t => (
+                                    <button
+                                        key={t.key}
+                                        onClick={() => setCoachTab(t.key)}
                                         style={{
-                                            display: 'inline-block', padding: '11px 28px', borderRadius: 999,
-                                            background: '#c4714a', color: 'white',
-                                            fontSize: 14, fontWeight: 600, textDecoration: 'none',
+                                            padding: '10px 16px', border: 'none', background: 'none',
+                                            fontSize: 13, fontWeight: coachTab === t.key ? 700 : 500,
+                                            color: coachTab === t.key ? '#c4714a' : '#9a8a7a',
+                                            borderBottom: coachTab === t.key ? '2px solid #c4714a' : '2px solid transparent',
+                                            marginBottom: -2, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                                         }}
                                     >
-                                        Objaviť koučov →
-                                    </Link>
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                    {subscriptions.map((sub, i) => (
-                                        <div
-                                            key={sub.coach_id ?? i}
-                                            style={{
-                                                background: 'white', borderRadius: 16, padding: '14px 16px',
-                                                border: '1px solid #e8d9c4',
-                                                display: 'flex', alignItems: 'center', gap: 14,
-                                            }}
-                                        >
-                                            <Avatar src={sub.avatar_url} name={sub.name} size={48} />
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2118' }}>{sub.name}</div>
-                                                {sub.specialization && (
-                                                    <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 2 }}>{sub.specialization}</div>
-                                                )}
-                                                {sub.subscribed_since && (
-                                                    <div style={{ fontSize: 11, color: '#9a8a7a', marginTop: 3 }}>
-                                                        Predplatiteľ od {new Date(sub.subscribed_since).toLocaleDateString('sk-SK', { month: 'long', year: 'numeric' })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                                                {sub.monthly_price && (
-                                                    <span style={{
-                                                        padding: '3px 10px', borderRadius: 999,
-                                                        background: '#fce8de', color: '#c4714a',
-                                                        fontSize: 12, fontWeight: 700,
-                                                    }}>
-                                                        €{Number(sub.monthly_price).toFixed(2)}/mes
-                                                    </span>
-                                                )}
-                                                <span style={{
-                                                    padding: '2px 8px', borderRadius: 999,
-                                                    background: sub.status === 'active' ? '#e8f4ec' : '#fdecea',
-                                                    color: sub.status === 'active' ? '#4a7c59' : '#d32f2f',
-                                                    fontSize: 11, fontWeight: 600,
-                                                }}>
-                                                    {sub.status === 'active' ? '● Aktívne' : '● Zrušené'}
-                                                </span>
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                                                {sub.coach_id && (
-                                                    <Link
-                                                        href={`/coaches/${sub.coach_id}`}
-                                                        style={{
-                                                            fontSize: 12, color: '#c4714a', fontWeight: 600,
-                                                            textDecoration: 'none', whiteSpace: 'nowrap',
-                                                        }}
-                                                    >
-                                                        Profil →
-                                                    </Link>
-                                                )}
-                                                <button
-                                                    style={{
-                                                        fontSize: 11, color: '#9a8a7a', background: 'none',
-                                                        border: '1px solid #e8d9c4', borderRadius: 6,
-                                                        padding: '3px 8px', cursor: 'pointer',
-                                                    }}
-                                                    onMouseEnter={e => { (e.currentTarget.style.color = '#d32f2f'); (e.currentTarget.style.borderColor = '#d32f2f'); }}
-                                                    onMouseLeave={e => { (e.currentTarget.style.color = '#9a8a7a'); (e.currentTarget.style.borderColor = '#e8d9c4'); }}
-                                                >
-                                                    Zrušiť
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )
-                        )}
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
 
-                        {/* ── SLEDUJE tab ── */}
-                        {tab === 'sleduje' && (
-                            followingList.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '60px 0', color: '#9a8a7a' }}>
-                                    <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
-                                    <p style={{ fontSize: 14, margin: '0 0 16px' }}>
-                                        {isOwn ? 'Zatiaľ nesleduješ žiadnych koučov.' : `${profileUser.name} ešte nikoho nenasleduje.`}
-                                    </p>
-                                    {isOwn && (
-                                        <Link href="/coaches" style={{ color: '#c4714a', fontWeight: 600, textDecoration: 'none', fontSize: 14 }}>
-                                            Nájdi koučov →
-                                        </Link>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {followingList.map(u => (
-                                        <div
-                                            key={u.id}
-                                            style={{
-                                                background: 'white', borderRadius: 16, padding: '16px 12px',
-                                                border: '1px solid #e8d9c4', textAlign: 'center',
-                                                opacity: isCoachFollowed(u.id) ? 1 : 0.5,
-                                                transition: 'opacity 0.2s',
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-                                                <Avatar src={u.avatar_url} name={u.name} size={56} />
+                            {/* ── PREHĽAD tab ── */}
+                            {coachTab === 'prehlad' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                    {/* Quick stats */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[
+                                            { icon: '👥', value: profileUser.subscriber_count, label: 'Predplatitelia' },
+                                            { icon: '❤️', value: followersCount, label: 'Sledovatelia' },
+                                            { icon: '📝', value: postsCount, label: 'Príspevky' },
+                                            { icon: '⭐', value: profileUser.rating_avg > 0 ? profileUser.rating_avg.toFixed(1) : '—', label: 'Hodnotenie' },
+                                        ].map(s => (
+                                            <div key={s.label} style={{ background: 'white', borderRadius: 14, padding: '14px 16px', border: '1px solid #e8d9c4' }}>
+                                                <div style={{ fontSize: 22, fontWeight: 700, color: '#c4714a' }}>{s.icon} {s.value}</div>
+                                                <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 4 }}>{s.label}</div>
                                             </div>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#2d2118', marginBottom: 3 }}>
-                                                {u.name}
-                                            </div>
-                                            {u.specialization && (
-                                                <div style={{ fontSize: 11, color: '#9a8a7a', marginBottom: 10 }}>{u.specialization}</div>
-                                            )}
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                {u.coach_id && (
-                                                    <Link
-                                                        href={`/coaches/${u.coach_id}`}
-                                                        style={{
-                                                            fontSize: 12, color: '#c4714a', fontWeight: 600,
-                                                            textDecoration: 'none',
-                                                        }}
-                                                    >
-                                                        Zobraziť →
-                                                    </Link>
-                                                )}
-                                                {isOwn && (
-                                                    <button
-                                                        onClick={() => handleUnfollowCoach(u.id)}
-                                                        disabled={!isCoachFollowed(u.id)}
-                                                        style={{
-                                                            fontSize: 11, borderRadius: 999,
-                                                            padding: '4px 10px', cursor: 'pointer',
-                                                            background: isCoachFollowed(u.id) ? '#4a7c59' : '#e8d9c4',
-                                                            color: 'white', border: 'none',
-                                                            fontWeight: 600,
-                                                        }}
-                                                    >
-                                                        {isCoachFollowed(u.id) ? 'Sledujem ✓' : 'Odsledovaný'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )
-                        )}
-
-                        {/* ── LAJKY tab (own only) ── */}
-                        {tab === 'lajky' && isOwn && (
-                            likedPosts.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '60px 0', color: '#9a8a7a' }}>
-                                    <div style={{ fontSize: 48, marginBottom: 12 }}>❤️</div>
-                                    <p style={{ fontSize: 14 }}>Zatiaľ žiadne lajknuté príspevky.</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {likedPosts.map(post => (
-                                        <Link
-                                            key={post.id}
-                                            href={post.coach_id ? `/coaches/${post.coach_id}` : '#'}
-                                            style={{ textDecoration: 'none', display: 'block' }}
-                                        >
-                                            <div style={{
-                                                background: 'white', borderRadius: 14,
-                                                border: '1px solid #e8d9c4', overflow: 'hidden',
-                                                transition: 'box-shadow 0.15s',
-                                            }}
-                                                onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)')}
-                                                onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-                                            >
-                                                {/* Thumbnail */}
-                                                <div style={{
-                                                    aspectRatio: '4/3', background: '#f0e8df',
-                                                    position: 'relative', overflow: 'hidden',
-                                                }}>
-                                                    {post.thumbnail_url ? (
-                                                        <img
-                                                            src={post.thumbnail_url}
-                                                            alt={post.title}
-                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                        />
-                                                    ) : (
-                                                        <div style={{
-                                                            width: '100%', height: '100%',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            fontSize: 28, color: '#c4714a',
-                                                        }}>
-                                                            {post.media_type === 'video' ? '🎬' : post.media_type === 'image' ? '📸' : '📝'}
-                                                        </div>
-                                                    )}
-                                                    {post.is_exclusive && (
-                                                        <div style={{
-                                                            position: 'absolute', top: 6, right: 6,
-                                                            background: 'rgba(0,0,0,0.6)', color: 'white',
-                                                            borderRadius: 6, padding: '2px 6px', fontSize: 10, fontWeight: 600,
-                                                        }}>
-                                                            🔒
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {/* Info */}
-                                                <div style={{ padding: '8px 10px' }}>
-                                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#2d2118', marginBottom: 2 }}
-                                                        className="line-clamp-1"
-                                                    >
-                                                        {post.title || '—'}
-                                                    </div>
-                                                    {post.coach_name && (
-                                                        <div style={{ fontSize: 11, color: '#9a8a7a' }}>{post.coach_name}</div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )
-                        )}
-
-                        {/* ── NASTAVENIA tab (own only) ── */}
-                        {tab === 'nastavenia' && isOwn && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-                                {/* Account info */}
-                                <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
-                                    <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 14px' }}>
-                                        Účet
-                                    </h3>
-                                    <div style={{ fontSize: 13, color: '#9a8a7a', marginBottom: 4 }}>Email</div>
-                                    <div style={{ fontSize: 14, color: '#2d2118', fontWeight: 500, marginBottom: 16 }}>
-                                        {profileUser.email}
+                                        ))}
                                     </div>
+
+                                    {/* Last 3 posts */}
+                                    {ownPosts.length > 0 && (
+                                        <div>
+                                            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', margin: '0 0 10px' }}>Posledné príspevky</h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                {ownPosts.slice(0, 3).map(p => (
+                                                    <div key={p.id} style={{ background: 'white', borderRadius: 12, padding: '12px 14px', border: '1px solid #e8d9c4', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                        <div style={{ width: 48, height: 48, borderRadius: 8, background: '#f0e8df', overflow: 'hidden', flexShrink: 0 }}>
+                                                            {p.media_path ? (
+                                                                <img src={p.media_path} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            ) : (
+                                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                                                                    {p.media_type === 'video' ? '🎬' : p.media_type === 'image' ? '📸' : '📝'}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#2d2118' }} className="truncate">{p.title}</div>
+                                                            <div style={{ fontSize: 11, color: '#9a8a7a', marginTop: 2 }}>
+                                                                👁️ {p.views} · ❤️ {p.likes_count} · {p.created_at}
+                                                                {p.is_exclusive && <span style={{ marginLeft: 6, color: '#c4714a' }}>🔒</span>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Last 3 reviews */}
+                                    {coachReviews.length > 0 && (
+                                        <div>
+                                            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', margin: '0 0 10px' }}>Posledné recenzie</h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                {coachReviews.slice(0, 3).map(r => (
+                                                    <div key={r.id} style={{ background: 'white', borderRadius: 12, padding: '12px 14px', border: '1px solid #e8d9c4' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                                            <Avatar src={r.user.avatar_url} name={r.user.name} size={28} />
+                                                            <span style={{ fontSize: 13, fontWeight: 600, color: '#2d2118' }}>{r.user.name}</span>
+                                                            <Stars rating={r.rating} />
+                                                            <span style={{ fontSize: 11, color: '#9a8a7a', marginLeft: 'auto' }}>{r.created_at}</span>
+                                                        </div>
+                                                        {r.content && <p style={{ fontSize: 13, color: '#2d2118', margin: 0, lineHeight: 1.5 }}>{r.content}</p>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <Link
-                                        href="/password/change"
-                                        style={{
-                                            display: 'inline-block', fontSize: 13, fontWeight: 600,
-                                            color: '#c4714a', textDecoration: 'none',
-                                            padding: '8px 18px', borderRadius: 999,
-                                            border: '1px solid #c4714a',
-                                        }}
+                                        href="/dashboard"
+                                        style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 12, border: '1.5px solid #c4714a', color: '#c4714a', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}
                                     >
-                                        🔑 Zmeniť heslo
+                                        📈 Zobraziť celý dashboard →
                                     </Link>
                                 </div>
+                            )}
 
-                                {/* Coach settings (only for coaches) */}
-                                {profileUser.role === 'coach' && (
-                                    <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
-                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 14px' }}>
-                                            Nastavenia kouča
+                            {/* ── MÔJ OBSAH tab ── */}
+                            {coachTab === 'obsah' && (
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: 0 }}>
+                                            Príspevky ({ownPosts.length})
                                         </h3>
                                         <Link
-                                            href="/dashboard/profile"
-                                            style={{
-                                                display: 'inline-block', fontSize: 13, fontWeight: 600,
-                                                color: '#c4714a', textDecoration: 'none',
-                                                padding: '8px 18px', borderRadius: 999,
-                                                border: '1px solid #c4714a',
-                                            }}
+                                            href="/dashboard/posts/create"
+                                            style={{ padding: '8px 16px', borderRadius: 999, border: 'none', background: '#c4714a', color: 'white', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}
                                         >
-                                            ⚙️ Upraviť profil kouča
+                                            + Pridať obsah
                                         </Link>
                                     </div>
-                                )}
 
-                                {/* Danger zone */}
-                                <div style={{
-                                    background: '#fff5f5', borderRadius: 16, padding: 20,
-                                    border: '1px solid #fecaca',
-                                }}>
-                                    <h3 style={{ fontSize: 15, fontWeight: 700, color: '#d32f2f', margin: '0 0 8px' }}>
-                                        Nebezpečná zóna
-                                    </h3>
-                                    <p style={{ fontSize: 13, color: '#9a8a7a', margin: '0 0 16px' }}>
-                                        Zmazanie účtu je nenávratné. Všetky dáta budú trvalo odstránené.
-                                    </p>
-                                    <button
-                                        onClick={() => setShowDelete(true)}
-                                        style={{
-                                            padding: '9px 20px', borderRadius: 999,
-                                            background: 'none', border: '1.5px solid #d32f2f',
-                                            color: '#d32f2f', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                                        }}
-                                        onMouseEnter={e => { (e.currentTarget.style.background = '#d32f2f'); (e.currentTarget.style.color = 'white'); }}
-                                        onMouseLeave={e => { (e.currentTarget.style.background = 'none'); (e.currentTarget.style.color = '#d32f2f'); }}
-                                    >
-                                        🗑️ Zmazať účet
-                                    </button>
+                                    {ownPosts.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '48px 0', color: '#9a8a7a' }}>
+                                            <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
+                                            <p style={{ fontSize: 14, margin: '0 0 16px' }}>Zatiaľ žiadny obsah. Pridaj prvý príspevok!</p>
+                                            <Link href="/dashboard/posts/create" style={{ color: '#c4714a', fontWeight: 600, textDecoration: 'none', fontSize: 14 }}>
+                                                Vytvoriť príspevok →
+                                            </Link>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                            {ownPosts.map(p => (
+                                                <div
+                                                    key={p.id}
+                                                    style={{ background: 'white', borderRadius: 14, padding: 14, border: '1px solid #e8d9c4', display: 'flex', gap: 12, alignItems: 'flex-start' }}
+                                                >
+                                                    {/* Thumbnail */}
+                                                    <div style={{ width: 64, height: 64, borderRadius: 10, background: '#f0e8df', overflow: 'hidden', flexShrink: 0 }}>
+                                                        {p.media_path ? (
+                                                            <img src={p.media_path} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        ) : (
+                                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                                                                {p.media_type === 'video' ? '🎬' : p.media_type === 'image' ? '📸' : '📝'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {/* Content */}
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, flexWrap: 'wrap' }}>
+                                                            <span style={{ fontSize: 14, fontWeight: 600, color: '#2d2118', flex: 1, minWidth: 0 }} className="truncate">
+                                                                {p.title}
+                                                            </span>
+                                                            <span style={{
+                                                                padding: '2px 8px', borderRadius: 999,
+                                                                background: p.is_exclusive ? '#fce8de' : '#e8f4ec',
+                                                                color: p.is_exclusive ? '#c4714a' : '#4a7c59',
+                                                                fontSize: 10, fontWeight: 700, flexShrink: 0,
+                                                            }}>
+                                                                {p.is_exclusive ? '🔒 Exkluzívne' : '🌍 Verejné'}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 4 }}>
+                                                            👁️ {p.views} · ❤️ {p.likes_count} · {p.created_at}
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                                            <Link
+                                                                href="/dashboard/posts/create"
+                                                                style={{ fontSize: 12, fontWeight: 600, color: '#c4714a', textDecoration: 'none', padding: '4px 12px', borderRadius: 999, border: '1px solid #c4714a' }}
+                                                            >
+                                                                Upraviť
+                                                            </Link>
+                                                            <button
+                                                                onClick={() => setDeletePostId(p.id)}
+                                                                style={{ fontSize: 12, fontWeight: 600, color: '#9a8a7a', background: 'none', border: '1px solid #e8d9c4', borderRadius: 999, padding: '4px 12px', cursor: 'pointer' }}
+                                                                onMouseEnter={e => { (e.currentTarget.style.color = '#d32f2f'); (e.currentTarget.style.borderColor = '#d32f2f'); }}
+                                                                onMouseLeave={e => { (e.currentTarget.style.color = '#9a8a7a'); (e.currentTarget.style.borderColor = '#e8d9c4'); }}
+                                                            >
+                                                                Zmazať
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
+                            )}
 
+                            {/* ── RECENZIE tab ── */}
+                            {coachTab === 'recenzie' && (
+                                <div>
+                                    {/* Rating summary */}
+                                    {profileUser.rating_count > 0 && (
+                                        <div style={{ background: 'white', borderRadius: 14, padding: '16px 18px', border: '1px solid #e8d9c4', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <div style={{ fontSize: 36, fontWeight: 700, color: '#2d2118' }}>{profileUser.rating_avg.toFixed(1)}</div>
+                                                <Stars rating={profileUser.rating_avg} />
+                                                <div style={{ fontSize: 11, color: '#9a8a7a', marginTop: 4 }}>{profileUser.rating_count} recenzií</div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {coachReviews.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '48px 0', color: '#9a8a7a' }}>
+                                            <div style={{ fontSize: 48, marginBottom: 12 }}>⭐</div>
+                                            <p style={{ fontSize: 14 }}>Zatiaľ žiadne recenzie.</p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                            {coachReviews.map(r => (
+                                                <div key={r.id} style={{ background: 'white', borderRadius: 14, padding: '14px 16px', border: '1px solid #e8d9c4' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                                        <Avatar src={r.user.avatar_url} name={r.user.name} size={36} />
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#2d2118' }}>{r.user.name}</div>
+                                                            <Stars rating={r.rating} />
+                                                        </div>
+                                                        <span style={{ fontSize: 11, color: '#9a8a7a' }}>{r.created_at}</span>
+                                                    </div>
+                                                    {r.content && (
+                                                        <p style={{ fontSize: 13, color: '#2d2118', margin: 0, lineHeight: 1.6 }}>{r.content}</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ── NASTAVENIA tab (coach) ── */}
+                            {coachTab === 'nastavenia' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                    {/* Account */}
+                                    <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 14px' }}>Účet</h3>
+                                        <div style={{ fontSize: 13, color: '#9a8a7a', marginBottom: 4 }}>Email</div>
+                                        <div style={{ fontSize: 14, color: '#2d2118', fontWeight: 500, marginBottom: 16 }}>{profileUser.email}</div>
+                                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                            <Link href="/password/change" style={{ display: 'inline-block', fontSize: 13, fontWeight: 600, color: '#c4714a', textDecoration: 'none', padding: '8px 18px', borderRadius: 999, border: '1px solid #c4714a' }}>
+                                                🔑 Zmeniť heslo
+                                            </Link>
+                                            <Link href="/dashboard/profile" style={{ display: 'inline-block', fontSize: 13, fontWeight: 600, color: 'white', textDecoration: 'none', padding: '8px 18px', borderRadius: 999, background: '#c4714a', border: '1px solid #c4714a' }}>
+                                                ⚙️ Upraviť coach profil
+                                            </Link>
+                                        </div>
+                                    </div>
+
+                                    {/* Notification preferences */}
+                                    <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 4px' }}>Notifikácie</h3>
+                                        <p style={{ fontSize: 12, color: '#9a8a7a', margin: '0 0 14px' }}>Vyber, o čom chceš dostávať upozornenia</p>
+                                        <NotifToggle label="🔔 Nový predplatiteľ" checked={notifSubscriber} onChange={setNotifSubscriber} />
+                                        <NotifToggle label="🔔 Nová správa"       checked={notifMessage}    onChange={setNotifMessage} />
+                                        <NotifToggle label="🔔 Nové hodnotenie"   checked={notifReview}     onChange={setNotifReview} />
+                                        <NotifToggle label="🔔 Nový lajk"        checked={notifLike}       onChange={setNotifLike} />
+                                        <button
+                                            onClick={saveNotifPrefs}
+                                            disabled={notifSaving}
+                                            style={{ marginTop: 14, padding: '9px 22px', borderRadius: 999, border: 'none', background: '#c4714a', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                                        >
+                                            {notifSaving ? 'Ukladám...' : 'Uložiť'}
+                                        </button>
+                                    </div>
+
+                                    {/* Danger zone */}
+                                    <div style={{ background: '#fff5f5', borderRadius: 16, padding: 20, border: '1px solid #fecaca' }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#d32f2f', margin: '0 0 8px' }}>Nebezpečná zóna</h3>
+                                        <p style={{ fontSize: 13, color: '#9a8a7a', margin: '0 0 16px' }}>Zmazanie účtu je nenávratné.</p>
+                                        <button
+                                            onClick={() => setShowDelete(true)}
+                                            style={{ padding: '9px 20px', borderRadius: 999, background: 'none', border: '1.5px solid #d32f2f', color: '#d32f2f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                                            onMouseEnter={e => { (e.currentTarget.style.background = '#d32f2f'); (e.currentTarget.style.color = 'white'); }}
+                                            onMouseLeave={e => { (e.currentTarget.style.background = 'none'); (e.currentTarget.style.color = '#d32f2f'); }}
+                                        >
+                                            🗑️ Zmazať účet
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ═══════════════════════════════════════════════════════════
+                        FAN / OTHER USER TABS
+                    ═══════════════════════════════════════════════════════════ */}
+                    {!isCoachOwnProfile && (
+                        <div style={{ marginTop: 24 }}>
+                            {/* Tab bar */}
+                            <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e8d9c4', marginBottom: 20, overflowX: 'auto' }}>
+                                {(isOwn
+                                    ? [
+                                        { key: 'predplatne', label: '📋 Predplatné' },
+                                        { key: 'sleduje',    label: '👥 Sleduje' },
+                                        { key: 'lajky',      label: '❤️ Páčilo sa mi' },
+                                        { key: 'nastavenia', label: '⚙️ Nastavenia' },
+                                      ]
+                                    : [{ key: 'sleduje', label: '👥 Sleduje' }]
+                                ).map((t: { key: string; label: string }) => (
+                                    <button
+                                        key={t.key}
+                                        onClick={() => setFanTab(t.key as FanTab)}
+                                        style={{
+                                            padding: '10px 16px', border: 'none', background: 'none',
+                                            fontSize: 13, fontWeight: fanTab === t.key ? 700 : 500,
+                                            color: fanTab === t.key ? '#c4714a' : '#9a8a7a',
+                                            borderBottom: fanTab === t.key ? '2px solid #c4714a' : '2px solid transparent',
+                                            marginBottom: -2, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                                        }}
+                                    >
+                                        {t.label}
+                                    </button>
+                                ))}
                             </div>
-                        )}
 
-                    </div>
+                            {/* ── PREDPLATNÉ tab ── */}
+                            {fanTab === 'predplatne' && isOwn && (
+                                subscriptions.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#9a8a7a' }}>
+                                        <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+                                        <p style={{ fontSize: 14, margin: '0 0 16px' }}>Zatiaľ žiadne predplatné.</p>
+                                        <Link href="/coaches" style={{ display: 'inline-block', padding: '10px 24px', borderRadius: 999, background: '#c4714a', color: 'white', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                                            Objaviť koučov →
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                        {subscriptions.map((sub, i) => (
+                                            <div key={sub.coach_id ?? i} style={{ background: 'white', borderRadius: 16, padding: '14px 16px', border: '1px solid #e8d9c4', display: 'flex', alignItems: 'center', gap: 14 }}>
+                                                <Avatar src={sub.avatar_url} name={sub.name} size={48} />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2118' }}>{sub.name}</div>
+                                                    {sub.specialization && <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 2 }}>{sub.specialization}</div>}
+                                                    {sub.subscribed_since && (
+                                                        <div style={{ fontSize: 11, color: '#9a8a7a', marginTop: 3 }}>
+                                                            Predplatiteľ od {new Date(sub.subscribed_since).toLocaleDateString('sk-SK', { month: 'long', year: 'numeric' })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                                                    {sub.monthly_price && (
+                                                        <span style={{ padding: '3px 10px', borderRadius: 999, background: '#fce8de', color: '#c4714a', fontSize: 12, fontWeight: 700 }}>
+                                                            €{Number(sub.monthly_price).toFixed(2)}/mes
+                                                        </span>
+                                                    )}
+                                                    <span style={{ padding: '2px 8px', borderRadius: 999, background: sub.status === 'active' ? '#e8f4ec' : '#fdecea', color: sub.status === 'active' ? '#4a7c59' : '#d32f2f', fontSize: 11, fontWeight: 600 }}>
+                                                        {sub.status === 'active' ? '● Aktívne' : '● Zrušené'}
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                                                    {sub.coach_id && (
+                                                        <Link href={`/coaches/${sub.coach_id}`} style={{ fontSize: 12, color: '#c4714a', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                                                            Profil →
+                                                        </Link>
+                                                    )}
+                                                    <button
+                                                        style={{ fontSize: 11, color: '#9a8a7a', background: 'none', border: '1px solid #e8d9c4', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}
+                                                        onMouseEnter={e => { (e.currentTarget.style.color = '#d32f2f'); (e.currentTarget.style.borderColor = '#d32f2f'); }}
+                                                        onMouseLeave={e => { (e.currentTarget.style.color = '#9a8a7a'); (e.currentTarget.style.borderColor = '#e8d9c4'); }}
+                                                    >
+                                                        Zrušiť
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            )}
+
+                            {/* ── SLEDUJE tab ── */}
+                            {fanTab === 'sleduje' && (
+                                followingList.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#9a8a7a' }}>
+                                        <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+                                        <p style={{ fontSize: 14, margin: '0 0 16px' }}>
+                                            {isOwn ? 'Zatiaľ nesleduješ žiadnych koučov.' : `${profileUser.name} ešte nikoho nenasleduje.`}
+                                        </p>
+                                        {isOwn && (
+                                            <Link href="/coaches" style={{ color: '#c4714a', fontWeight: 600, textDecoration: 'none', fontSize: 14 }}>
+                                                Nájdi koučov →
+                                            </Link>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        {followingList.map(u => (
+                                            <div
+                                                key={u.id}
+                                                style={{ background: 'white', borderRadius: 16, padding: '16px 12px', border: '1px solid #e8d9c4', textAlign: 'center', opacity: isCoachFollowed(u.id) ? 1 : 0.5, transition: 'opacity 0.2s' }}
+                                            >
+                                                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                                                    <Avatar src={u.avatar_url} name={u.name} size={56} />
+                                                </div>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: '#2d2118', marginBottom: 3 }}>{u.name}</div>
+                                                {u.specialization && <div style={{ fontSize: 11, color: '#9a8a7a', marginBottom: 10 }}>{u.specialization}</div>}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                    {u.coach_id && (
+                                                        <Link href={`/coaches/${u.coach_id}`} style={{ fontSize: 12, color: '#c4714a', fontWeight: 600, textDecoration: 'none' }}>
+                                                            Zobraziť →
+                                                        </Link>
+                                                    )}
+                                                    {isOwn && (
+                                                        <button
+                                                            onClick={() => handleUnfollowCoach(u.id)}
+                                                            disabled={!isCoachFollowed(u.id)}
+                                                            style={{ fontSize: 11, borderRadius: 999, padding: '4px 10px', cursor: 'pointer', background: isCoachFollowed(u.id) ? '#4a7c59' : '#e8d9c4', color: 'white', border: 'none', fontWeight: 600 }}
+                                                        >
+                                                            {isCoachFollowed(u.id) ? 'Sledujem ✓' : 'Odsledovaný'}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            )}
+
+                            {/* ── LAJKY tab ── */}
+                            {fanTab === 'lajky' && isOwn && (
+                                likedPosts.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#9a8a7a' }}>
+                                        <div style={{ fontSize: 48, marginBottom: 12 }}>❤️</div>
+                                        <p style={{ fontSize: 14 }}>Zatiaľ žiadne lajknuté príspevky.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {likedPosts.map(post => (
+                                            <Link key={post.id} href={post.coach_id ? `/coaches/${post.coach_id}` : '#'} style={{ textDecoration: 'none', display: 'block' }}>
+                                                <div
+                                                    style={{ background: 'white', borderRadius: 14, border: '1px solid #e8d9c4', overflow: 'hidden', transition: 'box-shadow 0.15s' }}
+                                                    onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)')}
+                                                    onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                                                >
+                                                    <div style={{ aspectRatio: '4/3', background: '#f0e8df', position: 'relative', overflow: 'hidden' }}>
+                                                        {post.thumbnail_url ? (
+                                                            <img src={post.thumbnail_url} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        ) : (
+                                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: '#c4714a' }}>
+                                                                {post.media_type === 'video' ? '🎬' : post.media_type === 'image' ? '📸' : '📝'}
+                                                            </div>
+                                                        )}
+                                                        {post.is_exclusive && (
+                                                            <div style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', color: 'white', borderRadius: 6, padding: '2px 6px', fontSize: 10, fontWeight: 600 }}>🔒</div>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ padding: '8px 10px' }}>
+                                                        <div style={{ fontSize: 12, fontWeight: 600, color: '#2d2118', marginBottom: 2 }} className="line-clamp-1">
+                                                            {post.title || '—'}
+                                                        </div>
+                                                        {post.coach_name && <div style={{ fontSize: 11, color: '#9a8a7a' }}>{post.coach_name}</div>}
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )
+                            )}
+
+                            {/* ── NASTAVENIA tab (fan) ── */}
+                            {fanTab === 'nastavenia' && isOwn && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                    <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 14px' }}>Účet</h3>
+                                        <div style={{ fontSize: 13, color: '#9a8a7a', marginBottom: 4 }}>Email</div>
+                                        <div style={{ fontSize: 14, color: '#2d2118', fontWeight: 500, marginBottom: 16 }}>{profileUser.email}</div>
+                                        <Link href="/password/change" style={{ display: 'inline-block', fontSize: 13, fontWeight: 600, color: '#c4714a', textDecoration: 'none', padding: '8px 18px', borderRadius: 999, border: '1px solid #c4714a' }}>
+                                            🔑 Zmeniť heslo
+                                        </Link>
+                                    </div>
+
+                                    {/* Notification prefs for fans */}
+                                    <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 4px' }}>Notifikácie</h3>
+                                        <p style={{ fontSize: 12, color: '#9a8a7a', margin: '0 0 14px' }}>Upozornenia</p>
+                                        <NotifToggle label="🔔 Nová správa" checked={notifMessage} onChange={setNotifMessage} />
+                                        <NotifToggle label="🔔 Nový lajk"   checked={notifLike}    onChange={setNotifLike} />
+                                        <button onClick={saveNotifPrefs} disabled={notifSaving} style={{ marginTop: 14, padding: '9px 22px', borderRadius: 999, border: 'none', background: '#c4714a', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                            {notifSaving ? 'Ukladám...' : 'Uložiť'}
+                                        </button>
+                                    </div>
+
+                                    <div style={{ background: '#fff5f5', borderRadius: 16, padding: 20, border: '1px solid #fecaca' }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#d32f2f', margin: '0 0 8px' }}>Nebezpečná zóna</h3>
+                                        <p style={{ fontSize: 13, color: '#9a8a7a', margin: '0 0 16px' }}>Zmazanie účtu je nenávratné. Všetky dáta budú trvalo odstránené.</p>
+                                        <button
+                                            onClick={() => setShowDelete(true)}
+                                            style={{ padding: '9px 20px', borderRadius: 999, background: 'none', border: '1.5px solid #d32f2f', color: '#d32f2f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                                            onMouseEnter={e => { (e.currentTarget.style.background = '#d32f2f'); (e.currentTarget.style.color = 'white'); }}
+                                            onMouseLeave={e => { (e.currentTarget.style.background = 'none'); (e.currentTarget.style.color = '#d32f2f'); }}
+                                        >
+                                            🗑️ Zmazať účet
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                 </div>
             </div>
         </PulseLayout>
