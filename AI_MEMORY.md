@@ -754,3 +754,37 @@ DELETE /coaches/{coachId}/reviews  → auth
 - One review per user per coach (editable)
 - Coach cannot review themselves
 - Seeded: 3–6 reviews per coach, real avg stored in rating_avg/rating_count
+- [2026-03-08 19:31:15] ea6c12d: chore: update AI_MEMORY with session 15 review system
+- [2026-03-08 19:35:35] e4f2fbc: fix: review 500 error — wrong notifications table schema
+- [2026-03-08 19:47:35] f6e89cf: chore: developer onboarding — README, CONTRIBUTING, tests, .env.example
+- [2026-03-08 19:54:18] 0d3e58d: chore: use pulse_test DB for tests — prevent wiping demo data
+- [2026-03-08 19:56:25] 3d3ddc6: fix: dashboard 500 when coach has no profile yet
+- [2026-03-08 20:10:57] 99de78f: fix: share flash messages globally via Inertia middleware
+- [2026-03-08 20:18:26] 0d147f2: chore: consistency audit, docs, versioning v1.1.0
+- [2026-03-09 08:30:52] b9a9faf: feat: coach profile redesign — content tab, reviews, completeness indicator
+
+---
+
+## Session 16 — 2026-03-09 — Coach Profile Redesign
+
+### What was built
+
+**Smart /profile/{id} — role-aware layout:**
+- Coach viewing own profile: completely different layout from fan
+- 4 coach tabs: 📊 Prehľad / 📝 Môj obsah / ⭐ Recenzie / ⚙️ Nastavenia
+- Coach stats row: 👥 predplatitelia, ❤️ sledovatelia, ⭐ hodnotenie, 📝 príspevky
+- Action buttons: "Verejný profil" → /coaches/{coach_id}, "Upraviť profil" → /dashboard/profile
+- Profile completeness indicator (amber, 5 checks: avatar/bio/spec/price/1post)
+- "Môj obsah" tab: post cards + delete with confirmation modal (axios.delete /dashboard/posts/{id})
+- Notification preference toggles (on/off switches) for coaches and fans
+- Fan tabs unchanged
+
+**Backend changes:**
+- `UserProfileController::show()` now returns `ownPosts`, `coachReviews`, `postsCount` for coach own profile
+- `HandleInertiaRequests`: auth.user now includes `coach_id` field
+- `UserProfileController::update()`: accepts notif_* boolean fields
+- Migration: `notif_new_subscriber`, `notif_new_message`, `notif_new_review`, `notif_new_like` on users
+
+**PulseLayout changes:**
+- Sidebar bottom: "👤 Môj profil" + "🏋️ Verejný profil" links for coaches
+- Mobile nav "Profil" tab: fixed → `/profile/{user.id}`
