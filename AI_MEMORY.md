@@ -816,3 +816,46 @@ DELETE /coaches/{coachId}/reviews  → auth
 - Both message + notification counts fetched in single polling interval (30s)
 
 **Main content:** `pb-20 md:pb-0` so bottom nav doesn't overlap content on mobile
+- [2026-03-10 07:50:38] 1a9a989: chore: update AI_MEMORY with session 17 unified navigation
+- [2026-03-10 08:10:40] ccea2b9: feat: followers/subscribers lists, clickable notifications with redirect
+
+---
+
+## Session 18 — 2026-03-10 — Coach Profile Tabs + Clickable Notifications
+
+### What was built
+
+**FIX 1 — Coach profile followers + subscribers lists:**
+- `UserProfileController::show()`: new queries for coach own profile:
+  - `followers`: JOIN follows + users, ordered by followed_at desc
+  - `subscribers`: JOIN subscriptions (active) + users, monthly_price from coach
+  - `recentActivity`: last 5 notifications for the coach
+- `Profile/Show.tsx`: two new coach tabs added to tab bar:
+  - `👥 Sledovatelia (N)`: list with Avatar, name, follow date, role badge (Kouč/Člen)
+  - `💳 Predplatitelia (N)`: list with Avatar, name, subscribed date, €price/mes badge + revenue footer
+- `CoachTab` type extended: `'sledovatelia' | 'predplatitelia'` added
+- New types: `Follower`, `CoachSubscriber`, `ActivityItem` interfaces
+
+**FIX 2 — Notifications clickable with redirect:**
+- Migration: `related_id` (unsignedBigInteger nullable) added to notifications table
+- `Notification` model: `related_id` added to `$fillable`
+- `FollowController::toggle()`: stores `related_id = $follower->id` (new_follower)
+- `ReviewController::store()`: stores `related_id = $coach->id` (new_review)
+- `SendPostNotificationsJob`: stores `related_id = $post->id` (new_post/reel)
+- `NotificationController::index()`: exposes `related_id` in response
+- `Notifications/Index.tsx`: each notification is now a `<Link>` using `getNotificationLink(n)`:
+  - `new_message` → `/messages/{related_id}`
+  - `new_follower` → `/profile/{related_id}`
+  - `new_review` → `/coaches/{related_id}`
+  - `new_post/reel/like` → `/feed`
+  - `new_subscriber` → `/profile/me`
+  - Clicking also marks notification as read (if unread)
+
+**FIX 3 — Clickable activity in coach Prehľad tab:**
+- "Posledná aktivita" section in Prehľad tab using `recentActivity` prop
+- Each item is a `<Link>` using same `getNotificationLink()` logic
+- Unread items: slightly tinted background + terracotta border + dot indicator
+
+### Key patterns
+- `related_id` stores: user_id (for follows/messages), coach_id (for reviews), post_id (for posts/reels)
+- `getNotificationLink(item)` helper used in both Notifications page and Profile Prehľad tab
