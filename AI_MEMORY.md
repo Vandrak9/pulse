@@ -937,3 +937,76 @@ DELETE /coaches/{coachId}/reviews  → auth
 2. Check user `email_verified_at` — null = no email sent
 3. Check `email_notif_{type}` preference column — false = no email sent
 4. Use `Mail::to()->sendNow()` in tinker for sync test (bypasses queue)
+- [2026-03-10 11:44:41] 8855d72: chore: update AI_MEMORY with session 20 email delivery fix
+- [2026-03-10 11:49:11] ef0ce97: docs: update README to v1.2.0 — email notifications, nav redesign, coach profile
+
+---
+
+## Session 21 — 2026-03-10 — Mux Live Streaming
+
+### Mux integration
+- Package: `muxinc/mux-php` ^5.1
+- Config: `config/services.php` → `mux.token_id`, `mux.token_secret`, `mux.webhook_secret`
+- Env vars: `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`
+
+### New DB tables
+- `live_streams`: coach_id(FK), mux_live_stream_id, mux_playback_id, stream_key, rtmp_url, status(idle|active|disabled), access(subscribers|everyone), title, description, started_at, ended_at, peak_viewers, viewers_count
+- `live_stream_messages`: live_stream_id(FK), user_id(FK), message(300)
+
+### New Models
+- `app/Models/LiveStream.php` — belongsTo Coach, hasMany LiveStreamMessage
+- `app/Models/LiveStreamMessage.php` — belongsTo LiveStream, User
+
+### New Service
+- `app/Services/MuxService.php`
+  - `createLiveStream()` → creates Mux stream + playback ID
+  - `deleteLiveStream($id)` → deletes from Mux
+  - `getStreamStatus($id)` → polls Mux for current status
+
+### New Controller
+- `app/Http/Controllers/LiveStreamController.php`
+  - `index()` — coach dashboard `/dashboard/live`
+  - `store()` — create new stream via Mux, notify viewers
+  - `destroy($id)` — end stream
+  - `watch($coachId)` — fan viewer page
+  - `sendMessage($streamId)` — live chat
+  - `poll($streamId)` — status + new messages (3-5s polling)
+
+### Routes
+- GET/POST `/dashboard/live` → live.index / live.store (auth)
+- DELETE `/dashboard/live/{id}` → live.destroy (auth)
+- GET `/live/{coachId}` → live.watch (auth)
+- POST `/live/{streamId}/message` → live.message (auth)
+- GET `/live/{streamId}/poll` → live.poll (auth)
+
+### New Pages
+- `resources/js/Pages/Dashboard/LiveStream.tsx` — coach management (create form + RTMP/key display)
+- `resources/js/Pages/LiveStream/Watch.tsx` — dark theme viewer + Mux player + live chat (3s poll)
+- `resources/js/Pages/LiveStream/Locked.tsx` — paywall for subscribers-only streams
+
+### Player
+- `@mux/mux-player` loaded via CDN script tag in useEffect
+- Uses `<mux-player stream-type="live" playback-id="...">` web component
+- No npm package needed — avoids SSR issues
+
+### PulseLayout
+- Added `Radio` icon import from lucide-react
+- Added "Live Stream" nav link for coaches → `/dashboard/live`
+
+### CoachController
+- Added `is_live` field (bool) to both `index()` and `show()` responses
+- Checks `LiveStream::where('coach_id',...)->where('status','active')->exists()`
+
+### Coaches/Index.tsx + Show.tsx
+- `is_live: boolean` added to Coach interface
+- Index: red pulsing LIVE badge on coach card
+- Show: "Sledovať LIVE" red button → `/live/{coach.id}` when coach is live
+
+### Access control
+- `subscribers` — only active/trialing subscribers (+ coach themselves) can watch
+- `everyone` — all authenticated users can watch
+- Non-subscribers see `LiveStream/Locked.tsx` with subscribe CTA
+
+### Notifications on stream start
+- `notifyViewers()` inserts batch notifications to followers (everyone) or subscribers (subscribers)
+- Type: `live_stream`, related_id = stream.id

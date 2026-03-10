@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coach;
+use App\Models\LiveStream;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +45,8 @@ class CoachController extends Controller
                     'video_count'      => $coach->video_count,
                     'image_count'      => $coach->image_count,
                     'is_following'     => $isFollowing,
+                    'is_live'          => LiveStream::where('coach_id', $coach->id)
+                        ->where('status', 'active')->exists(),
                     'avatar_url'       => $coach->avatar_path
                         ? Storage::url($coach->avatar_path)
                         : null,
@@ -133,6 +136,8 @@ class CoachController extends Controller
                 'followers_count' => $followersCount,
                 'is_verified'     => $coach->is_verified,
                 'is_following'    => $isFollowing,
+                'is_live'         => LiveStream::where('coach_id', $coach->id)
+                    ->where('status', 'active')->exists(),
                 'messages_access' => $coach->messages_access ?? 'everyone',
                 'avatar_url'      => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)

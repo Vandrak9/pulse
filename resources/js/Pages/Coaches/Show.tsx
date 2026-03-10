@@ -18,6 +18,7 @@ interface CoachData {
     followers_count: number;
     is_verified: boolean;
     is_following: boolean;
+    is_live: boolean;
     messages_access: 'everyone' | 'followers' | 'subscribers' | 'nobody';
     avatar_url: string | null;
 }
@@ -297,6 +298,21 @@ export default function CoachShow({ coach, posts, isSubscribed, reviews: initial
                                         >
                                             {following ? '✓ Sledujem' : '+ Sledovať'}
                                         </button>
+                                        {coach.is_live && (
+                                            <Link
+                                                href={`/live/${coach.id}`}
+                                                style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                                    padding: '8px 18px', borderRadius: 999,
+                                                    background: '#dc2626', color: 'white',
+                                                    fontSize: 13, fontWeight: 700, textDecoration: 'none',
+                                                    animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
+                                                }}
+                                            >
+                                                <span style={{ width: 8, height: 8, background: 'white', borderRadius: '50%', display: 'inline-block' }} />
+                                                Sledovať LIVE
+                                            </Link>
+                                        )}
                                         {coach.messages_access !== 'nobody' && (
                                             <Link
                                                 href={`/messages/${coach.user_id}`}

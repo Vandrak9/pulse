@@ -28,6 +28,12 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'mux' => [
+        'token_id'       => env('MUX_TOKEN_ID'),
+        'token_secret'   => env('MUX_TOKEN_SECRET'),
+        'webhook_secret' => env('MUX_WEBHOOK_SECRET', ''),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

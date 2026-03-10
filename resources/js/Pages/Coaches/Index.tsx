@@ -17,6 +17,7 @@ interface Coach {
     video_count: number;
     image_count: number;
     is_following: boolean;
+    is_live: boolean;
 }
 
 interface PaginatedCoaches {
@@ -220,11 +221,19 @@ function CoachCard({
                 {coach.name}
             </h3>
 
-            {coach.specialization && (
-                <span className="mt-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: '#fce8de', color: '#c4714a' }}>
-                    {coach.specialization}
-                </span>
-            )}
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap justify-center">
+                {coach.specialization && (
+                    <span className="rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: '#fce8de', color: '#c4714a' }}>
+                        {coach.specialization}
+                    </span>
+                )}
+                {coach.is_live && (
+                    <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold text-white animate-pulse" style={{ background: '#dc2626' }}>
+                        <span className="w-1.5 h-1.5 bg-white rounded-full inline-block" />
+                        LIVE
+                    </span>
+                )}
+            </div>
 
             {/* Content type indicators */}
             {contentBadges.length > 0 && (

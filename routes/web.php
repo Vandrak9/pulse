@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\LiveStreamController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\PostController;
@@ -100,6 +101,14 @@ Route::middleware('auth')->group(function () {
     // Reviews
     Route::post('/coaches/{coachId}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
     Route::delete('/coaches/{coachId}/reviews', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+
+    // Live streaming
+    Route::get('/dashboard/live', [LiveStreamController::class, 'index'])->name('live.index');
+    Route::post('/dashboard/live', [LiveStreamController::class, 'store'])->name('live.store');
+    Route::delete('/dashboard/live/{id}', [LiveStreamController::class, 'destroy'])->name('live.destroy');
+    Route::get('/live/{coachId}', [LiveStreamController::class, 'watch'])->name('live.watch');
+    Route::post('/live/{streamId}/message', [LiveStreamController::class, 'sendMessage'])->name('live.message');
+    Route::get('/live/{streamId}/poll', [LiveStreamController::class, 'poll'])->name('live.poll');
 
     // Subscriptions
     Route::get('/subscribe/{coachId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
