@@ -106,11 +106,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/live', [LiveStreamController::class, 'index'])->name('live.index');
     Route::post('/dashboard/live', [LiveStreamController::class, 'store'])->name('live.store');
     Route::delete('/dashboard/live/{id}', [LiveStreamController::class, 'destroy'])->name('live.destroy');
-    Route::get('/dashboard/live/{streamId}/webrtc-config', [LiveStreamController::class, 'getWebRtcConfig'])->name('live.webrtc-config');
     Route::post('/dashboard/live/{streamId}/whip', [LiveStreamController::class, 'whipProxy'])->name('live.whip');
     Route::get('/live/{coachId}', [LiveStreamController::class, 'watch'])->name('live.watch');
     Route::post('/live/{streamId}/message', [LiveStreamController::class, 'sendMessage'])->name('live.message');
     Route::get('/live/{streamId}/poll', [LiveStreamController::class, 'poll'])->name('live.poll');
+    Route::post('/live/{streamId}/join', [LiveStreamController::class, 'join'])->name('live.join');
+    Route::post('/live/{streamId}/leave', [LiveStreamController::class, 'leave'])->name('live.leave');
 
     // Subscriptions
     Route::get('/subscribe/{coachId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');

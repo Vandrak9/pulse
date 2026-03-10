@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\LiveChatMessage;
+use App\Events\LiveStreamViewerJoined;
+use App\Events\LiveStreamViewerLeft;
 use App\Models\Coach;
 use App\Models\LiveStream;
 use App\Models\LiveStreamMessage;
@@ -210,7 +213,7 @@ class LiveStreamController extends Controller
         ]);
     }
 
-    // Fan: send chat message
+    // Fan: send chat message + broadcast via Reverb
     public function sendMessage(Request $request, $streamId)
     {
         $validated = $request->validate([
@@ -218,6 +221,7 @@ class LiveStreamController extends Controller
         ]);
 
         $stream = LiveStream::findOrFail($streamId);
+        $user   = auth()->user();
 
         if ($stream->status === 'disabled') {
             return response()->json(['error' => 'Stream skončil.'], 422);
@@ -225,25 +229,70 @@ class LiveStreamController extends Controller
 
         $msg = LiveStreamMessage::create([
             'live_stream_id' => $stream->id,
-            'user_id'        => auth()->id(),
+            'user_id'        => $user->id,
             'message'        => $validated['message'],
         ]);
 
-        $msg->load('user:id,name,profile_avatar,role');
+        $isCoach = $stream->coach->user_id === $user->id;
 
-        return response()->json([
+        $messageData = [
             'id'         => $msg->id,
             'message'    => $msg->message,
             'created_at' => $msg->created_at->toISOString(),
             'user'       => [
-                'id'         => $msg->user->id,
-                'name'       => $msg->user->name,
-                'role'       => $msg->user->role,
-                'avatar_url' => $msg->user->profile_avatar
-                    ? Storage::url($msg->user->profile_avatar)
+                'id'         => $user->id,
+                'name'       => $user->name,
+                'role'       => $user->role,
+                'is_coach'   => $isCoach,
+                'avatar_url' => $user->profile_avatar
+                    ? Storage::url($user->profile_avatar)
                     : null,
             ],
-        ]);
+        ];
+
+        broadcast(new LiveChatMessage((int) $streamId, $messageData))->toOthers();
+
+        return response()->json($messageData);
+    }
+
+    // Fan: join stream (viewer tracking)
+    public function join(Request $request, $streamId)
+    {
+        $stream = LiveStream::findOrFail($streamId);
+        $user   = $request->user();
+
+        $stream->increment('viewers_count');
+
+        cache()->put("stream:{$streamId}:viewer:{$user->id}", true, now()->addMinutes(5));
+
+        broadcast(new LiveStreamViewerJoined(
+            (int) $streamId,
+            ['id' => $user->id, 'name' => $user->name, 'avatar_url' => $user->profile_avatar ? Storage::url($user->profile_avatar) : null],
+            $stream->viewers_count
+        ))->toOthers();
+
+        return response()->json(['viewers_count' => $stream->viewers_count]);
+    }
+
+    // Fan: leave stream (viewer tracking)
+    public function leave(Request $request, $streamId)
+    {
+        $stream = LiveStream::findOrFail($streamId);
+        $user   = $request->user();
+
+        if ($stream->viewers_count > 0) {
+            $stream->decrement('viewers_count');
+        }
+
+        cache()->forget("stream:{$streamId}:viewer:{$user->id}");
+
+        broadcast(new LiveStreamViewerLeft(
+            (int) $streamId,
+            ['id' => $user->id, 'name' => $user->name],
+            $stream->viewers_count
+        ))->toOthers();
+
+        return response()->json(['ok' => true]);
     }
 
     // Poll stream status + new messages
@@ -296,7 +345,8 @@ class LiveStreamController extends Controller
         ]);
     }
 
-    // Coach: WHIP proxy — forwards SDP offer to Mux (avoids browser CORS)
+    // Coach: WHIP proxy — forwards SDP offer to mediamtx (localhost:8889)
+    // mediamtx receives WebRTC and re-streams to Mux via ffmpeg
     public function whipProxy(Request $request, $streamId)
     {
         $stream = LiveStream::findOrFail($streamId);
@@ -310,22 +360,23 @@ class LiveStreamController extends Controller
             return response('SDP offer required', 400);
         }
 
-        $muxUrl = 'https://global-live.mux.com:443/app/' . $stream->stream_key;
+        // mediamtx WHIP endpoint — path = Mux stream key
+        $mediamtxUrl = 'http://127.0.0.1:8889/' . $stream->stream_key . '/whip';
 
         try {
             $http = new \GuzzleHttp\Client(['timeout' => 15]);
-            $muxResponse = $http->post($muxUrl, [
+            $res = $http->post($mediamtxUrl, [
                 'body'    => $sdpOffer,
                 'headers' => ['Content-Type' => 'application/sdp'],
             ]);
 
-            return response($muxResponse->getBody()->getContents(), $muxResponse->getStatusCode())
+            return response($res->getBody()->getContents(), $res->getStatusCode())
                 ->header('Content-Type', 'application/sdp');
 
         } catch (\GuzzleHttp\Exception\ClientException $e) {
             $body = $e->getResponse()->getBody()->getContents();
             Log::error('WHIP proxy error: ' . $body);
-            return response('Mux error: ' . $body, $e->getResponse()->getStatusCode());
+            return response('mediamtx error: ' . $body, $e->getResponse()->getStatusCode());
         } catch (\Exception $e) {
             Log::error('WHIP proxy exception: ' . $e->getMessage());
             return response('WHIP proxy failed: ' . $e->getMessage(), 500);

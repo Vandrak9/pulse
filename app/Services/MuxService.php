@@ -30,7 +30,7 @@ class MuxService
             'new_asset_settings' => [
                 'playback_policy' => ['public'],
             ],
-            'reduced_latency' => true,
+            'latency_mode' => 'low',
         ]);
 
         $stream = $this->liveStreamsApi->createLiveStream($request);
