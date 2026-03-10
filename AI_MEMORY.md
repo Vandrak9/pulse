@@ -788,3 +788,31 @@ DELETE /coaches/{coachId}/reviews  → auth
 **PulseLayout changes:**
 - Sidebar bottom: "👤 Môj profil" + "🏋️ Verejný profil" links for coaches
 - Mobile nav "Profil" tab: fixed → `/profile/{user.id}`
+- [2026-03-09 08:41:10] 2108c04: chore: update AI_MEMORY with session 16 coach profile redesign
+- [2026-03-10 07:50:20] 77ea57c: feat: unified desktop+mobile navigation with matching Lucide icons
+
+---
+
+## Session 17 — 2026-03-10 — Unified Navigation Icons
+
+### What was changed
+
+**PulseLayout.tsx — mobile bottom nav rewrite:**
+- Replaced emoji icons (🏠📱🔍💬👤) with Lucide icons matching desktop exactly
+- Mobile nav is now role-aware: coach nav ≠ fan nav
+- Coach mobile nav (5 tabs): LayoutDashboard / Rss / MessageCircle / Bell / User
+- Fan mobile nav (5 tabs): Home / Rss / Compass / MessageCircle / User
+- Active state: terracotta color (#c4714a) + strokeWidth 2.5 vs 1.8 inactive
+- Unread badge (red dot, 9+ max) on Messages AND Notifications tabs on mobile
+
+**Desktop sidebar icon fixes:**
+- Dashboard: BarChart2 → LayoutDashboard
+- Objaviť: Search → Compass
+- Notifikácie now shows unread badge (was always 0)
+
+**Backend — `NotificationController::unreadCount()`:**
+- New method returns `{count: N}` for auth user
+- Route: `GET /api/notifications/unread-count` (auth, same pattern as messages)
+- Both message + notification counts fetched in single polling interval (30s)
+
+**Main content:** `pb-20 md:pb-0` so bottom nav doesn't overlap content on mobile
