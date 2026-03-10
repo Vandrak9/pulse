@@ -51,6 +51,7 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
     // Browser streaming state
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [isBroadcasting, setIsBroadcasting] = useState(false);
+    const [broadcastLoading, setBroadcastLoading] = useState(false);
     const [micOn, setMicOn] = useState(true);
     const [camOn, setCamOn] = useState(true);
     const [broadcastError, setBroadcastError] = useState<string | null>(null);
@@ -139,33 +140,44 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
     const startBroadcast = async () => {
         if (!localStream || !activeStream) return;
         setBroadcastError(null);
+        setBroadcastLoading(true);
 
         try {
+            // 1. Get WHIP endpoint from server
             const res = await axios.get(`/dashboard/live/${activeStream.id}/webrtc-config`);
             const whipEndpoint = res.data.whip_endpoint;
 
+            // 2. Create peer connection
             const pc = new RTCPeerConnection({
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                ],
             });
             pcRef.current = pc;
 
             localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
+            // 3. Create offer
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            // Wait for ICE gathering (max 3s)
+            // 4. Wait for ICE candidates (trickle or complete, max 4s)
             await new Promise<void>(resolve => {
-                if (pc.iceGatheringState === 'complete') return resolve();
-                const timeout = setTimeout(resolve, 3000);
-                pc.onicegatheringstatechange = () => {
+                const timeout = setTimeout(resolve, 4000);
+                pc.addEventListener('icegatheringstatechange', () => {
                     if (pc.iceGatheringState === 'complete') {
                         clearTimeout(timeout);
                         resolve();
                     }
-                };
+                });
+                if (pc.iceGatheringState === 'complete') {
+                    clearTimeout(timeout);
+                    resolve();
+                }
             });
 
+            // 5. Send SDP offer to Mux WHIP endpoint
             const response = await fetch(whipEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/sdp' },
@@ -173,16 +185,22 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
             });
 
             if (!response.ok) {
-                throw new Error(`WHIP ${response.status}: ${await response.text()}`);
+                const body = await response.text();
+                throw new Error(`Mux WHIP ${response.status}: ${body}`);
             }
 
+            // 6. Set remote answer
             const answerSdp = await response.text();
             await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
             setIsBroadcasting(true);
             setStreamStatus('active');
 
         } catch (err: any) {
-            setBroadcastError('Nepodarilo sa spustiť stream: ' + (err.message ?? 'Neznáma chyba'));
+            const msg = err?.message ?? String(err);
+            setBroadcastError('Nepodarilo sa spustiť stream: ' + msg);
+        } finally {
+            setBroadcastLoading(false);
         }
     };
 
@@ -423,11 +441,13 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
                         {/* Actions */}
                         <div className="grid grid-cols-2 gap-3">
                             {!isBroadcasting ? (
-                                <button onClick={startBroadcast} disabled={!localStream}
-                                    className="col-span-2 flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-xl transition disabled:opacity-50"
-                                    style={{ background: localStream ? '#c4714a' : '#e8d9c4', color: localStream ? 'white' : '#9a8a7a' }}>
-                                    <span className="w-3 h-3 bg-white rounded-full animate-pulse" />
-                                    {localStream ? 'Spustiť stream' : 'Najprv povoľ kameru'}
+                                <button onClick={startBroadcast} disabled={!localStream || broadcastLoading}
+                                    className="col-span-2 flex items-center justify-center gap-2 font-semibold py-4 rounded-xl transition disabled:opacity-60"
+                                    style={{ background: localStream ? '#c4714a' : '#d1d5db', color: 'white' }}>
+                                    {broadcastLoading
+                                        ? <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />Pripájam sa na Mux...</>
+                                        : <><span className="w-3 h-3 bg-white rounded-full animate-pulse" />{localStream ? 'Spustiť stream' : 'Najprv povoľ kameru'}</>
+                                    }
                                 </button>
                             ) : (
                                 <>
