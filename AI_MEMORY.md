@@ -910,3 +910,30 @@ DELETE /coaches/{coachId}/reviews  → auth
 ### Queue worker
 - `pulse-queue.service` restarted and running
 - All emails are queued (ShouldQueue interface) — processed async
+- [2026-03-10 11:32:44] dbf24be: chore: update AI_MEMORY with session 19 email notifications
+
+---
+
+## Session 20 — 2026-03-10 — Email delivery fix + queue debug
+
+### Problem: emails not arriving
+- `NotificationMail` and `WelcomeMail` implement `ShouldQueue`
+- Calling `Mail::to()->send()` on ShouldQueue mailable dispatches to Redis queue
+- Queue worker ran jobs with old `MAIL_SCHEME=ssl` → failed with `UnsupportedSchemeException`
+- Laravel 11 uses Symfony Mailer — only supports `smtp` or `smtps` schemes (NOT `ssl`)
+
+### Fix applied
+- `.env`: `MAIL_SCHEME=smtps` (was `ssl`)
+- Retried failed jobs: `php artisan queue:retry all`
+- All email jobs now process successfully
+
+### Email verification guard
+- `EmailNotificationService::send()` skips users with `email_verified_at = null`
+- Seeded/test users may lack verified email → emails silently skipped
+- Fix: `App\Models\User::whereNull('email_verified_at')->update(['email_verified_at' => now()])`
+
+### Debugging pattern for email issues
+1. Check `failed_jobs` table for exceptions
+2. Check user `email_verified_at` — null = no email sent
+3. Check `email_notif_{type}` preference column — false = no email sent
+4. Use `Mail::to()->sendNow()` in tinker for sync test (bypasses queue)
