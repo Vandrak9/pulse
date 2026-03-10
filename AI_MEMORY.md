@@ -859,3 +859,54 @@ DELETE /coaches/{coachId}/reviews  → auth
 ### Key patterns
 - `related_id` stores: user_id (for follows/messages), coach_id (for reviews), post_id (for posts/reels)
 - `getNotificationLink(item)` helper used in both Notifications page and Profile Prehľad tab
+- [2026-03-10 08:11:02] 9ea5eaa: chore: update AI_MEMORY with session 18 coach profile tabs and notifications
+- [2026-03-10 11:32:21] 1de4bc1: feat: email notifications, preferences UI, password reset fix
+
+---
+
+## Session 19 — 2026-03-10 — Email Notifications + Password Reset
+
+### Email provider
+- **Resend** (resend.com) — free tier 3000 emails/month
+- SMTP: `smtp.resend.com:465` (SSL), username=`resend`, from=`hello@pulsehub.fun`
+- API key stored in `.env` as `MAIL_PASSWORD` (gitignored)
+
+### Mail classes
+- `app/Mail/NotificationMail.php` — ShouldQueue, params: title/body/actionUrl/actionText/type
+- `app/Mail/WelcomeMail.php` — ShouldQueue, sends on registration
+- `resources/views/emails/notification.blade.php` — branded markdown template with button
+- `resources/views/emails/welcome.blade.php` — welcome with coach discovery CTA
+
+### EmailNotificationService
+- `app/Services/EmailNotificationService.php`
+- Checks `email_notif_{type}` column — skips if false
+- Skips unverified emails
+- Builds config per type, queues `NotificationMail`
+- Email types handled: `new_subscriber`, `new_message`, `new_review`, `new_like`, `new_post`
+
+### Where emails are triggered
+- `FollowController::toggle()` — `new_subscriber` when coach is followed
+- `MessageController::store()` — `new_message` to receiver
+- `ReviewController::store()` — `new_review` to coach (first review only)
+- `SubscriptionController::success()` — `new_subscriber` on Stripe checkout
+- `RegisteredUserController::store()` — `WelcomeMail` on registration
+
+### DB schema additions
+- `users` table: `email_notif_new_subscriber`, `email_notif_new_message`,
+  `email_notif_new_review`, `email_notif_new_like`, `email_notif_new_post` (all boolean)
+- Separate from in-app `notif_*` columns (those control in-app only)
+
+### UI — Profile/Show.tsx Nastavenia tab
+- "📧 Emailové notifikácie" section added to both coach and fan Nastavenia tabs
+- Toggle each type, saves optimistically via `axios.post('/profile/update', {key: 0|1})`
+- "🔔 Notifikácie v apke" renamed/separated from email section
+
+### Password reset
+- Routes were already correct (Laravel Breeze default)
+- Fix was configuring real SMTP (was `log` driver before)
+- `ForgotPassword.tsx` → translated to Slovak
+- `ResetPassword.tsx` → "Nové heslo" / "Potvrď nové heslo" / "Obnoviť heslo"
+
+### Queue worker
+- `pulse-queue.service` restarted and running
+- All emails are queued (ShouldQueue interface) — processed async
