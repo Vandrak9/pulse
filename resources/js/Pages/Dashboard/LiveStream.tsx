@@ -86,12 +86,12 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
         return () => clearInterval(id);
     }, [streamStatus, activeStream?.started_at]);
 
-    // Auto-start camera preview when browser stream is active
+    // Attach localStream to video element after it renders
     useEffect(() => {
-        if (activeStream?.method === 'browser' && !localStream) {
-            startCameraPreview();
+        if (localStream && videoRef.current) {
+            videoRef.current.srcObject = localStream;
         }
-    }, [activeStream?.id]);
+    }, [localStream]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -118,15 +118,21 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
     // ── Browser streaming ──────────────────────────────────────────────────────
 
     const startCameraPreview = async () => {
+        setBroadcastError(null);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+                video: { width: { ideal: 1280 }, height: { ideal: 720 } },
                 audio: true,
             });
             setLocalStream(stream);
-            if (videoRef.current) videoRef.current.srcObject = stream;
-        } catch {
-            setBroadcastError('Nepodarilo sa získať prístup ku kamere/mikrofónu. Skontroluj povolenia prehliadača.');
+            // videoRef.current may not exist yet — set it after render via useEffect
+        } catch (err: any) {
+            const msg = err?.name === 'NotAllowedError'
+                ? 'Prístup ku kamere bol zamietnutý. Klikni na ikonu zámku v adresnom riadku a povol kameru + mikrofón.'
+                : err?.name === 'NotFoundError'
+                ? 'Kamera alebo mikrofón nenájdený.'
+                : 'Nepodarilo sa získať prístup ku kamere: ' + (err?.message ?? err);
+            setBroadcastError(msg);
         }
     };
 
@@ -364,26 +370,41 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
                         {broadcastError && (
                             <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
                                 <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                                {broadcastError}
+                                <div>
+                                    <strong>Chyba kamery:</strong> {broadcastError}
+                                    <button onClick={() => { setBroadcastError(null); startCameraPreview(); }}
+                                        className="ml-2 underline font-medium">Skúsiť znova</button>
+                                </div>
                             </div>
                         )}
 
-                        {/* Camera preview */}
-                        <div className="rounded-2xl overflow-hidden bg-black relative" style={{ aspectRatio: '16/9' }}>
-                            <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-
-                            {!localStream && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                                    <Camera size={48} className="opacity-30 mb-3" />
-                                    <p className="text-sm opacity-60 mb-3">Kamera nie je aktívna</p>
-                                    <button onClick={startCameraPreview}
-                                        className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium">
-                                        Povoliť kameru
-                                    </button>
+                        {/* Camera — NOT yet active: big CTA card */}
+                        {!localStream && (
+                            <div className="bg-white rounded-2xl border p-8 text-center" style={{ borderColor: '#e8d9c4' }}>
+                                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    style={{ background: '#fce8de' }}>
+                                    <Camera size={32} style={{ color: '#c4714a' }} />
                                 </div>
-                            )}
+                                <h3 className="font-semibold text-lg mb-1" style={{ color: '#2d2118' }}>Spustiť kameru</h3>
+                                <p className="text-sm mb-5" style={{ color: '#9a8a7a' }}>
+                                    Klikni na tlačidlo — prehliadač ťa požiada o povolenie kamery a mikrofónu.
+                                </p>
+                                <button onClick={startCameraPreview}
+                                    className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 rounded-xl transition"
+                                    style={{ background: '#c4714a' }}>
+                                    <Camera size={18} />
+                                    Povoliť kameru a mikrofón
+                                </button>
+                                <p className="text-xs mt-3" style={{ color: '#9a8a7a' }}>
+                                    Vyžaduje HTTPS a povolenie v prehliadači
+                                </p>
+                            </div>
+                        )}
 
-                            {localStream && (
+                        {/* Camera preview — active */}
+                        {localStream && (
+                            <div className="rounded-2xl overflow-hidden bg-black relative" style={{ aspectRatio: '16/9' }}>
+                                <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                                 <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-3">
                                     <button onClick={toggleMic}
                                         className="w-10 h-10 rounded-full flex items-center justify-center transition"
@@ -396,17 +417,17 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
                                         {camOn ? <Video size={18} className="text-white" /> : <VideoOff size={18} className="text-white" />}
                                     </button>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         {/* Actions */}
                         <div className="grid grid-cols-2 gap-3">
                             {!isBroadcasting ? (
                                 <button onClick={startBroadcast} disabled={!localStream}
                                     className="col-span-2 flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-xl transition disabled:opacity-50"
-                                    style={{ background: '#c4714a' }}>
+                                    style={{ background: localStream ? '#c4714a' : '#e8d9c4', color: localStream ? 'white' : '#9a8a7a' }}>
                                     <span className="w-3 h-3 bg-white rounded-full animate-pulse" />
-                                    Spustiť stream
+                                    {localStream ? 'Spustiť stream' : 'Najprv povoľ kameru'}
                                 </button>
                             ) : (
                                 <>

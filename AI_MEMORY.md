@@ -1043,3 +1043,4 @@ DELETE /coaches/{coachId}/reviews  → auth
 
 ### npm packages added
 - `@mux/mux-player-react` — HLS live stream player
+- [2026-03-10 12:43:09] 4ffd3bb: feat: browser WebRTC streaming + fix Mux 500 error
