@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:messages')
         ->name('messages.store');
     Route::get('/api/messages/unread-count', [MessageController::class, 'unreadCount'])->name('messages.unread');
+    Route::get('/api/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
 
     // Media streaming
     Route::get('/media/message/{message}', [MediaStreamController::class, 'stream'])->name('media.message');

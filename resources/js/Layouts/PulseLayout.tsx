@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Rss, Search, MessageCircle, Bell, User, BarChart2, LogOut, PlusSquare, Megaphone, Dumbbell, Flame, Leaf, Activity, Heart, Zap } from 'lucide-react';
+import { Home, Rss, Compass, MessageCircle, Bell, User, LayoutDashboard, LogOut, PlusSquare, Megaphone, Dumbbell, Flame, Leaf, Activity, Heart, Zap } from 'lucide-react';
 
 interface Props {
     children: React.ReactNode;
@@ -37,6 +37,7 @@ export default function PulseLayout({ children }: Props) {
     const isCoach = user?.role === 'coach';
     const url = page.url;
     const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [suggestedCoaches, setSuggestedCoaches] = useState<SuggestedCoach[]>([]);
     const [addMenuOpen, setAddMenuOpen] = useState(false);
     const addMenuRef = useRef<HTMLDivElement>(null);
@@ -58,7 +59,7 @@ export default function PulseLayout({ children }: Props) {
         return url.startsWith(href);
     }
 
-    // Fetch unread message count (auth only)
+    // Fetch unread counts (auth only)
     useEffect(() => {
         if (!user) return;
         const fetchUnread = () => {
@@ -68,6 +69,13 @@ export default function PulseLayout({ children }: Props) {
             })
                 .then(r => r.ok ? r.json() : null)
                 .then(d => { if (d && typeof d.count === 'number') setUnreadCount(d.count); })
+                .catch(() => {});
+            fetch('/api/notifications/unread-count', {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            })
+                .then(r => r.ok ? r.json() : null)
+                .then(d => { if (d && typeof d.count === 'number') setUnreadNotifications(d.count); })
                 .catch(() => {});
         };
         fetchUnread();
@@ -89,32 +97,40 @@ export default function PulseLayout({ children }: Props) {
     // Desktop sidebar nav links — different order for coaches vs fans
     const sharedLinks: { label: string; icon: React.ReactNode; href: string; badge: number }[] = [
         { label: 'Feed',        icon: <Rss size={18} />,           href: '/feed',          badge: 0 },
-        { label: 'Objaviť',    icon: <Search size={18} />,        href: '/coaches',       badge: 0 },
+        { label: 'Objaviť',    icon: <Compass size={18} />,       href: '/coaches',       badge: 0 },
         { label: 'Správy',     icon: <MessageCircle size={18} />, href: '/messages',      badge: unreadCount },
-        { label: 'Notifikácie',icon: <Bell size={18} />,          href: '/notifications', badge: 0 },
+        { label: 'Notifikácie',icon: <Bell size={18} />,          href: '/notifications', badge: unreadNotifications },
         { label: 'Profil',     icon: <User size={18} />,          href: user ? `/profile/${user.id}` : '/login', badge: 0 },
     ];
 
     const desktopNavLinks: { label: string; icon: React.ReactNode; href: string; badge: number; isAddMenu?: boolean }[] = isCoach
         ? [
-            { label: 'Dashboard',    icon: <BarChart2 size={18} />,  href: '/dashboard',           badge: 0 },
-            { label: 'Broadcast',    icon: <Megaphone size={18} />,  href: '/dashboard/broadcast', badge: 0 },
+            { label: 'Dashboard',    icon: <LayoutDashboard size={18} />, href: '/dashboard',           badge: 0 },
+            { label: 'Broadcast',    icon: <Megaphone size={18} />,       href: '/dashboard/broadcast', badge: 0 },
             ...sharedLinks,
-            { label: 'Pridať obsah', icon: <PlusSquare size={18} />, href: '#',                    badge: 0, isAddMenu: true },
+            { label: 'Pridať obsah', icon: <PlusSquare size={18} />,      href: '#',                    badge: 0, isAddMenu: true },
           ]
         : [
             { label: 'Domov', icon: <Home size={18} />, href: '/', badge: 0 },
             ...sharedLinks,
           ];
 
-    // Mobile bottom tab links (keep emoji for mobile — clear at small size)
-    const mobileLinks = [
-        { label: 'Domov',   icon: '🏠', href: '/' },
-        { label: 'Feed',    icon: '📱', href: '/feed' },
-        { label: 'Objaviť',icon: '🔍', href: '/coaches' },
-        { label: 'Správy', icon: '💬', href: '/messages' },
-        { label: 'Profil', icon: '👤', href: user ? `/profile/${user.id}` : '/login' },
+    // Mobile bottom tab links — Lucide icons, role-aware
+    const coachMobileNav = [
+        { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard',                               badge: 0 },
+        { label: 'Feed',      icon: Rss,             href: '/feed',                                    badge: 0 },
+        { label: 'Správy',   icon: MessageCircle,   href: '/messages',                                badge: unreadCount },
+        { label: 'Notif.',   icon: Bell,            href: '/notifications',                           badge: unreadNotifications },
+        { label: 'Profil',   icon: User,            href: user ? `/profile/${user.id}` : '/login',   badge: 0 },
     ];
+    const fanMobileNav = [
+        { label: 'Domov',   icon: Home,          href: '/',                                          badge: 0 },
+        { label: 'Feed',    icon: Rss,           href: '/feed',                                      badge: 0 },
+        { label: 'Objaviť',icon: Compass,        href: '/coaches',                                   badge: 0 },
+        { label: 'Správy', icon: MessageCircle, href: '/messages',                                   badge: unreadCount },
+        { label: 'Profil', icon: User,          href: user ? `/profile/${user.id}` : '/login',      badge: 0 },
+    ];
+    const mobileNav = isCoach ? coachMobileNav : fanMobileNav;
 
     return (
         <div style={{ background: '#faf6f0', minHeight: '100vh' }}>
@@ -549,7 +565,7 @@ export default function PulseLayout({ children }: Props) {
 
             {/* ── MAIN CONTENT — offset by sidebars on desktop ── */}
             <div className="md:ml-64 lg:mr-72" style={{ minHeight: '100vh', background: '#faf6f0', display: 'flex', flexDirection: 'column' }}>
-                <main className="animate-fade-in flex-1">
+                <main className="animate-fade-in flex-1 pb-20 md:pb-0">
                     {children}
                 </main>
                 <footer style={{ borderTop: '1px solid #e8d9c4', padding: '32px 16px 16px', textAlign: 'center' }}>
@@ -583,40 +599,48 @@ export default function PulseLayout({ children }: Props) {
 
             {/* ── MOBILE BOTTOM TAB BAR — hidden on desktop ── */}
             <nav
-                className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white md:hidden"
-                style={{ borderColor: '#e8d9c4' }}
+                className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden"
+                style={{ background: 'white', borderTop: '1px solid #e8d9c4' }}
             >
-                <div className="flex">
-                    {mobileLinks.map((tab) => {
-                        const active = isActive(tab.href);
-                        const isMessages = tab.href === '/messages';
-                        return (
-                            <Link
-                                key={tab.href}
-                                href={tab.href}
-                                className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors"
-                                style={{ color: active ? '#c4714a' : '#9a8a7a' }}
-                            >
-                                <span className="relative text-lg leading-none">
-                                    {tab.icon}
-                                    {isMessages && unreadCount > 0 && (
-                                        <span style={{
-                                            position: 'absolute', top: -4, right: -8,
-                                            background: '#c4714a', color: 'white',
-                                            borderRadius: 999, fontSize: 9, fontWeight: 700,
-                                            minWidth: 16, height: 16,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            padding: '0 4px', lineHeight: 1,
-                                        }}>
-                                            {unreadCount > 99 ? '99+' : unreadCount}
-                                        </span>
-                                    )}
-                                </span>
+                {mobileNav.map((tab) => {
+                    const active = isActive(tab.href);
+                    const IconComponent = tab.icon;
+                    return (
+                        <Link
+                            key={tab.href}
+                            href={tab.href}
+                            className="flex flex-1 flex-col items-center justify-center py-2 transition-colors"
+                            style={{ gap: 2 }}
+                        >
+                            <span style={{ position: 'relative', display: 'inline-flex' }}>
+                                <IconComponent
+                                    size={22}
+                                    strokeWidth={active ? 2.5 : 1.8}
+                                    style={{ color: active ? '#c4714a' : '#9a8a7a', transition: 'all 0.15s' }}
+                                />
+                                {tab.badge > 0 && (
+                                    <span style={{
+                                        position: 'absolute', top: -4, right: -6,
+                                        background: '#e53e3e', color: 'white',
+                                        borderRadius: 999, fontSize: 9, fontWeight: 700,
+                                        minWidth: 16, height: 16,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        padding: '0 3px', lineHeight: 1,
+                                    }}>
+                                        {tab.badge > 9 ? '9+' : tab.badge}
+                                    </span>
+                                )}
+                            </span>
+                            <span style={{
+                                fontSize: 10, fontWeight: 500,
+                                color: active ? '#c4714a' : '#9a8a7a',
+                                transition: 'color 0.15s',
+                            }}>
                                 {tab.label}
-                            </Link>
-                        );
-                    })}
-                </div>
+                            </span>
+                        </Link>
+                    );
+                })}
             </nav>
 
             {/* Mobile bottom padding */}

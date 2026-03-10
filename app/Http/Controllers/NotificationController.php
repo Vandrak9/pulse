@@ -33,6 +33,15 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function unreadCount()
+    {
+        $count = Notification::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->count();
+
+        return response()->json(['count' => $count]);
+    }
+
     public function markAllRead()
     {
         Notification::where('user_id', auth()->id())
