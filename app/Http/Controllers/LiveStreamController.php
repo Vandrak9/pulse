@@ -296,8 +296,8 @@ class LiveStreamController extends Controller
         ]);
     }
 
-    // Coach: get WebRTC/WHIP config for browser streaming
-    public function getWebRtcConfig($streamId)
+    // Coach: WHIP proxy — forwards SDP offer to Mux (avoids browser CORS)
+    public function whipProxy(Request $request, $streamId)
     {
         $stream = LiveStream::findOrFail($streamId);
 
@@ -305,11 +305,31 @@ class LiveStreamController extends Controller
             abort(403);
         }
 
-        return response()->json([
-            'stream_key'    => $stream->stream_key,
-            'mux_stream_id' => $stream->mux_live_stream_id,
-            'whip_endpoint' => 'https://global-live.mux.com:443/app/' . $stream->stream_key,
-        ]);
+        $sdpOffer = $request->getContent();
+        if (empty($sdpOffer)) {
+            return response('SDP offer required', 400);
+        }
+
+        $muxUrl = 'https://global-live.mux.com:443/app/' . $stream->stream_key;
+
+        try {
+            $http = new \GuzzleHttp\Client(['timeout' => 15]);
+            $muxResponse = $http->post($muxUrl, [
+                'body'    => $sdpOffer,
+                'headers' => ['Content-Type' => 'application/sdp'],
+            ]);
+
+            return response($muxResponse->getBody()->getContents(), $muxResponse->getStatusCode())
+                ->header('Content-Type', 'application/sdp');
+
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $body = $e->getResponse()->getBody()->getContents();
+            Log::error('WHIP proxy error: ' . $body);
+            return response('Mux error: ' . $body, $e->getResponse()->getStatusCode());
+        } catch (\Exception $e) {
+            Log::error('WHIP proxy exception: ' . $e->getMessage());
+            return response('WHIP proxy failed: ' . $e->getMessage(), 500);
+        }
     }
 
     private function notifyViewers(LiveStream $stream, Coach $coach): void

@@ -107,6 +107,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/dashboard/live', [LiveStreamController::class, 'store'])->name('live.store');
     Route::delete('/dashboard/live/{id}', [LiveStreamController::class, 'destroy'])->name('live.destroy');
     Route::get('/dashboard/live/{streamId}/webrtc-config', [LiveStreamController::class, 'getWebRtcConfig'])->name('live.webrtc-config');
+    Route::post('/dashboard/live/{streamId}/whip', [LiveStreamController::class, 'whipProxy'])->name('live.whip');
     Route::get('/live/{coachId}', [LiveStreamController::class, 'watch'])->name('live.watch');
     Route::post('/live/{streamId}/message', [LiveStreamController::class, 'sendMessage'])->name('live.message');
     Route::get('/live/{streamId}/poll', [LiveStreamController::class, 'poll'])->name('live.poll');

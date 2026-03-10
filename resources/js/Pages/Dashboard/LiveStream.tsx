@@ -143,11 +143,7 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
         setBroadcastLoading(true);
 
         try {
-            // 1. Get WHIP endpoint from server
-            const res = await axios.get(`/dashboard/live/${activeStream.id}/webrtc-config`);
-            const whipEndpoint = res.data.whip_endpoint;
-
-            // 2. Create peer connection
+            // 1. Create peer connection
             const pc = new RTCPeerConnection({
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
@@ -177,16 +173,24 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
                 }
             });
 
-            // 5. Send SDP offer to Mux WHIP endpoint
-            const response = await fetch(whipEndpoint, {
+            // 5. Send SDP offer via our server proxy (avoids CORS)
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
+
+            const response = await fetch(`/dashboard/live/${activeStream.id}/whip`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/sdp' },
+                headers: {
+                    'Content-Type': 'application/sdp',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
+                },
                 body: pc.localDescription?.sdp,
+                signal: controller.signal,
             });
+            clearTimeout(timeout);
 
             if (!response.ok) {
                 const body = await response.text();
-                throw new Error(`Mux WHIP ${response.status}: ${body}`);
+                throw new Error(`WHIP ${response.status}: ${body}`);
             }
 
             // 6. Set remote answer
