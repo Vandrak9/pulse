@@ -174,27 +174,18 @@ export default function LiveStream({ activeStream: initialStream, coach, flash }
             });
 
             // 5. Send SDP offer via our server proxy (avoids CORS)
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 12000);
-
-            const response = await fetch(`/dashboard/live/${activeStream.id}/whip`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/sdp',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                },
-                body: pc.localDescription?.sdp,
-                signal: controller.signal,
-            });
-            clearTimeout(timeout);
-
-            if (!response.ok) {
-                const body = await response.text();
-                throw new Error(`WHIP ${response.status}: ${body}`);
-            }
+            const whipRes = await axios.post(
+                `/dashboard/live/${activeStream.id}/whip`,
+                pc.localDescription?.sdp,
+                {
+                    headers: { 'Content-Type': 'application/sdp' },
+                    responseType: 'text',
+                    timeout: 12000,
+                }
+            );
 
             // 6. Set remote answer
-            const answerSdp = await response.text();
+            const answerSdp = whipRes.data;
             await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
             setIsBroadcasting(true);

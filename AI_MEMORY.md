@@ -1046,3 +1046,4 @@ DELETE /coaches/{coachId}/reviews  → auth
 - [2026-03-10 12:43:09] 4ffd3bb: feat: browser WebRTC streaming + fix Mux 500 error
 - [2026-03-10 12:45:51] e6198a0: fix: camera permission not prompted — remove auto-start getUserMedia
 - [2026-03-10 12:48:53] f3a3bf4: fix: startBroadcast shows loading + proper error display
+- [2026-03-10 12:51:50] b3fdd23: fix: proxy WHIP SDP through Laravel to avoid browser CORS
