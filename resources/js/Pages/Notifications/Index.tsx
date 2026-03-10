@@ -1,5 +1,5 @@
 import PulseLayout from '@/Layouts/PulseLayout';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 
 interface Notification {
     id: number;
@@ -7,6 +7,7 @@ interface Notification {
     title: string;
     body: string | null;
     data: Record<string, unknown> | null;
+    related_id: number | null;
     is_read: boolean;
     read_at: string | null;
     created_at: string;
@@ -23,8 +24,29 @@ const TYPE_ICONS: Record<string, string> = {
     new_like:       '❤️',
     new_post:       '📸',
     new_reel:       '⚡',
+    new_review:     '⭐',
+    new_follower:   '🔔',
     tip:            '💰',
 };
+
+function getNotificationLink(n: Notification): string {
+    switch (n.type) {
+        case 'new_message':
+            return n.related_id ? `/messages/${n.related_id}` : '/messages';
+        case 'new_subscriber':
+            return '/profile/me';
+        case 'new_follower':
+            return n.related_id ? `/profile/${n.related_id}` : '/notifications';
+        case 'new_like':
+        case 'new_post':
+        case 'new_reel':
+            return '/feed';
+        case 'new_review':
+            return n.related_id ? `/coaches/${n.related_id}` : '/notifications';
+        default:
+            return '/notifications';
+    }
+}
 
 function relativeTime(dateStr: string): string {
     const now = Date.now();
@@ -41,8 +63,10 @@ export default function NotificationsIndex({ notifications, unread_count }: Prop
         router.post('/notifications/read-all', {}, { preserveScroll: true });
     }
 
-    function markOneRead(id: number) {
-        router.post(`/notifications/${id}/read`, {}, { preserveScroll: true });
+    function handleMarkRead(id: number, isRead: boolean) {
+        if (!isRead) {
+            router.post(`/notifications/${id}/read`, {}, { preserveScroll: true });
+        }
     }
 
     return (
@@ -97,19 +121,21 @@ export default function NotificationsIndex({ notifications, unread_count }: Prop
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {notifications.map(n => (
-                            <div
+                            <Link
                                 key={n.id}
-                                onClick={() => !n.is_read && markOneRead(n.id)}
+                                href={getNotificationLink(n)}
+                                onClick={() => handleMarkRead(n.id, n.is_read)}
                                 style={{
                                     display: 'flex', gap: 14, padding: '14px 16px',
-                                    borderRadius: 12, cursor: n.is_read ? 'default' : 'pointer',
+                                    borderRadius: 12, cursor: 'pointer',
                                     background: n.is_read ? '#faf6f0' : 'white',
                                     border: `1px solid ${n.is_read ? 'transparent' : '#e8d9c4'}`,
                                     borderLeft: n.is_read ? '3px solid transparent' : '3px solid #c4714a',
-                                    transition: 'background 0.15s',
+                                    textDecoration: 'none',
+                                    transition: 'background 0.15s, box-shadow 0.15s',
                                 }}
-                                onMouseEnter={e => { if (!n.is_read) e.currentTarget.style.background = '#fef8f5'; }}
-                                onMouseLeave={e => { if (!n.is_read) e.currentTarget.style.background = 'white'; }}
+                                onMouseEnter={e => { e.currentTarget.style.background = n.is_read ? '#f0e8df' : '#fef8f5'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = n.is_read ? '#faf6f0' : 'white'; e.currentTarget.style.boxShadow = 'none'; }}
                             >
                                 {/* Icon */}
                                 <div style={{
@@ -149,7 +175,7 @@ export default function NotificationsIndex({ notifications, unread_count }: Prop
                                         alignSelf: 'center',
                                     }} />
                                 )}
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 )}

@@ -42,12 +42,13 @@ class FollowController extends Controller
 
             // Notify the followed user
             Notification::create([
-                'user_id' => $following->id,
-                'type'    => 'new_follower',
-                'title'   => 'Nový sledovateľ',
-                'body'    => "{$follower->name} ťa začal sledovať.",
-                'data'    => ['actor_id' => $follower->id, 'actor_name' => $follower->name],
-                'is_read' => false,
+                'user_id'    => $following->id,
+                'type'       => 'new_follower',
+                'title'      => 'Nový sledovateľ',
+                'body'       => "{$follower->name} ťa začal sledovať.",
+                'data'       => ['actor_id' => $follower->id, 'actor_name' => $follower->name],
+                'related_id' => $follower->id,
+                'is_read'    => false,
             ]);
         }
 

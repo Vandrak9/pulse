@@ -20,6 +20,7 @@ class NotificationController extends Controller
                 'title'      => $n->title,
                 'body'       => $n->body,
                 'data'       => $n->data,
+                'related_id' => $n->related_id,
                 'is_read'    => $n->is_read,
                 'read_at'    => $n->read_at,
                 'created_at' => $n->created_at,

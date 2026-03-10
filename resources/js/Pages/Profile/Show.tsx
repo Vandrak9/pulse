@@ -75,6 +75,33 @@ interface CoachReview {
     user: { id: number; name: string; avatar_url: string | null };
 }
 
+interface Follower {
+    id: number;
+    name: string;
+    profile_avatar: string | null;
+    role: string;
+    followed_at: string;
+}
+
+interface CoachSubscriber {
+    id: number;
+    name: string;
+    profile_avatar: string | null;
+    subscribed_at: string;
+    monthly_price: number;
+}
+
+interface ActivityItem {
+    id: number;
+    type: string;
+    title: string;
+    body: string | null;
+    related_id: number | null;
+    is_read: boolean;
+    created_at: string;
+    time: string;
+}
+
 interface Props {
     profileUser: ProfileUser;
     isOwn: boolean;
@@ -89,11 +116,14 @@ interface Props {
     ownPosts: OwnPost[];
     coachReviews: CoachReview[];
     postsCount: number;
+    followers: Follower[];
+    subscribers: CoachSubscriber[];
+    recentActivity: ActivityItem[];
     flash?: { success?: string };
 }
 
 type FanTab   = 'predplatne' | 'sleduje' | 'lajky' | 'nastavenia';
-type CoachTab = 'prehlad' | 'obsah' | 'recenzie' | 'nastavenia';
+type CoachTab = 'prehlad' | 'obsah' | 'recenzie' | 'sledovatelia' | 'predplatitelia' | 'nastavenia';
 
 // ── Stars helper ───────────────────────────────────────────────────────────────
 
@@ -216,6 +246,9 @@ export default function ProfileShow({
     ownPosts: initOwnPosts,
     coachReviews,
     postsCount,
+    followers = [],
+    subscribers = [],
+    recentActivity = [],
     flash,
 }: Props) {
     const { auth } = usePage().props as { auth: { user: { id: number; name: string } | null } };
@@ -343,6 +376,25 @@ export default function ProfileShow({
     }
 
     const isCoachFollowed = (userId: number) => followingState[userId] !== false;
+
+    // ── Notification link helper ────────────────────────────────────────────────
+    function getNotificationLink(item: ActivityItem): string {
+        switch (item.type) {
+            case 'new_message':   return item.related_id ? `/messages/${item.related_id}` : '/messages';
+            case 'new_subscriber': return '/profile/me';
+            case 'new_follower':  return item.related_id ? `/profile/${item.related_id}` : '/notifications';
+            case 'new_like':
+            case 'new_post':
+            case 'new_reel':      return '/feed';
+            case 'new_review':    return item.related_id ? `/coaches/${item.related_id}` : '/notifications';
+            default:              return '/notifications';
+        }
+    }
+
+    const ACTIVITY_ICONS: Record<string, string> = {
+        new_subscriber: '🎉', new_message: '💬', new_like: '❤️',
+        new_post: '📸', new_reel: '⚡', new_review: '⭐', new_follower: '🔔',
+    };
 
     // ── Profile completeness (coach only) ─────────────────────────────────────
 
@@ -602,10 +654,12 @@ export default function ProfileShow({
                             {/* Tab bar */}
                             <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e8d9c4', marginBottom: 20, overflowX: 'auto' }}>
                                 {([
-                                    { key: 'prehlad',    label: '📊 Prehľad' },
-                                    { key: 'obsah',      label: '📝 Môj obsah' },
-                                    { key: 'recenzie',   label: `⭐ Recenzie (${coachReviews.length})` },
-                                    { key: 'nastavenia', label: '⚙️ Nastavenia' },
+                                    { key: 'prehlad',        label: '📊 Prehľad' },
+                                    { key: 'obsah',          label: '📝 Môj obsah' },
+                                    { key: 'sledovatelia',   label: `👥 Sledovatelia (${followers.length})` },
+                                    { key: 'predplatitelia', label: `💳 Predplatitelia (${subscribers.length})` },
+                                    { key: 'recenzie',       label: `⭐ Recenzie (${coachReviews.length})` },
+                                    { key: 'nastavenia',     label: '⚙️ Nastavenia' },
                                 ] as { key: CoachTab; label: string }[]).map(t => (
                                     <button
                                         key={t.key}
@@ -685,6 +739,48 @@ export default function ProfileShow({
                                                         </div>
                                                         {r.content && <p style={{ fontSize: 13, color: '#2d2118', margin: 0, lineHeight: 1.5 }}>{r.content}</p>}
                                                     </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Recent activity (clickable) */}
+                                    {recentActivity.length > 0 && (
+                                        <div>
+                                            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', margin: '0 0 10px' }}>Posledná aktivita</h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                {recentActivity.map(activity => (
+                                                    <Link
+                                                        key={activity.id}
+                                                        href={getNotificationLink(activity)}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: 10,
+                                                            padding: '10px 12px', borderRadius: 10,
+                                                            background: activity.is_read ? 'white' : '#fef8f5',
+                                                            border: `1px solid ${activity.is_read ? '#e8d9c4' : '#fce8de'}`,
+                                                            textDecoration: 'none', transition: 'background 0.15s',
+                                                        }}
+                                                        onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                                        onMouseLeave={e => (e.currentTarget.style.background = activity.is_read ? 'white' : '#fef8f5')}
+                                                    >
+                                                        <div style={{
+                                                            width: 32, height: 32, borderRadius: '50%',
+                                                            background: '#fce8de', display: 'flex',
+                                                            alignItems: 'center', justifyContent: 'center',
+                                                            fontSize: 14, flexShrink: 0,
+                                                        }}>
+                                                            {ACTIVITY_ICONS[activity.type] ?? '🔔'}
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <p style={{ fontSize: 13, color: '#2d2118', margin: 0, fontWeight: activity.is_read ? 400 : 600 }} className="truncate">
+                                                                {activity.body ?? activity.title}
+                                                            </p>
+                                                            <p style={{ fontSize: 11, color: '#9a8a7a', margin: '2px 0 0' }}>{activity.time}</p>
+                                                        </div>
+                                                        {!activity.is_read && (
+                                                            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#c4714a', flexShrink: 0 }} />
+                                                        )}
+                                                    </Link>
                                                 ))}
                                             </div>
                                         </div>
@@ -776,6 +872,112 @@ export default function ProfileShow({
                                                     </div>
                                                 </div>
                                             ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ── SLEDOVATELIA tab ── */}
+                            {coachTab === 'sledovatelia' && (
+                                <div>
+                                    {followers.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '60px 0', color: '#9a8a7a' }}>
+                                            <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+                                            <p style={{ fontSize: 14 }}>Zatiaľ žiadni sledovatelia</p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            {followers.map(follower => (
+                                                <Link
+                                                    key={follower.id}
+                                                    href={`/profile/${follower.id}`}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: 12,
+                                                        padding: '12px 14px', borderRadius: 14,
+                                                        background: 'white', border: '1px solid #e8d9c4',
+                                                        textDecoration: 'none', transition: 'background 0.15s',
+                                                    }}
+                                                    onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                                                >
+                                                    <Avatar src={follower.profile_avatar} name={follower.name} size={44} />
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <p style={{ fontSize: 14, fontWeight: 600, color: '#2d2118', margin: 0 }}>
+                                                            {follower.name}
+                                                        </p>
+                                                        <p style={{ fontSize: 12, color: '#9a8a7a', margin: '2px 0 0' }}>
+                                                            Sleduje od {new Date(follower.followed_at).toLocaleDateString('sk-SK', { month: 'long', year: 'numeric' })}
+                                                        </p>
+                                                    </div>
+                                                    <span style={{
+                                                        fontSize: 11, padding: '3px 10px', borderRadius: 999,
+                                                        background: follower.role === 'coach' ? '#fce8de' : '#e8f4ec',
+                                                        color: follower.role === 'coach' ? '#c4714a' : '#4a7c59',
+                                                        fontWeight: 600, flexShrink: 0,
+                                                    }}>
+                                                        {follower.role === 'coach' ? '💪 Kouč' : '👤 Člen'}
+                                                    </span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ── PREDPLATITELIA tab ── */}
+                            {coachTab === 'predplatitelia' && (
+                                <div>
+                                    {subscribers.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '60px 0', color: '#9a8a7a' }}>
+                                            <div style={{ fontSize: 48, marginBottom: 12 }}>💳</div>
+                                            <p style={{ fontSize: 14, margin: '0 0 8px' }}>Zatiaľ žiadni predplatitelia</p>
+                                            <p style={{ fontSize: 13, color: '#b0a090', margin: 0 }}>
+                                                Zdieľaj svoj profil aby si získal prvých predplatiteľov
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            {subscribers.map(sub => (
+                                                <Link
+                                                    key={sub.id}
+                                                    href={`/profile/${sub.id}`}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: 12,
+                                                        padding: '12px 14px', borderRadius: 14,
+                                                        background: 'white', border: '1px solid #e8d9c4',
+                                                        textDecoration: 'none', transition: 'background 0.15s',
+                                                    }}
+                                                    onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                                                >
+                                                    <Avatar src={sub.profile_avatar} name={sub.name} size={44} />
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <p style={{ fontSize: 14, fontWeight: 600, color: '#2d2118', margin: 0 }}>
+                                                            {sub.name}
+                                                        </p>
+                                                        <p style={{ fontSize: 12, color: '#9a8a7a', margin: '2px 0 0' }}>
+                                                            Predplatiteľ od {new Date(sub.subscribed_at).toLocaleDateString('sk-SK', { month: 'long', year: 'numeric' })}
+                                                        </p>
+                                                    </div>
+                                                    <span style={{
+                                                        fontSize: 12, fontWeight: 700, padding: '3px 10px',
+                                                        borderRadius: 999, background: '#e8f4ec', color: '#4a7c59',
+                                                        flexShrink: 0,
+                                                    }}>
+                                                        €{sub.monthly_price.toFixed(2)}/mes
+                                                    </span>
+                                                </Link>
+                                            ))}
+                                            {/* Revenue summary */}
+                                            <div style={{ marginTop: 8, padding: '12px 16px', background: '#faf6f0', borderRadius: 14, textAlign: 'center' }}>
+                                                <p style={{ fontSize: 14, color: '#5a4a3a', margin: 0 }}>
+                                                    Celkový mesačný príjem:{' '}
+                                                    <span style={{ fontWeight: 700, color: '#c4714a' }}>
+                                                        €{subscribers.reduce((sum, s) => sum + s.monthly_price * 0.85, 0).toFixed(2)}
+                                                    </span>
+                                                    <span style={{ fontSize: 12, color: '#9a8a7a', marginLeft: 4 }}>(po 15% provízii)</span>
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

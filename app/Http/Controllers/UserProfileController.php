@@ -144,10 +144,13 @@ class UserProfileController extends Controller
                 : null);
 
         // ── Coach-specific data (own coach profile only) ───────────────────────
-        $ownPosts    = [];
-        $coachReviews = [];
-        $postsCount  = 0;
-        $coach       = $profileUser->coach;
+        $ownPosts      = [];
+        $coachReviews  = [];
+        $postsCount    = 0;
+        $followers     = [];
+        $subscribers   = [];
+        $recentActivity = [];
+        $coach         = $profileUser->coach;
 
         if ($isOwn && $profileUser->role === 'coach' && $coach) {
             $postsCount = Post::where('coach_id', $coach->id)->count();
@@ -188,6 +191,54 @@ class UserProfileController extends Controller
                             : null,
                     ],
                 ]);
+
+            // Followers list (users following this coach)
+            $followers = DB::table('follows')
+                ->where('following_id', $profileUser->id)
+                ->join('users', 'users.id', '=', 'follows.follower_id')
+                ->select('users.id', 'users.name', 'users.profile_avatar', 'users.role', 'follows.created_at as followed_at')
+                ->orderBy('follows.created_at', 'desc')
+                ->get()
+                ->map(fn ($u) => [
+                    'id'           => $u->id,
+                    'name'         => $u->name,
+                    'profile_avatar' => $u->profile_avatar ? Storage::url($u->profile_avatar) : null,
+                    'role'         => $u->role,
+                    'followed_at'  => $u->followed_at,
+                ]);
+
+            // Subscribers list (active subscriptions to this coach)
+            $subscribers = DB::table('subscriptions')
+                ->where('coach_id', $coach->id)
+                ->where('stripe_status', 'active')
+                ->join('users', 'users.id', '=', 'subscriptions.user_id')
+                ->select('users.id', 'users.name', 'users.profile_avatar', 'subscriptions.created_at as subscribed_at', 'subscriptions.stripe_price')
+                ->orderBy('subscriptions.created_at', 'desc')
+                ->get()
+                ->map(fn ($s) => [
+                    'id'             => $s->id,
+                    'name'           => $s->name,
+                    'profile_avatar' => $s->profile_avatar ? Storage::url($s->profile_avatar) : null,
+                    'subscribed_at'  => $s->subscribed_at,
+                    'monthly_price'  => (float) $coach->monthly_price,
+                ]);
+
+            // Recent activity (last 5 notifications for this coach)
+            $recentActivity = DB::table('notifications')
+                ->where('user_id', $profileUser->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(fn ($n) => [
+                    'id'         => $n->id,
+                    'type'       => $n->type,
+                    'title'      => $n->title,
+                    'body'       => $n->body,
+                    'related_id' => $n->related_id,
+                    'is_read'    => (bool) $n->is_read,
+                    'created_at' => $n->created_at,
+                    'time'       => \Carbon\Carbon::parse($n->created_at)->diffForHumans(),
+                ]);
         }
 
         return Inertia::render('Profile/Show', [
@@ -227,6 +278,9 @@ class UserProfileController extends Controller
             'ownPosts'           => $ownPosts,
             'coachReviews'       => $coachReviews,
             'postsCount'         => $postsCount,
+            'followers'          => $followers,
+            'subscribers'        => $subscribers,
+            'recentActivity'     => $recentActivity,
         ]);
     }
 

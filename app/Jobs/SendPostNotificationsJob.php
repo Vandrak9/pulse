@@ -73,13 +73,14 @@ class SendPostNotificationsJob implements ShouldQueue
         $data = json_encode(['post_id' => $post->id, 'coach_id' => $coach->id]);
 
         // Batch insert in chunks to avoid oversized queries
-        collect($userIds)->chunk(50)->each(function ($chunk) use ($title, $body, $data, $now) {
+        collect($userIds)->chunk(50)->each(function ($chunk) use ($title, $body, $data, $now, $post) {
             $rows = $chunk->map(fn ($uid) => [
                 'user_id'    => $uid,
                 'type'       => $this->type,
                 'title'      => $title,
                 'body'       => $body,
                 'data'       => $data,
+                'related_id' => $post->id,
                 'is_read'    => false,
                 'read_at'    => null,
                 'created_at' => $now,

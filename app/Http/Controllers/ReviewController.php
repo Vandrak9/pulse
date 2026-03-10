@@ -62,6 +62,7 @@ class ReviewController extends Controller
                     'title'      => $user->name . ' ti zanechal hodnotenie ' . $stars,
                     'body'       => $user->name . ' (' . $review->rating . '★)' . $preview,
                     'data'       => json_encode(['fan_name' => $user->name, 'rating' => $review->rating]),
+                    'related_id' => $coach->id,
                     'is_read'    => false,
                     'created_at' => now(),
                     'updated_at' => now(),
