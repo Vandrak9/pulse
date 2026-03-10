@@ -16,6 +16,7 @@ class LiveStream extends Model
         'rtmp_url',
         'status',
         'access',
+        'method',
         'title',
         'description',
         'started_at',

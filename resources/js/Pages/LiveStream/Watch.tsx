@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import MuxPlayer from '@mux/mux-player-react';
 import { useState, useEffect, useRef, FormEventHandler } from 'react';
 import axios from 'axios';
 import { Send, Users, Lock, Globe, Radio } from 'lucide-react';
@@ -49,27 +50,14 @@ export default function Watch({ stream: initialStream, coach, messages: initialM
     const [viewersCount, setViewersCount] = useState(initialStream.viewers_count);
     const chatBottomRef = useRef<HTMLDivElement>(null);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const playerMounted = useRef(false);
 
-    // Load Mux player
-    useEffect(() => {
-        if (playerMounted.current || !initialStream.playback_id) return;
-        playerMounted.current = true;
-
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@mux/mux-player';
-        script.type = 'module';
-        document.head.appendChild(script);
-    }, []);
-
-    // Poll for new messages + status
+    // Poll for new messages + status every 3s
     useEffect(() => {
         if (streamEnded) return;
 
         pollRef.current = setInterval(async () => {
             try {
                 const res = await axios.get(`/live/${initialStream.id}/poll?last_message_id=${lastMsgId}`);
-
                 setStreamStatus(res.data.status);
                 setViewersCount(res.data.viewers_count);
 
@@ -85,9 +73,7 @@ export default function Watch({ stream: initialStream, coach, messages: initialM
             } catch { /* silent */ }
         }, 3000);
 
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current);
-        };
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
     }, [lastMsgId, streamEnded]);
 
     // Scroll chat to bottom on new message
@@ -102,7 +88,6 @@ export default function Watch({ stream: initialStream, coach, messages: initialM
 
         setSending(true);
         setChatInput('');
-
         try {
             const res = await axios.post(`/live/${initialStream.id}/message`, { message: text });
             setMessages(prev => [...prev, res.data]);
@@ -119,13 +104,13 @@ export default function Watch({ stream: initialStream, coach, messages: initialM
             <Head title={`${coach.name} — LIVE`} />
 
             <div className="min-h-screen flex flex-col" style={{ background: '#111' }}>
+
                 {/* Top bar */}
-                <div className="flex items-center gap-3 px-4 py-3" style={{ background: '#1a1a1a', borderBottom: '1px solid #2a2a2a' }}>
-                    {/* Coach avatar */}
+                <div className="flex items-center gap-3 px-4 py-3 shrink-0"
+                    style={{ background: '#1a1a1a', borderBottom: '1px solid #2a2a2a' }}>
                     <a href={`/coaches/${coach.id}`} className="flex items-center gap-2.5">
                         {coach.avatar_url ? (
-                            <img src={coach.avatar_url} alt={coach.name}
-                                className="w-8 h-8 rounded-full object-cover" />
+                            <img src={coach.avatar_url} alt={coach.name} className="w-8 h-8 rounded-full object-cover" />
                         ) : (
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
                                 style={{ background: '#c4714a' }}>
@@ -140,38 +125,33 @@ export default function Watch({ stream: initialStream, coach, messages: initialM
                         </div>
                     </a>
 
-                    <div className="ml-2 flex items-center gap-2">
+                    <div className="ml-2">
                         {streamStatus === 'active' ? (
                             <span className="flex items-center gap-1.5 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">
-                                <span className="w-1.5 h-1.5 bg-white rounded-full" />
-                                LIVE
+                                <span className="w-1.5 h-1.5 bg-white rounded-full" />LIVE
                             </span>
                         ) : streamStatus === 'idle' ? (
                             <span className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
                                 style={{ background: '#2a2a2a', color: '#9a8a7a' }}>
-                                <Radio size={12} />
-                                Čaká na stream...
+                                <Radio size={12} />Čaká na stream...
                             </span>
                         ) : null}
                     </div>
 
                     <div className="ml-auto flex items-center gap-3 text-xs" style={{ color: '#9a8a7a' }}>
-                        <span className="flex items-center gap-1">
-                            <Users size={13} />
-                            {viewersCount}
-                        </span>
+                        <span className="flex items-center gap-1"><Users size={13} />{viewersCount}</span>
                         <span className="flex items-center gap-1">
                             {initialStream.access === 'subscribers' ? <Lock size={13} /> : <Globe size={13} />}
                         </span>
                     </div>
                 </div>
 
-                {/* Main content */}
+                {/* Main */}
                 <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
+
                     {/* Video area */}
                     <div className="lg:flex-1 flex flex-col">
-                        {/* Player */}
-                        <div className="w-full" style={{ aspectRatio: '16/9', background: '#000' }}>
+                        <div className="w-full bg-black" style={{ aspectRatio: '16/9' }}>
                             {streamEnded ? (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-center px-6">
                                     <div className="text-4xl mb-3">👋</div>
@@ -190,42 +170,39 @@ export default function Watch({ stream: initialStream, coach, messages: initialM
                                     <p className="text-sm" style={{ color: '#9a8a7a' }}>Kouč čoskoro začne streamovať.</p>
                                 </div>
                             ) : initialStream.playback_id ? (
-                                <div
-                                    dangerouslySetInnerHTML={{
-                                        __html: `<mux-player
-                                            stream-type="live"
-                                            playback-id="${initialStream.playback_id}"
-                                            metadata-video-title="${initialStream.title}"
-                                            autoplay
-                                            muted
-                                            style="width:100%;height:100%;"
-                                        ></mux-player>`
-                                    }}
-                                    style={{ width: '100%', height: '100%' }}
+                                <MuxPlayer
+                                    streamType="live"
+                                    playbackId={initialStream.playback_id}
+                                    metadataVideoTitle={initialStream.title}
+                                    autoPlay
+                                    muted
+                                    className="w-full"
                                 />
                             ) : null}
                         </div>
 
-                        {/* Stream info */}
-                        <div className="px-4 py-4 hidden lg:block" style={{ background: '#1a1a1a' }}>
-                            <h1 className="text-white font-semibold text-lg">{initialStream.title}</h1>
+                        {/* Stream info (desktop) */}
+                        <div className="px-4 py-3 hidden lg:block" style={{ background: '#1a1a1a' }}>
+                            <h1 className="text-white font-semibold">{initialStream.title}</h1>
                             {initialStream.description && (
                                 <p className="text-sm mt-1" style={{ color: '#9a8a7a' }}>{initialStream.description}</p>
                             )}
                         </div>
                     </div>
 
-                    {/* Chat panel */}
-                    <div className="flex flex-col lg:w-80 xl:w-96" style={{ background: '#1a1a1a', borderLeft: '1px solid #2a2a2a' }}>
-                        {/* Chat header */}
-                        <div className="px-4 py-3 font-semibold text-sm text-white border-b" style={{ borderColor: '#2a2a2a' }}>
+                    {/* Chat */}
+                    <div className="flex flex-col lg:w-80 xl:w-96 border-l"
+                        style={{ background: '#1a1a1a', borderColor: '#2a2a2a' }}>
+
+                        <div className="px-4 py-3 font-semibold text-sm text-white border-b shrink-0"
+                            style={{ borderColor: '#2a2a2a' }}>
                             💬 Live chat
                         </div>
 
-                        {/* Messages */}
-                        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3" style={{ maxHeight: '400px' }}>
+                        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3"
+                            style={{ minHeight: 0 }}>
                             {messages.length === 0 && (
-                                <p className="text-xs text-center py-4" style={{ color: '#666' }}>
+                                <p className="text-xs text-center py-4" style={{ color: '#555' }}>
                                     Zatiaľ žiadne správy. Buď prvý!
                                 </p>
                             )}
@@ -240,26 +217,26 @@ export default function Watch({ stream: initialStream, coach, messages: initialM
                                             {getInitials(msg.user.name)}
                                         </div>
                                     )}
-                                    <div>
+                                    <div className="min-w-0">
                                         <span className="text-xs font-semibold mr-1.5"
                                             style={{ color: msg.user.role === 'coach' ? '#c4714a' : '#aaa' }}>
                                             {msg.user.name}
                                             {msg.user.role === 'coach' && (
-                                                <span className="ml-1 text-xs px-1 py-0.5 rounded text-white"
+                                                <span className="ml-1 text-white rounded px-1 py-0.5"
                                                     style={{ background: '#c4714a', fontSize: '10px' }}>
                                                     Kouč
                                                 </span>
                                             )}
                                         </span>
-                                        <span className="text-sm" style={{ color: '#ddd' }}>{msg.message}</span>
+                                        <span className="text-sm break-words" style={{ color: '#ddd' }}>{msg.message}</span>
                                     </div>
                                 </div>
                             ))}
                             <div ref={chatBottomRef} />
                         </div>
 
-                        {/* Chat input */}
-                        <form onSubmit={sendMessage} className="flex items-center gap-2 px-3 py-3 border-t"
+                        <form onSubmit={sendMessage}
+                            className="flex items-center gap-2 px-3 py-3 border-t shrink-0"
                             style={{ borderColor: '#2a2a2a' }}>
                             <input
                                 type="text"
@@ -271,12 +248,10 @@ export default function Watch({ stream: initialStream, coach, messages: initialM
                                 className="flex-1 text-sm rounded-xl px-3 py-2 outline-none"
                                 style={{ background: '#2a2a2a', color: '#eee', border: '1px solid #3a3a3a' }}
                             />
-                            <button
-                                type="submit"
+                            <button type="submit"
                                 disabled={!chatInput.trim() || sending || streamEnded}
                                 className="p-2 rounded-xl transition disabled:opacity-40"
-                                style={{ background: '#c4714a' }}
-                            >
+                                style={{ background: '#c4714a' }}>
                                 <Send size={16} className="text-white" />
                             </button>
                         </form>

@@ -1010,3 +1010,36 @@ DELETE /coaches/{coachId}/reviews  → auth
 ### Notifications on stream start
 - `notifyViewers()` inserts batch notifications to followers (everyone) or subscribers (subscribers)
 - Type: `live_stream`, related_id = stream.id
+- [2026-03-10 12:30:45] 58f7a11: feat: Mux live streaming — coach dashboard, viewer page, live chat
+
+---
+
+## Session 22 — 2026-03-10 — Browser WebRTC streaming + 500 fix
+
+### Bug fix: 500 on stream create
+- `CreatePlaybackIdRequest` → správne `CreatePlaybackIDRequest` (veľké ID)
+- Mux PHP SDK v5.x používa `CreatePlaybackIDRequest` nie `CreatePlaybackIdRequest`
+
+### Browser streaming (WebRTC / WHIP protocol)
+- Coach môže streamovať priamo z prehliadača (getUserMedia + RTCPeerConnection)
+- WHIP endpoint: `https://global-live.mux.com:443/app/{stream_key}` — POST SDP offer
+- `getWebRtcConfig($streamId)` → vráti `whip_endpoint` (len pre vlastníka streamu)
+- Route: `GET /dashboard/live/{streamId}/webrtc-config`
+
+### method column na live_streams
+- `method` enum: `browser` | `obs`, default `obs`
+- Uložené pri vytváraní streamu, zobrazuje správne UI sekciu
+
+### Dashboard/LiveStream.tsx — kompletný rewrite
+- **Create form**: title + desc + access selector + method selector (browser vs OBS)
+- **Browser view**: camera preview (video element), mic/cam toggles, Spustiť/Ukončiť
+- **OBS view**: RTMP URL + stream key display + inštrukcie + Ukončiť
+- WebRTC flow: getUserMedia → RTCPeerConnection → createOffer → ICE gather (3s timeout) → POST SDP na WHIP endpoint → setRemoteDescription
+
+### Watch.tsx — player upgrade
+- `@mux/mux-player-react` npm balík namiesto CDN script tagu
+- `<MuxPlayer streamType="live" playbackId={...} autoPlay muted />`
+- Robustnejší, bez hydration issues
+
+### npm packages added
+- `@mux/mux-player-react` — HLS live stream player

@@ -5,7 +5,7 @@ namespace App\Services;
 use MuxPhp\Api\LiveStreamsApi;
 use MuxPhp\Configuration;
 use MuxPhp\Models\CreateLiveStreamRequest;
-use MuxPhp\Models\CreatePlaybackIdRequest;
+use MuxPhp\Models\CreatePlaybackIDRequest;
 
 class MuxService
 {
@@ -35,7 +35,7 @@ class MuxService
 
         $stream = $this->liveStreamsApi->createLiveStream($request);
 
-        $playbackRequest = new CreatePlaybackIdRequest([
+        $playbackRequest = new CreatePlaybackIDRequest([
             'policy' => 'public',
         ]);
 

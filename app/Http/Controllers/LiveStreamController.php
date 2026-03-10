@@ -30,16 +30,17 @@ class LiveStreamController extends Controller
 
         return Inertia::render('Dashboard/LiveStream', [
             'activeStream' => $activeStream ? [
-                'id'                  => $activeStream->id,
-                'title'               => $activeStream->title,
-                'description'         => $activeStream->description,
-                'status'              => $activeStream->status,
-                'access'              => $activeStream->access,
-                'rtmp_url'            => $activeStream->rtmp_url,
-                'stream_key'          => $activeStream->stream_key,
-                'mux_playback_id'     => $activeStream->mux_playback_id,
-                'started_at'          => $activeStream->started_at?->toISOString(),
-                'viewers_count'       => $activeStream->viewers_count,
+                'id'              => $activeStream->id,
+                'title'           => $activeStream->title,
+                'description'     => $activeStream->description,
+                'status'          => $activeStream->status,
+                'access'          => $activeStream->access,
+                'method'          => $activeStream->method,
+                'rtmp_url'        => $activeStream->rtmp_url,
+                'stream_key'      => $activeStream->stream_key,
+                'mux_playback_id' => $activeStream->mux_playback_id,
+                'started_at'      => $activeStream->started_at?->toISOString(),
+                'viewers_count'   => $activeStream->viewers_count,
             ] : null,
             'coach' => [
                 'id'             => $coach->id,
@@ -55,6 +56,7 @@ class LiveStreamController extends Controller
             'title'       => 'required|string|max:200',
             'description' => 'nullable|string|max:500',
             'access'      => 'required|in:everyone,subscribers',
+            'method'      => 'required|in:browser,obs',
         ]);
 
         $coach = auth()->user()->coach;
@@ -75,14 +77,18 @@ class LiveStreamController extends Controller
                 'title'       => $validated['title'],
                 'description' => $validated['description'],
                 'access'      => $validated['access'],
+                'method'      => $validated['method'],
                 'status'      => 'idle',
                 ...$streamData,
             ]);
 
             $this->notifyViewers($stream, $coach);
 
-            return redirect()->route('live.index')
-                ->with('success', 'Stream vytvorený! Použi RTMP URL a Stream Key v OBS alebo Larix.');
+            $msg = $validated['method'] === 'browser'
+                ? 'Stream vytvorený! Spusti kameru a začni streamovať.'
+                : 'Stream vytvorený! Použi RTMP URL a Stream Key v OBS alebo Larix.';
+
+            return redirect()->route('live.index')->with('success', $msg);
 
         } catch (\Exception $e) {
             Log::error('Mux create stream error: ' . $e->getMessage());
@@ -287,6 +293,22 @@ class LiveStreamController extends Controller
             'status'        => $stream->status,
             'viewers_count' => $stream->viewers_count,
             'messages'      => $messages,
+        ]);
+    }
+
+    // Coach: get WebRTC/WHIP config for browser streaming
+    public function getWebRtcConfig($streamId)
+    {
+        $stream = LiveStream::findOrFail($streamId);
+
+        if ($stream->coach->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return response()->json([
+            'stream_key'    => $stream->stream_key,
+            'mux_stream_id' => $stream->mux_live_stream_id,
+            'whip_endpoint' => 'https://global-live.mux.com:443/app/' . $stream->stream_key,
         ]);
     }
 
