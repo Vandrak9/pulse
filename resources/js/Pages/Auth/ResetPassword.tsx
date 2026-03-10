@@ -22,7 +22,6 @@ export default function ResetPassword({
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-
         post(route('password.store'), {
             onFinish: () => reset('password', 'password_confirmation'),
         });
@@ -30,7 +29,7 @@ export default function ResetPassword({
 
     return (
         <GuestLayout>
-            <Head title="Reset Password" />
+            <Head title="Obnoviť heslo" />
 
             <form onSubmit={submit}>
                 <div>
@@ -50,7 +49,7 @@ export default function ResetPassword({
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
+                    <InputLabel htmlFor="password" value="Nové heslo" />
 
                     <TextInput
                         id="password"
@@ -69,7 +68,7 @@ export default function ResetPassword({
                 <div className="mt-4">
                     <InputLabel
                         htmlFor="password_confirmation"
-                        value="Confirm Password"
+                        value="Potvrď nové heslo"
                     />
 
                     <TextInput
@@ -91,7 +90,7 @@ export default function ResetPassword({
 
                 <div className="mt-4 flex items-center justify-end">
                     <PrimaryButton className="ms-4" disabled={processing}>
-                        Reset Password
+                        {processing ? 'Ukladám...' : 'Obnoviť heslo'}
                     </PrimaryButton>
                 </div>
             </form>

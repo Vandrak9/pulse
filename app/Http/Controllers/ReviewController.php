@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Coach;
 use App\Models\Review;
+use App\Services\EmailNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -50,7 +51,19 @@ class ReviewController extends Controller
 
         [$avg, $count] = $this->recalculate($coachId);
 
-        // Notify coach (only on new review, not edit)
+        // Email + DB notification for coach (only on new review, not edit)
+        if ($review->wasRecentlyCreated) {
+            app(EmailNotificationService::class)->send(
+                $coach->user,
+                'new_review',
+                [
+                    'name'     => $user->name,
+                    'rating'   => $validated['rating'],
+                    'coach_id' => $coach->id,
+                ]
+            );
+        }
+
         if ($review->wasRecentlyCreated) {
             $stars   = str_repeat('★', $review->rating) . str_repeat('☆', 5 - $review->rating);
             $preview = $review->content ? ' — "' . mb_substr($review->content, 0, 80) . '"' : '';

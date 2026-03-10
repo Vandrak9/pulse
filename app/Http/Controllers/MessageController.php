@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NotificationMail;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\EmailNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -229,6 +232,17 @@ class MessageController extends Controller
             'is_broadcast'    => false,
             'created_at'      => now(),
         ]);
+
+        // Send email notification to receiver
+        app(EmailNotificationService::class)->send(
+            $receiver,
+            'new_message',
+            [
+                'name'      => $user->name,
+                'preview'   => $content ?: '📎 Médiá',
+                'sender_id' => $user->id,
+            ]
+        );
 
         // Inertia text posts get a redirect; axios file uploads get JSON
         if ($request->header('X-Inertia') && !$request->hasFile('media')) {

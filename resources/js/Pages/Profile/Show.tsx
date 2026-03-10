@@ -27,6 +27,11 @@ interface ProfileUser {
     notif_new_message: boolean | null;
     notif_new_review: boolean | null;
     notif_new_like: boolean | null;
+    email_notif_new_subscriber: boolean | null;
+    email_notif_new_message: boolean | null;
+    email_notif_new_review: boolean | null;
+    email_notif_new_like: boolean | null;
+    email_notif_new_post: boolean | null;
 }
 
 interface FollowingUser {
@@ -297,6 +302,15 @@ export default function ProfileShow({
     const [notifLike, setNotifLike]             = useState(profileUser.notif_new_like ?? false);
     const [notifSaving, setNotifSaving]         = useState(false);
 
+    // Email notification preferences
+    const [emailPrefs, setEmailPrefs] = useState({
+        email_notif_new_subscriber: profileUser.email_notif_new_subscriber ?? true,
+        email_notif_new_message:    profileUser.email_notif_new_message ?? true,
+        email_notif_new_review:     profileUser.email_notif_new_review ?? true,
+        email_notif_new_like:       profileUser.email_notif_new_like ?? false,
+        email_notif_new_post:       profileUser.email_notif_new_post ?? true,
+    });
+
     // ── Handlers ────────────────────────────────────────────────────────────────
 
     async function handleFollow(e: React.MouseEvent) {
@@ -357,6 +371,17 @@ export default function ProfileShow({
             });
         } finally {
             setNotifSaving(false);
+        }
+    }
+
+    async function handleToggleEmailPref(key: string) {
+        const prev = emailPrefs[key as keyof typeof emailPrefs];
+        const next = !prev;
+        setEmailPrefs(p => ({ ...p, [key]: next }));
+        try {
+            await axios.post('/profile/update', { [key]: next ? 1 : 0 });
+        } catch {
+            setEmailPrefs(p => ({ ...p, [key]: prev }));
         }
     }
 
@@ -1042,14 +1067,14 @@ export default function ProfileShow({
                                         </div>
                                     </div>
 
-                                    {/* Notification preferences */}
+                                    {/* In-app notifications */}
                                     <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
-                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 4px' }}>Notifikácie</h3>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 4px' }}>🔔 Notifikácie v apke</h3>
                                         <p style={{ fontSize: 12, color: '#9a8a7a', margin: '0 0 14px' }}>Vyber, o čom chceš dostávať upozornenia</p>
-                                        <NotifToggle label="🔔 Nový predplatiteľ" checked={notifSubscriber} onChange={setNotifSubscriber} />
-                                        <NotifToggle label="🔔 Nová správa"       checked={notifMessage}    onChange={setNotifMessage} />
-                                        <NotifToggle label="🔔 Nové hodnotenie"   checked={notifReview}     onChange={setNotifReview} />
-                                        <NotifToggle label="🔔 Nový lajk"        checked={notifLike}       onChange={setNotifLike} />
+                                        <NotifToggle label="Nový predplatiteľ" checked={notifSubscriber} onChange={setNotifSubscriber} />
+                                        <NotifToggle label="Nová správa"       checked={notifMessage}    onChange={setNotifMessage} />
+                                        <NotifToggle label="Nové hodnotenie"   checked={notifReview}     onChange={setNotifReview} />
+                                        <NotifToggle label="Nový lajk"        checked={notifLike}       onChange={setNotifLike} />
                                         <button
                                             onClick={saveNotifPrefs}
                                             disabled={notifSaving}
@@ -1057,6 +1082,31 @@ export default function ProfileShow({
                                         >
                                             {notifSaving ? 'Ukladám...' : 'Uložiť'}
                                         </button>
+                                    </div>
+
+                                    {/* Email notifications */}
+                                    <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 4px' }}>📧 Emailové notifikácie</h3>
+                                        <p style={{ fontSize: 12, color: '#9a8a7a', margin: '0 0 14px' }}>Upozornenia posielané na tvoj email</p>
+                                        {([
+                                            { key: 'email_notif_new_subscriber', label: 'Nový predplatiteľ', desc: 'Keď sa niekto prihlási na tvoj odber' },
+                                            { key: 'email_notif_new_message',    label: 'Nová správa',       desc: 'Keď ti niekto pošle správu' },
+                                            { key: 'email_notif_new_review',     label: 'Nové hodnotenie',   desc: 'Keď ti niekto zanechá recenziu' },
+                                            { key: 'email_notif_new_like',       label: 'Lajky',             desc: 'Keď niekto lajkne tvoj príspevok' },
+                                        ] as { key: keyof typeof emailPrefs; label: string; desc: string }[]).map(pref => (
+                                            <div key={pref.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f0e8df' }}>
+                                                <div>
+                                                    <p style={{ fontSize: 14, color: '#2d2118', margin: 0, fontWeight: 500 }}>{pref.label}</p>
+                                                    <p style={{ fontSize: 11, color: '#9a8a7a', margin: '2px 0 0' }}>{pref.desc}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleToggleEmailPref(pref.key)}
+                                                    style={{ width: 44, height: 24, borderRadius: 999, border: 'none', background: emailPrefs[pref.key] ? '#c4714a' : '#e8d9c4', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                                                >
+                                                    <div style={{ position: 'absolute', top: 3, left: emailPrefs[pref.key] ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     {/* Danger zone */}
@@ -1266,13 +1316,37 @@ export default function ProfileShow({
 
                                     {/* Notification prefs for fans */}
                                     <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
-                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 4px' }}>Notifikácie</h3>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 4px' }}>🔔 Notifikácie v apke</h3>
                                         <p style={{ fontSize: 12, color: '#9a8a7a', margin: '0 0 14px' }}>Upozornenia</p>
-                                        <NotifToggle label="🔔 Nová správa" checked={notifMessage} onChange={setNotifMessage} />
-                                        <NotifToggle label="🔔 Nový lajk"   checked={notifLike}    onChange={setNotifLike} />
+                                        <NotifToggle label="Nová správa" checked={notifMessage} onChange={setNotifMessage} />
+                                        <NotifToggle label="Nový lajk"   checked={notifLike}    onChange={setNotifLike} />
                                         <button onClick={saveNotifPrefs} disabled={notifSaving} style={{ marginTop: 14, padding: '9px 22px', borderRadius: 999, border: 'none', background: '#c4714a', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                                             {notifSaving ? 'Ukladám...' : 'Uložiť'}
                                         </button>
+                                    </div>
+
+                                    {/* Email notifications for fans */}
+                                    <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e8d9c4' }}>
+                                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d2118', margin: '0 0 4px' }}>📧 Emailové notifikácie</h3>
+                                        <p style={{ fontSize: 12, color: '#9a8a7a', margin: '0 0 14px' }}>Upozornenia posielané na tvoj email</p>
+                                        {([
+                                            { key: 'email_notif_new_message', label: 'Nová správa',     desc: 'Keď ti niekto pošle správu' },
+                                            { key: 'email_notif_new_post',    label: 'Nový obsah',      desc: 'Keď kouč ktorého sleduješ pridá príspevok' },
+                                            { key: 'email_notif_new_like',    label: 'Lajky',           desc: 'Keď niekto lajkne tvoj príspevok' },
+                                        ] as { key: keyof typeof emailPrefs; label: string; desc: string }[]).map(pref => (
+                                            <div key={pref.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f0e8df' }}>
+                                                <div>
+                                                    <p style={{ fontSize: 14, color: '#2d2118', margin: 0, fontWeight: 500 }}>{pref.label}</p>
+                                                    <p style={{ fontSize: 11, color: '#9a8a7a', margin: '2px 0 0' }}>{pref.desc}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleToggleEmailPref(pref.key)}
+                                                    style={{ width: 44, height: 24, borderRadius: 999, border: 'none', background: emailPrefs[pref.key] ? '#c4714a' : '#e8d9c4', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                                                >
+                                                    <div style={{ position: 'absolute', top: 3, left: emailPrefs[pref.key] ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     <div style={{ background: '#fff5f5', borderRadius: 16, padding: 20, border: '1px solid #fecaca' }}>

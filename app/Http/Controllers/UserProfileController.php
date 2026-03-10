@@ -260,10 +260,15 @@ class UserProfileController extends Controller
                 'rating_count'          => (int) ($coach?->rating_count ?? 0),
                 'monthly_price'         => $coach ? (float) $coach->monthly_price : null,
                 // Notification prefs (own profile only)
-                'notif_new_subscriber'  => $isOwn ? (bool) $profileUser->notif_new_subscriber : null,
-                'notif_new_message'     => $isOwn ? (bool) $profileUser->notif_new_message : null,
-                'notif_new_review'      => $isOwn ? (bool) $profileUser->notif_new_review : null,
-                'notif_new_like'        => $isOwn ? (bool) $profileUser->notif_new_like : null,
+                'notif_new_subscriber'        => $isOwn ? (bool) $profileUser->notif_new_subscriber : null,
+                'notif_new_message'           => $isOwn ? (bool) $profileUser->notif_new_message : null,
+                'notif_new_review'            => $isOwn ? (bool) $profileUser->notif_new_review : null,
+                'notif_new_like'              => $isOwn ? (bool) $profileUser->notif_new_like : null,
+                'email_notif_new_subscriber'  => $isOwn ? (bool) $profileUser->email_notif_new_subscriber : null,
+                'email_notif_new_message'     => $isOwn ? (bool) $profileUser->email_notif_new_message : null,
+                'email_notif_new_review'      => $isOwn ? (bool) $profileUser->email_notif_new_review : null,
+                'email_notif_new_like'        => $isOwn ? (bool) $profileUser->email_notif_new_like : null,
+                'email_notif_new_post'        => $isOwn ? (bool) $profileUser->email_notif_new_post : null,
             ],
             'isOwn'              => $isOwn,
             'isFollowing'        => $isFollowing,
@@ -324,13 +329,18 @@ class UserProfileController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $request->validate([
-            'bio'                   => 'nullable|string|max:300',
-            'avatar'                => 'nullable|image|max:2048',
-            'is_public'             => 'boolean',
-            'notif_new_subscriber'  => 'boolean',
-            'notif_new_message'     => 'boolean',
-            'notif_new_review'      => 'boolean',
-            'notif_new_like'        => 'boolean',
+            'bio'                          => 'nullable|string|max:300',
+            'avatar'                       => 'nullable|image|max:2048',
+            'is_public'                    => 'boolean',
+            'notif_new_subscriber'         => 'boolean',
+            'notif_new_message'            => 'boolean',
+            'notif_new_review'             => 'boolean',
+            'notif_new_like'               => 'boolean',
+            'email_notif_new_subscriber'   => 'boolean',
+            'email_notif_new_message'      => 'boolean',
+            'email_notif_new_review'       => 'boolean',
+            'email_notif_new_like'         => 'boolean',
+            'email_notif_new_post'         => 'boolean',
         ]);
 
         $user = $request->user();
@@ -338,17 +348,15 @@ class UserProfileController extends Controller
         $user->profile_bio       = $request->input('bio');
         $user->profile_is_public = $request->boolean('is_public', true);
 
-        if ($request->has('notif_new_subscriber')) {
-            $user->notif_new_subscriber = $request->boolean('notif_new_subscriber');
-        }
-        if ($request->has('notif_new_message')) {
-            $user->notif_new_message = $request->boolean('notif_new_message');
-        }
-        if ($request->has('notif_new_review')) {
-            $user->notif_new_review = $request->boolean('notif_new_review');
-        }
-        if ($request->has('notif_new_like')) {
-            $user->notif_new_like = $request->boolean('notif_new_like');
+        $boolFields = [
+            'notif_new_subscriber', 'notif_new_message', 'notif_new_review', 'notif_new_like',
+            'email_notif_new_subscriber', 'email_notif_new_message', 'email_notif_new_review',
+            'email_notif_new_like', 'email_notif_new_post',
+        ];
+        foreach ($boolFields as $field) {
+            if ($request->has($field)) {
+                $user->$field = $request->boolean($field);
+            }
         }
 
         if ($request->hasFile('avatar')) {

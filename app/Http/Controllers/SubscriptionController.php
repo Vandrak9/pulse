@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coach;
+use App\Models\User;
+use App\Services\EmailNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -157,6 +159,13 @@ class SubscriptionController extends Controller
                             $coach->increment('subscriber_count');
                         }
                     }
+
+                    // Email notification to coach
+                    app(EmailNotificationService::class)->send(
+                        $coach->user,
+                        'new_subscriber',
+                        ['name' => $user->name]
+                    );
 
                     // Notify the coach (DB notification)
                     DB::table('notifications')->insert([

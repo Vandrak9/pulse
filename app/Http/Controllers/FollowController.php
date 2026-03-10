@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\EmailNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -50,6 +51,15 @@ class FollowController extends Controller
                 'related_id' => $follower->id,
                 'is_read'    => false,
             ]);
+
+            // Email notification for coaches who just gained a subscriber/follower
+            if ($following->role === 'coach') {
+                app(EmailNotificationService::class)->send(
+                    $following,
+                    'new_subscriber',
+                    ['name' => $follower->name]
+                );
+            }
         }
 
         $count = DB::table('follows')->where('following_id', $following->id)->count();

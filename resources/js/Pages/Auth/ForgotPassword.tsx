@@ -12,18 +12,16 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-
         post(route('password.email'));
     };
 
     return (
         <GuestLayout>
-            <Head title="Forgot Password" />
+            <Head title="Zabudnuté heslo" />
 
             <div className="mb-4 text-sm text-gray-600">
-                Forgot your password? No problem. Just let us know your email
-                address and we will email you a password reset link that will
-                allow you to choose a new one.
+                Zabudol si heslo? Žiadny problém. Zadaj svoju emailovú adresu
+                a pošleme ti odkaz na obnovenie hesla.
             </div>
 
             {status && (
@@ -40,6 +38,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     value={data.email}
                     className="mt-1 block w-full"
                     isFocused={true}
+                    placeholder="tvoj@email.sk"
                     onChange={(e) => setData('email', e.target.value)}
                 />
 
@@ -47,7 +46,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
                 <div className="mt-4 flex items-center justify-end">
                     <PrimaryButton className="ms-4" disabled={processing}>
-                        Email Password Reset Link
+                        {processing ? 'Odosiela sa...' : 'Odoslať odkaz na obnovenie'}
                     </PrimaryButton>
                 </div>
             </form>
