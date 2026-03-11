@@ -134,7 +134,7 @@ CVC:    123
 
 ---
 
-## Aktuálny stav (v1.2.0)
+## Aktuálny stav (v1.3.0)
 
 ### Funkčné features
 - ✅ Autentifikácia (fan/kouč roly)
@@ -148,7 +148,7 @@ CVC:    123
 - ✅ Stripe predplatné (test mód)
 - ✅ Hodnotenia a recenzie koučov
 - ✅ Tvorba obsahu (príspevky, reels)
-- ✅ Dashboard pre koučov (zárobky, predplatitelia)
+- ✅ Dashboard pre koučov (zárobky, predplatitelia, aktivita)
 - ✅ Coach profil — redesign (tabs: Prehľad / Môj obsah / Recenzie / Nastavenia)
 - ✅ Coach profil — zoznam sledovateľov a predplatiteľov
 - ✅ Profil completeness indikátor
@@ -156,11 +156,25 @@ CVC:    123
 - ✅ Zjednotená navigácia desktop + mobil (Lucide ikony, role-aware)
 - ✅ Obnovenie zabudnutého hesla cez email
 - ✅ Legal stránky (GDPR, VOP, Cookies)
+- ✅ **Komentáre s vláknovými odpoveďami**
+- ✅ **Post detail modal**
+- ✅ **Live streaming** (browser WebRTC → mediamtx → Mux)
+- ✅ **Live chat** (Laravel Reverb WebSockets)
 
-### Zmeny od v1.1.0
+### Zmeny v1.3.0
+- **Komentárový systém** — `PostComment` model + `CommentController`, `post_comments` tabuľka
+- **Vláknové odpovede** — `parent_id` stĺpec, flat threading (odpovede pod rodičovský komentár), odpovedať na komentár aj odpoveď
+- **Notifikácie na komentáre** — `new_comment` (kouč) + `new_reply` (autor komentára), in-app aj email; nové stĺpce prefs v `users`
+- **Post detail modal** — `PostDetailModal` komponent, otvára príspevok z dashboardu/feedu, plné média + komentáre bez redirectu
+- **Zdieľaný `CommentSection`** — standalone React komponent s vlastným stavom, použitý v Feed PostCard aj PostDetailModal
+- **Dashboard recent posts** — kliknutie otvára PostDetailModal namiesto `/feed`
+- **`GET /api/posts/{post}`** — nový JSON endpoint pre detail príspevku
+- **Lajk notifikácie** — opravené: `related_id` = `user_id` lajkujúceho (nie `post_id`) pre správne načítanie mena
+
+### Zmeny v1.2.0
 - **Email notifikácie** — Resend SMTP, `EmailNotificationService`, typy: nový predplatiteľ, správa, recenzia, lajk, nový post
 - **Coach profil redesign** — 4 záložky, sledovatelia/predplatitelia listy, profil completeness
-- **Navigácia** — Lucide ikony namiesto emoji, mobilná nav je role-aware (coach vs fan), unread badge na správach a notifikáciách
+- **Navigácia** — Lucide ikony namiesto emoji, mobilná nav je role-aware, unread badge na správach a notifikáciách
 - **Notifikácie** — klikateľné s `related_id` pre správny redirect
 - **Password reset** — funkčné cez Resend email, UI preložené do slovenčiny
 
@@ -180,7 +194,8 @@ CVC:    123
 ```
 Http/Controllers/
   CoachController.php         ← profily koučov (index / show / edit / update / search)
-  FeedController.php          ← feed príspevkov + like
+  CommentController.php       ← komentáre a odpovede (index / store / destroy)
+  FeedController.php          ← feed príspevkov + like + show (JSON detail)
   MessageController.php       ← DM chat (fan ↔ kouč) + unread count
   ReviewController.php        ← hodnotenia koučov (len predplatitelia)
   SubscriptionController.php  ← Stripe Checkout flow (checkout / success / cancel)
@@ -195,8 +210,9 @@ Http/Controllers/
 Models/
   User.php     ← Billable (Cashier), role: fan|coach
   Coach.php    ← profil kouča, stripe_price_id, rating_avg, rating_count
-  Post.php     ← príspevok s média, is_exclusive, video_type
-  Review.php   ← hodnotenie (1-5 hviezdičiek), unique per user+coach
+  Post.php        ← príspevok s média, is_exclusive, video_type; has comments()
+  PostComment.php ← komentár/odpoveď (parent_id self-ref), has replies()
+  Review.php      ← hodnotenie (1-5 hviezdičiek), unique per user+coach
   Message.php  ← správa (text/image/video/voice), is_read, is_broadcast
   Tip.php      ← jednorazový tip (stripe_payment_id)
 
@@ -246,6 +262,8 @@ Pages/
 Components/
   Avatar.tsx             ← kruhový avatar s initials fallback
   VideoModal.tsx         ← fullscreen HTML5 video player
+  CommentSection.tsx     ← komentáre + vláknové odpovede (standalone, self-contained stav)
+  PostDetailModal.tsx    ← modal s plným detailom príspevku (médium + komentáre)
 
 lib/utils.ts             ← getInitials, formatDuration, relativeTime, formatFullDate, ...
 ```
@@ -264,13 +282,14 @@ lib/utils.ts             ← getInitials, formatDuration, relativeTime, formatFu
 
 ```
 users           id, name, email, role(fan|coach), + Cashier stĺpce,
-                notif_new_subscriber/message/review/like (in-app prefs),
-                email_notif_new_subscriber/message/review/like/post (email prefs)
+                notif_new_subscriber/message/review/like/comment/reply (in-app prefs),
+                email_notif_new_subscriber/message/review/like/post/comment/reply (email prefs)
 coaches         id, user_id, bio, specialization, monthly_price,
                 stripe_product_id, stripe_price_id, rating_avg, rating_count,
                 subscriber_count, messages_access
 posts           id, coach_id, title, content, media_type(none|image|video),
                 video_type(reel|video|null), is_exclusive, video_duration
+post_comments   id, post_id, user_id, parent_id (nullable self-ref), content
 reviews         id, user_id, coach_id, rating(1-5), content, is_visible
 messages        id, sender_id, receiver_id, content, message_type,
                 media_path, is_read, is_broadcast
@@ -278,6 +297,9 @@ subscriptions   id, user_id, coach_id, stripe_id, stripe_status   ← Cashier
 notifications   id, user_id, type, title, body, data(json), related_id, is_read
 follows         follower_id, following_id
 post_likes      user_id, post_id
+live_streams    id, coach_id, mux_live_stream_id, stream_key, mux_playback_id,
+                status(idle|active|disabled), method(browser|obs), access
+live_stream_messages  id, live_stream_id, user_id, content
 ```
 
 Kompletná schéma so všetkými stĺpcami: `AI_MEMORY.md`
@@ -312,6 +334,8 @@ MAIL_FROM_NAME="PULSE"
 | `new_review` | Niekto zanechal recenziu | `email_notif_new_review` |
 | `new_like` | Lajk na príspevok | `email_notif_new_like` |
 | `new_post` | Kouč zverejnil nový obsah | `email_notif_new_post` |
+| `new_comment` | Niekto okomentoval príspevok kouča | `email_notif_new_comment` |
+| `new_reply` | Niekto odpovedal na tvoj komentár | `email_notif_new_reply` |
 
 Email sa **neodošle** ak:
 - Používateľ nemá overený email (`email_verified_at = null`)
