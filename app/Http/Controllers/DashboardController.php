@@ -56,15 +56,10 @@ class DashboardController extends Controller
             ->where('created_at', '>=', now()->startOfWeek())
             ->count();
 
-        $monthlyEarnings = round(
-            DB::table('subscriptions')
-                ->where('coach_id', $coach->id)
-                ->whereIn('stripe_status', ['active', 'trialing'])
-                ->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->sum('stripe_price') * 0.85,
-            2
-        );
+        // stripe_price stores a Stripe Price ID string — not a monetary amount.
+        // Until real payment tracking exists, estimate from subscriber count × price.
+        $monthlyPrice    = floatval($coach->monthly_price);
+        $monthlyEarnings = round($subscribersCount * $monthlyPrice * 0.85, 2);
 
         // Profile completeness
         $completeness = 0;
@@ -112,17 +107,10 @@ class DashboardController extends Controller
             'created_at' => $bestPost->created_at->diffForHumans(),
         ] : null;
 
-        // Earnings chart — last 6 months (real data from subscriptions)
-        $earningsData = collect(range(5, 0))->map(function ($monthsAgo) use ($coach) {
-            $date     = now()->subMonths($monthsAgo);
-            $earnings = round(
-                DB::table('subscriptions')
-                    ->where('coach_id', $coach->id)
-                    ->whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->sum('stripe_price') * 0.85,
-                2
-            );
+        // Earnings chart — last 6 months
+        // stripe_price is a Stripe Price ID string, not a number — estimate via newSubs × monthly_price
+        $earningsData = collect(range(5, 0))->map(function ($monthsAgo) use ($coach, $monthlyPrice) {
+            $date    = now()->subMonths($monthsAgo);
             $newSubs = DB::table('subscriptions')
                 ->where('coach_id', $coach->id)
                 ->whereYear('created_at', $date->year)
@@ -131,7 +119,7 @@ class DashboardController extends Controller
             return [
                 'month'          => $date->locale('sk')->isoFormat('MMM'),
                 'year'           => $date->year,
-                'earnings'       => $earnings,
+                'earnings'       => round($newSubs * $monthlyPrice * 0.85, 2),
                 'subscribers'    => $newSubs,
                 'isCurrentMonth' => $monthsAgo === 0,
             ];
