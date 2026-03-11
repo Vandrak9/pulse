@@ -61,6 +61,10 @@ class DashboardController extends Controller
         $monthlyPrice    = floatval($coach->monthly_price);
         $monthlyEarnings = round($subscribersCount * $monthlyPrice * 0.85, 2);
 
+        $followersCount = DB::table('follows')
+            ->where('following_id', $user->id)
+            ->count();
+
         // Profile completeness
         $completeness = 0;
         if ($user->profile_avatar) $completeness += 20;
@@ -190,6 +194,8 @@ class DashboardController extends Controller
                 'completeness'        => $completeness,
                 'missing_items'       => $missingItems,
                 'recent_subscribers'  => $recentSubscribers,
+                'followers_count'     => $followersCount,
+                'subscribers_count'   => $subscribersCount,
             ],
         ]);
     }

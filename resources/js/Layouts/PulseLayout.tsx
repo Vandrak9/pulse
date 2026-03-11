@@ -27,6 +27,8 @@ interface DashboardSidebar {
         avatar: string | null;
         subscribed_at: string;
     }>;
+    followers_count: number;
+    subscribers_count: number;
 }
 
 const TRENDING_CATS: { icon: React.ReactNode; label: string; k: string }[] = [
@@ -382,7 +384,27 @@ export default function PulseLayout({ children }: Props) {
                             <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', fontFamily: 'Georgia, serif', margin: '0 0 12px 0' }}>
                                 📊 Rýchly prehľad
                             </h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {/* Followers */}
+                                <Link href={user ? `/profile/${user.id}` : '/login'} style={{ textDecoration: 'none' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#faf6f0', borderRadius: 10, cursor: 'pointer', transition: 'background 0.12s' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#f0e8df')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = '#faf6f0')}
+                                    >
+                                        <span style={{ fontSize: 13, color: '#5a4a3a' }}>👥 Sledovatelia</span>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: '#2d2118' }}>{dashboardSidebar.followers_count}</span>
+                                    </div>
+                                </Link>
+                                {/* Subscribers */}
+                                <Link href="/dashboard/subscribers" style={{ textDecoration: 'none' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#faf6f0', borderRadius: 10, cursor: 'pointer', transition: 'background 0.12s' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#f0e8df')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = '#faf6f0')}
+                                    >
+                                        <span style={{ fontSize: 13, color: '#5a4a3a' }}>💳 Predplatitelia</span>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: '#c4714a' }}>{dashboardSidebar.subscribers_count}</span>
+                                    </div>
+                                </Link>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#faf6f0', borderRadius: 10 }}>
                                     <span style={{ fontSize: 13, color: '#5a4a3a' }}>❤️ Lajky celkom</span>
                                     <span style={{ fontSize: 13, fontWeight: 700, color: '#2d2118' }}>{dashboardSidebar.total_likes}</span>
@@ -392,7 +414,10 @@ export default function PulseLayout({ children }: Props) {
                                     <span style={{ fontSize: 13, fontWeight: 700, color: '#2d2118' }}>{dashboardSidebar.total_posts}</span>
                                 </div>
                                 <Link href="/messages" style={{ textDecoration: 'none' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: dashboardSidebar.unread_messages > 0 ? '#fce8de' : '#faf6f0', borderRadius: 10, cursor: 'pointer' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: dashboardSidebar.unread_messages > 0 ? '#fce8de' : '#faf6f0', borderRadius: 10, cursor: 'pointer', transition: 'background 0.12s' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = dashboardSidebar.unread_messages > 0 ? '#f5d5c5' : '#f0e8df')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = dashboardSidebar.unread_messages > 0 ? '#fce8de' : '#faf6f0')}
+                                    >
                                         <span style={{ fontSize: 13, color: '#5a4a3a' }}>✉️ Neprečítané správy</span>
                                         <span style={{ fontSize: 13, fontWeight: 700, color: dashboardSidebar.unread_messages > 0 ? '#c4714a' : '#2d2118' }}>
                                             {dashboardSidebar.unread_messages}

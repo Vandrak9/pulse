@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import PulseLayout from '@/Layouts/PulseLayout';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import {
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+    LineChart, Line, CartesianGrid, Legend,
+} from 'recharts';
 
 interface MonthRow {
     month: string;
@@ -39,12 +42,120 @@ function fmt(n: number) {
     return new Intl.NumberFormat('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
+function EarningsCharts({
+    chartData,
+    growthData,
+    fmt,
+}: {
+    chartData: { month_short: string; net: number; gross: number; status: string }[];
+    growthData: { month: string; predplatitelia: number; hrube: number; ciste: number }[];
+    fmt: (n: number) => string;
+}) {
+    const [tab, setTab] = useState<'earnings' | 'subscribers'>('earnings');
+
+    return (
+        <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '20px 16px', marginBottom: 24 }}>
+            {/* Tab switcher */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700, color: '#2d2118', margin: 0 }}>
+                    {tab === 'earnings' ? 'Zárobky za posledných 6 mesiacov' : 'Rast predplatiteľov (12 mesiacov)'}
+                </h2>
+                <div style={{ display: 'flex', gap: 4, background: '#faf6f0', borderRadius: 10, padding: 3, border: '1px solid #e8d9c4' }}>
+                    {(['earnings', 'subscribers'] as const).map(t => (
+                        <button
+                            key={t}
+                            onClick={() => setTab(t)}
+                            style={{
+                                padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                                fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+                                background: tab === t ? '#c4714a' : 'transparent',
+                                color: tab === t ? 'white' : '#9a8a7a',
+                            }}
+                        >
+                            {t === 'earnings' ? '💰 Zárobky' : '📈 Predplatitelia'}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {tab === 'earnings' ? (
+                /* Bar chart — gross vs net, last 6 months */
+                <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={chartData} barSize={24} barGap={4} margin={{ top: 4, right: 4, left: -15, bottom: 0 }}>
+                        <XAxis dataKey="month_short" tick={{ fontSize: 12, fill: '#9a8a7a' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#9a8a7a' }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
+                        <Tooltip
+                            formatter={(v, name) => [`€${fmt(Number(v))}`, name === 'gross' ? 'Hrubý zárobok' : 'Čistý zárobok']}
+                            contentStyle={{ borderRadius: 10, border: '1px solid #e8d9c4', fontSize: 13 }}
+                        />
+                        <Legend
+                            formatter={v => v === 'gross' ? 'Hrubý zárobok' : 'Čistý zárobok'}
+                            wrapperStyle={{ fontSize: 12, color: '#9a8a7a' }}
+                        />
+                        <Bar dataKey="gross" radius={[4, 4, 0, 0]} fill="#f0c4a8" />
+                        <Bar dataKey="net" radius={[4, 4, 0, 0]}>
+                            {chartData.map((entry, i) => (
+                                <Cell key={i} fill={entry.status === 'pending' ? '#c4714a' : '#5a3e2b'} />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            ) : (
+                /* Line chart — subscriber growth over 12 months */
+                <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={growthData} margin={{ top: 4, right: 16, left: -15, bottom: 0 }}>
+                        <CartesianGrid stroke="#f0e8df" strokeDasharray="4 2" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9a8a7a' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#9a8a7a' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip
+                            formatter={(v, name) => [v, name === 'predplatitelia' ? 'Noví predplatitelia' : name]}
+                            contentStyle={{ borderRadius: 10, border: '1px solid #e8d9c4', fontSize: 13 }}
+                        />
+                        <Line
+                            type="monotone"
+                            dataKey="predplatitelia"
+                            stroke="#c4714a"
+                            strokeWidth={2.5}
+                            dot={{ fill: '#c4714a', r: 4, strokeWidth: 0 }}
+                            activeDot={{ r: 6, fill: '#c4714a' }}
+                            name="Noví predplatitelia"
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            )}
+
+            {/* Legend for earnings tab */}
+            {tab === 'earnings' && (
+                <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#9a8a7a' }}>
+                        <div style={{ width: 12, height: 12, borderRadius: 3, background: '#c4714a' }} /> Tento mesiac (čistý)
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#9a8a7a' }}>
+                        <div style={{ width: 12, height: 12, borderRadius: 3, background: '#5a3e2b' }} /> Vyplatené (čistý)
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#9a8a7a' }}>
+                        <div style={{ width: 12, height: 12, borderRadius: 3, background: '#f0c4a8' }} /> Hrubý zárobok
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function Earnings({ coach, summary, monthly_table, transactions }: Props) {
     const [txPage, setTxPage] = useState(0);
     const PER_PAGE = 10;
     const txSlice = transactions.slice(txPage * PER_PAGE, (txPage + 1) * PER_PAGE);
 
+    // Last 6 months for bar chart (earnings)
     const chartData = monthly_table.slice(-6);
+    // Full 12 months for subscriber growth line chart
+    const growthData = monthly_table.map(r => ({
+        month: r.month_short,
+        predplatitelia: r.subscribers,
+        hrube: r.gross,
+        ciste: r.net,
+    }));
 
     return (
         <PulseLayout>
@@ -79,27 +190,8 @@ export default function Earnings({ coach, summary, monthly_table, transactions }
                         </div>
                     </div>
 
-                    {/* Chart */}
-                    <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '20px 16px', marginBottom: 24 }}>
-                        <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700, color: '#2d2118', marginBottom: 16 }}>
-                            Mesačné zárobky (posledných 6 mesiacov)
-                        </h2>
-                        <ResponsiveContainer width="100%" height={180}>
-                            <BarChart data={chartData} barSize={36} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                                <XAxis dataKey="month_short" tick={{ fontSize: 12, fill: '#9a8a7a' }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: '#9a8a7a' }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
-                                <Tooltip
-                                    formatter={(v) => [`€${fmt(Number(v))}`, 'Čistý zárobok']}
-                                    contentStyle={{ borderRadius: 10, border: '1px solid #e8d9c4', fontSize: 13 }}
-                                />
-                                <Bar dataKey="net" radius={[6, 6, 0, 0]}>
-                                    {chartData.map((entry, i) => (
-                                        <Cell key={i} fill={entry.status === 'pending' ? '#c4714a' : '#f0c4a8'} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                    {/* Charts — two tabs */}
+                    <EarningsCharts chartData={chartData} growthData={growthData} fmt={fmt} />
 
                     {/* Monthly table */}
                     <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', marginBottom: 24, overflow: 'hidden' }}>
