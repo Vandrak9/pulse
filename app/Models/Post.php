@@ -42,4 +42,9 @@ class Post extends Model
     {
         return $this->hasMany(PostMedia::class)->orderBy('sort_order');
     }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(PostComment::class)->orderBy('created_at');
+    }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\LiveStreamController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SubscriptionController;
@@ -59,6 +60,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/feed/like/{post}', [FeedController::class, 'like'])
         ->middleware('throttle:likes')
         ->name('feed.like');
+
+    Route::get('/feed/posts/{post}/comments', [CommentController::class, 'index'])->name('comments.index');
+    Route::post('/feed/posts/{post}/comments', [CommentController::class, 'store'])->name('comments.store');
+    Route::delete('/feed/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
     // Messages — text send: throttle:messages; media upload: throttle:uploads
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
@@ -119,6 +124,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/subscription/success', [SubscriptionController::class, 'success'])->name('subscription.success');
     Route::post('/subscription/cancel/{coachId}', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
 });
+
+// ── Post detail API (auth optional) ───────────────────────────────────────────
+Route::get('/api/posts/{post}', [FeedController::class, 'show'])->name('posts.show');
 
 // ── Public API endpoints ───────────────────────────────────────────────────────
 

@@ -85,6 +85,18 @@ class EmailNotificationService
                 'actionUrl'  => "{$appUrl}/feed",
                 'actionText' => 'Zobraziť obsah',
             ],
+            'new_comment' => [
+                'title'      => 'Nový komentár 💬',
+                'body'       => "{$name} okomentoval tvoj príspevok \"" . ($data['post_title'] ?? '') . '"',
+                'actionUrl'  => "{$appUrl}/feed",
+                'actionText' => 'Zobraziť príspevok',
+            ],
+            'new_reply' => [
+                'title'      => 'Niekto odpovedal na tvoj komentár 💬',
+                'body'       => "{$name}: \"" . ($data['preview'] ?? '') . '"',
+                'actionUrl'  => "{$appUrl}/feed",
+                'actionText' => 'Zobraziť odpoveď',
+            ],
             default => null,
         };
     }

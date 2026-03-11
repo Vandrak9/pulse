@@ -65,14 +65,14 @@ class FeedController extends Controller
 
         // Mixed feed — 20 most recent posts
         $posts = Post::with(['coach.user'])
-            ->withCount('likes')
+            ->withCount(['likes', 'comments'])
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();
 
         // Reels — separate query, all free reels
         $reelPosts = Post::with(['coach.user'])
-            ->withCount('likes')
+            ->withCount(['likes', 'comments'])
             ->where('video_type', 'reel')
             ->where('is_exclusive', false)
             ->orderByDesc('created_at')
@@ -81,7 +81,7 @@ class FeedController extends Controller
 
         // Long videos — separate query
         $videoPosts = Post::with(['coach.user'])
-            ->withCount('likes')
+            ->withCount(['likes', 'comments'])
             ->where('video_type', 'video')
             ->orderByDesc('created_at')
             ->limit(40)
@@ -115,6 +115,7 @@ class FeedController extends Controller
             'video_duration' => $post->video_duration,
             'is_exclusive'   => $post->is_exclusive,
             'like_count'     => $post->likes_count,
+            'comment_count'  => $post->comments_count,
             'is_liked'       => in_array($post->id, $likedIds),
             'created_at'     => $post->created_at->toIso8601String(),
             'coach' => [
@@ -159,6 +160,48 @@ class FeedController extends Controller
             'reels'   => $mappedReels,
             'videos'  => $mappedVideos,
             'coaches' => $coaches,
+        ]);
+    }
+
+    public function show(Request $request, Post $post): \Illuminate\Http\JsonResponse
+    {
+        $user   = $request->user();
+        $userId = $user?->id;
+
+        $post->loadCount(['likes', 'comments'])->load('coach.user');
+
+        $isLiked = $userId
+            ? PostLike::where('user_id', $userId)->where('post_id', $post->id)->exists()
+            : false;
+
+        $subscribedCoachIds = $userId ? \DB::table('subscriptions')
+            ->where('user_id', $userId)
+            ->whereIn('stripe_status', ['active', 'trialing'])
+            ->whereNotNull('coach_id')
+            ->pluck('coach_id')->toArray() : [];
+
+        return response()->json([
+            'id'             => $post->id,
+            'title'          => $post->title,
+            'content'        => $post->content,
+            'media_type'     => $post->media_type,
+            'media_url'      => $post->media_path ? Storage::url($post->media_path) : null,
+            'thumbnail_url'  => $post->thumbnail_path ? Storage::url($post->thumbnail_path) : null,
+            'video_type'     => $post->video_type,
+            'video_duration' => $post->video_duration,
+            'is_exclusive'   => $post->is_exclusive,
+            'like_count'     => $post->likes_count,
+            'comment_count'  => $post->comments_count,
+            'is_liked'       => $isLiked,
+            'created_at'     => $post->created_at->toIso8601String(),
+            'coach' => [
+                'id'            => $post->coach->id,
+                'name'          => $post->coach->user->name,
+                'specialization'=> $post->coach->specialization,
+                'monthly_price' => $post->coach->monthly_price,
+                'is_subscribed' => in_array($post->coach->id, $subscribedCoachIds),
+                'avatar_url'    => $post->coach->avatar_path ? Storage::url($post->coach->avatar_path) : null,
+            ],
         ]);
     }
 

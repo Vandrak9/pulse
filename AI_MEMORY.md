@@ -1083,3 +1083,17 @@ DELETE /coaches/{coachId}/reviews  → auth
 - [2026-03-11 07:03:33] de4a5e1: fix: dashboard 500 — stripe_price is varchar not numeric, use monthly_price × count for earnings
 - [2026-03-11 07:11:16] 66859c5: feat: dashboard sidebar followers/subscribers + earnings page dual chart
 - [2026-03-11 07:26:38] 005556f: fix: followers page + earnings chart consistent values
+- [2026-03-11 07:37:49] 4c8743d: fix: recent posts widget, Slovak timestamps, activity actor names, completeness fix
+
+---
+
+## Session 26 — Dashboard remaining fixes (2026-03-11)
+
+- **Carbon locale**: `Carbon::setLocale('sk')` in AppServiceProvider::boot() — all diffForHumans() now Slovak
+- **recentPosts**: replaced bestPost — Post withCount('likes') + with('media'), thumbnail from PostMedia->media_thumbnail ?? media_path, ordered by created_at desc, take(3)
+- **Post model**: field is `content` (not `body`), no `comments` relation exists
+- **PostMedia columns**: media_path, media_thumbnail, media_type, sort_order
+- **recentActivity actor names**: `DB::table('users')->where('id', $n->related_id)->value('name')` — safe, returns null if related_id is not a user (e.g. post_id)
+- **Completeness avatar**: `Storage::disk('public')->exists($user->profile_avatar)` instead of simple truthy check
+- **Dashboard/Index.tsx**: "Moje posledné príspevky" widget — thumbnail/placeholder, title, 🔒 exclusive badge, ❤️ likes, relative time, hover, "+ Pridať" link
+- [2026-03-11 07:41:35] fdba4a1: fix: create like notification + email on post like

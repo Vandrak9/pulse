@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import PulseLayout from '@/Layouts/PulseLayout';
+import PostDetailModal from '@/Components/PostDetailModal';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface Coach {
@@ -70,6 +71,7 @@ export default function DashboardIndex({ coach, stats, recent_posts, earnings_da
     const hasStripe = !!coach.stripe_account_id;
     const [showContentDropdown, setShowContentDropdown] = useState(false);
     const [showStripeModal, setShowStripeModal] = useState(false);
+    const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown on outside click
@@ -90,6 +92,7 @@ export default function DashboardIndex({ coach, stats, recent_posts, earnings_da
     return (
         <PulseLayout>
             <Head title="Dashboard" />
+            <PostDetailModal postId={selectedPostId} onClose={() => setSelectedPostId(null)} />
             <div style={{ background: '#faf6f0', minHeight: '100vh', paddingBottom: 80 }}>
                 <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 24px' }}>
 
@@ -373,7 +376,8 @@ export default function DashboardIndex({ coach, stats, recent_posts, earnings_da
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                     {recent_posts.map(post => (
-                                        <Link key={post.id} href="/feed" style={{ textDecoration: 'none' }}>
+                                        <button key={post.id} onClick={() => setSelectedPostId(post.id)}
+                                            style={{ textDecoration: 'none', background: 'none', border: 'none', padding: 0, width: '100%', cursor: 'pointer', textAlign: 'left' }}>
                                             <div style={{
                                                 display: 'flex', alignItems: 'center', gap: 10,
                                                 padding: '8px', borderRadius: 12, transition: 'background 0.12s',
@@ -414,7 +418,7 @@ export default function DashboardIndex({ coach, stats, recent_posts, earnings_da
                                                     </div>
                                                 </div>
                                             </div>
-                                        </Link>
+                                        </button>
                                     ))}
 
                                     <Link href="/feed"

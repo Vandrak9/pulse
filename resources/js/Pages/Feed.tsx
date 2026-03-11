@@ -1,3 +1,4 @@
+import CommentSection from '@/Components/CommentSection';
 import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -31,10 +32,12 @@ interface Post {
     video_duration: number | null;
     is_exclusive: boolean;
     like_count: number;
+    comment_count: number;
     is_liked: boolean;
     created_at: string;
     coach: FeedCoach;
 }
+
 
 interface Props {
     posts: Post[];
@@ -67,6 +70,20 @@ export default function Feed({ posts, reels, videos, coaches, isGuest = false }:
     );
     const [saved, setSaved] = useState<Set<number>>(new Set());
     const [activeVideo, setActiveVideo] = useState<Post | null>(null);
+
+    // Comment toggle + count state (content managed inside CommentSection)
+    const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
+    const [commentCounts, setCommentCounts] = useState<Record<number, number>>(
+        () => Object.fromEntries(allPosts.map((p) => [p.id, p.comment_count])),
+    );
+
+    function toggleComments(postId: number) {
+        setExpandedComments(prev => {
+            const next = new Set(prev);
+            next.has(postId) ? next.delete(postId) : next.add(postId);
+            return next;
+        });
+    }
 
     function toggleLike(postId: number) {
         const isLiked = likedPosts.has(postId);
@@ -274,9 +291,14 @@ export default function Feed({ posts, reels, videos, coaches, isGuest = false }:
                                                 isLiked={likedPosts.has(post.id)}
                                                 likeCount={likeCounts[post.id] ?? post.like_count}
                                                 isSaved={saved.has(post.id)}
+                                                commentCount={commentCounts[post.id] ?? post.comment_count}
+                                                showComments={expandedComments.has(post.id)}
+                                                isGuest={isGuest}
                                                 onLike={() => !isGuest && toggleLike(post.id)}
                                                 onSave={() => !isGuest && toggleSave(post.id)}
                                                 onPlay={() => !isGuest && setActiveVideo(post)}
+                                                onCommentToggle={() => !isGuest && toggleComments(post.id)}
+                                                onCountChange={(n) => setCommentCounts(prev => ({ ...prev, [post.id]: n }))}
                                             />
                                             {blurGuest && (
                                                 <div style={{
@@ -309,6 +331,7 @@ export default function Feed({ posts, reels, videos, coaches, isGuest = false }:
                         reels={reels}
                         likedPosts={likedPosts}
                         likeCounts={likeCounts}
+                        commentCounts={commentCounts}
                         onLike={toggleLike}
                     />
                 )}
@@ -346,11 +369,13 @@ function ReelsPlayer({
     reels,
     likedPosts,
     likeCounts,
+    commentCounts,
     onLike,
 }: {
     reels: Post[];
     likedPosts: Set<number>;
     likeCounts: Record<number, number>;
+    commentCounts: Record<number, number>;
     onLike: (id: number) => void;
 }) {
     const [activeIdx, setActiveIdx] = useState(0);
@@ -396,6 +421,7 @@ function ReelsPlayer({
                     isActive={i === activeIdx}
                     isLiked={likedPosts.has(reel.id)}
                     likeCount={likeCounts[reel.id] ?? reel.like_count}
+                    commentCount={commentCounts[reel.id] ?? reel.comment_count}
                     onLike={() => onLike(reel.id)}
                 />
             ))}
@@ -408,12 +434,14 @@ function ReelSlide({
     isActive,
     isLiked,
     likeCount,
+    commentCount,
     onLike,
 }: {
     reel: Post;
     isActive: boolean;
     isLiked: boolean;
     likeCount: number;
+    commentCount: number;
     onLike: () => void;
 }) {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -538,7 +566,9 @@ function ReelSlide({
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm">
                         <span className="text-xl leading-none">💬</span>
                     </div>
-                    <span className="text-xs font-semibold text-white drop-shadow">0</span>
+                    {commentCount > 0 && (
+                        <span className="text-xs font-semibold text-white drop-shadow">{commentCount}</span>
+                    )}
                 </button>
 
                 {/* Share */}
@@ -664,17 +694,27 @@ function PostCard({
     isLiked,
     likeCount,
     isSaved,
+    commentCount,
+    showComments,
+    isGuest,
     onLike,
     onSave,
     onPlay,
+    onCommentToggle,
+    onCountChange,
 }: {
     post: Post;
     isLiked: boolean;
     likeCount: number;
     isSaved: boolean;
+    commentCount: number;
+    showComments: boolean;
+    isGuest: boolean;
     onLike: () => void;
     onSave: () => void;
     onPlay: () => void;
+    onCommentToggle: () => void;
+    onCountChange: (n: number) => void;
 }) {
     const price = parseFloat(post.coach.monthly_price);
 
@@ -782,9 +822,11 @@ function PostCard({
                         <span className="text-xs font-medium" style={{ color: isLiked ? '#c4714a' : '#9a8a7a' }}>{likeCount}</span>
                     )}
                 </button>
-                <button className="flex items-center gap-1 rounded-full px-2 py-1.5 transition hover:bg-gray-50">
+                <button onClick={onCommentToggle} className="flex items-center gap-1 rounded-full px-2 py-1.5 transition hover:bg-gray-50">
                     <span className="text-lg leading-none">💬</span>
-                    <span className="text-xs font-medium" style={{ color: '#9a8a7a' }}>0</span>
+                    {commentCount > 0 && (
+                        <span className="text-xs font-medium" style={{ color: showComments ? '#c4714a' : '#9a8a7a' }}>{commentCount}</span>
+                    )}
                 </button>
                 <button onClick={onSave} className="rounded-full px-2 py-1.5 transition hover:bg-gray-50">
                     <span className="text-lg leading-none" style={{ opacity: isSaved ? 1 : 0.5 }}>🔖</span>
@@ -807,22 +849,12 @@ function PostCard({
                 <p className="mt-1 text-sm leading-relaxed" style={{ color: '#4a3728' }}>{post.content}</p>
             </div>
 
-            {post.media_type === 'video' && !post.is_exclusive && post.media_url && (
-                <div className="px-4 pb-4 pt-2">
-                    <button
-                        onClick={onPlay}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition hover:bg-orange-50"
-                        style={{ borderColor: '#c4714a', color: '#c4714a' }}
-                    >
-                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
-                        Prehrat video
-                    </button>
-                </div>
-            )}
 
-            {post.media_type === 'none' && <div className="h-3" />}
+            {post.media_type === 'none' && !showComments && <div className="h-3" />}
+
+            {showComments && (
+                <CommentSection postId={post.id} isGuest={isGuest} onCountChange={onCountChange} />
+            )}
         </div>
     );
 }
