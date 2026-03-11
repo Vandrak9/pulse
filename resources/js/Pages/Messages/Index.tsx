@@ -352,6 +352,11 @@ export default function MessagesIndex({ conversations }: Props) {
                     </div>
                 </div>
             </div>
+            <style>{`
+                @media (min-width: 768px) {
+                    html, body { overflow: hidden; height: 100%; }
+                }
+            `}</style>
         </PulseLayout>
     );
 }

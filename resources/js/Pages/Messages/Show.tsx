@@ -832,6 +832,9 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                     0%, 100% { opacity: 1; transform: scale(1); }
                     50% { opacity: 0.35; transform: scale(0.75); }
                 }
+                @media (min-width: 768px) {
+                    html, body { overflow: hidden; height: 100%; }
+                }
             `}</style>
         </PulseLayout>
     );
