@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Message;
 use App\Models\Post;
-use App\Models\PostLike;
 use App\Models\Review;
-use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -31,53 +29,180 @@ class DashboardController extends Controller
         $coach = $this->requireCoach();
         if ($coach instanceof \Illuminate\Http\RedirectResponse) return $coach;
 
-        $posts = Post::where('coach_id', $coach->id)->withCount('likes')->get();
+        // Real counts
+        $totalPosts = DB::table('posts')->where('coach_id', $coach->id)->count();
 
-        $subscriberCount   = $coach->subscriber_count ?? 0;
-        $monthlyPrice      = floatval($coach->monthly_price);
-        $monthlyRevenue    = round($subscriberCount * $monthlyPrice * 0.85, 2);
-        $totalRevenue      = round($subscriberCount * $monthlyPrice * 0.85 * 6, 2); // 6-month estimate
-        $newThisWeek       = (int) round($subscriberCount * 0.04); // ~4% weekly churn/growth
-        $totalPosts        = $posts->count();
-        $totalViews        = $posts->sum('views');
-        $unreadMessages    = Message::where('receiver_id', $user->id)->where('is_read', false)->count();
+        $totalLikes = DB::table('post_likes')
+            ->join('posts', 'posts.id', '=', 'post_likes.post_id')
+            ->where('posts.coach_id', $coach->id)
+            ->count();
 
-        $topPost = $posts->sortByDesc('likes_count')->first();
+        $totalMessages = DB::table('messages')
+            ->where('receiver_id', auth()->id())
+            ->where('is_read', false)
+            ->count();
 
-        // Revenue chart — last 6 months (computed from subscriber progression)
-        $revenueChart = $this->buildRevenueChart($subscriberCount, $monthlyPrice);
+        $totalViews = (int) DB::table('posts')->where('coach_id', $coach->id)->sum('views');
 
-        // Recent activity (real data: likes + messages, last 10)
-        $recentActivity = $this->buildRecentActivity($coach, $user);
+        // Subscriber stats (real)
+        $subscribersCount = DB::table('subscriptions')
+            ->where('coach_id', $coach->id)
+            ->whereIn('stripe_status', ['active', 'trialing'])
+            ->count();
+
+        $newThisWeek = DB::table('subscriptions')
+            ->where('coach_id', $coach->id)
+            ->whereIn('stripe_status', ['active', 'trialing'])
+            ->where('created_at', '>=', now()->startOfWeek())
+            ->count();
+
+        $monthlyEarnings = round(
+            DB::table('subscriptions')
+                ->where('coach_id', $coach->id)
+                ->whereIn('stripe_status', ['active', 'trialing'])
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->sum('stripe_price') * 0.85,
+            2
+        );
+
+        // Profile completeness
+        $completeness = 0;
+        if ($user->profile_avatar) $completeness += 20;
+        if ($user->profile_bio) $completeness += 20;
+        if ($coach->monthly_price) $completeness += 20;
+        if ($totalPosts > 0) $completeness += 20;
+        if ($coach->stripe_price_id) $completeness += 20;
+
+        $missingItems = [];
+        if (!$user->profile_avatar) $missingItems[] = 'Nahraj profilovú fotku';
+        if (!$user->profile_bio) $missingItems[] = 'Doplň bio';
+        if (!$coach->monthly_price) $missingItems[] = 'Nastav cenu predplatného';
+        if ($totalPosts === 0) $missingItems[] = 'Pridaj prvý príspevok';
+        if (!$coach->stripe_price_id) $missingItems[] = 'Nastav platby';
+
+        // Recent subscribers for sidebar
+        $recentSubscribers = DB::table('subscriptions')
+            ->where('coach_id', $coach->id)
+            ->whereIn('stripe_status', ['active', 'trialing'])
+            ->join('users', 'users.id', '=', 'subscriptions.user_id')
+            ->select('users.id', 'users.name', 'users.profile_avatar',
+                     'subscriptions.created_at as subscribed_at')
+            ->orderBy('subscriptions.created_at', 'desc')
+            ->take(5)
+            ->get()
+            ->map(fn($s) => [
+                'id'           => $s->id,
+                'name'         => $s->name,
+                'avatar'       => $s->profile_avatar,
+                'subscribed_at' => Carbon::parse($s->subscribed_at)->diffForHumans(),
+            ])->all();
+
+        // Best post (real)
+        $bestPost = Post::where('coach_id', $coach->id)
+            ->withCount('likes')
+            ->orderBy('likes_count', 'desc')
+            ->first();
+
+        $bestPostData = $bestPost ? [
+            'id'         => $bestPost->id,
+            'title'      => $bestPost->title ?? Str::limit($bestPost->content ?? '', 40),
+            'likes'      => $bestPost->likes_count,
+            'views'      => (int)($bestPost->views ?? 0),
+            'created_at' => $bestPost->created_at->diffForHumans(),
+        ] : null;
+
+        // Earnings chart — last 6 months (real data from subscriptions)
+        $earningsData = collect(range(5, 0))->map(function ($monthsAgo) use ($coach) {
+            $date     = now()->subMonths($monthsAgo);
+            $earnings = round(
+                DB::table('subscriptions')
+                    ->where('coach_id', $coach->id)
+                    ->whereYear('created_at', $date->year)
+                    ->whereMonth('created_at', $date->month)
+                    ->sum('stripe_price') * 0.85,
+                2
+            );
+            $newSubs = DB::table('subscriptions')
+                ->where('coach_id', $coach->id)
+                ->whereYear('created_at', $date->year)
+                ->whereMonth('created_at', $date->month)
+                ->count();
+            return [
+                'month'          => $date->locale('sk')->isoFormat('MMM'),
+                'year'           => $date->year,
+                'earnings'       => $earnings,
+                'subscribers'    => $newSubs,
+                'isCurrentMonth' => $monthsAgo === 0,
+            ];
+        })->values()->all();
+
+        // Recent activity from notifications table
+        $recentActivity = DB::table('notifications')
+            ->where('user_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get()
+            ->map(function ($n) {
+                return [
+                    'id'      => $n->id,
+                    'type'    => $n->type,
+                    'title'   => $n->title,
+                    'body'    => $n->body,
+                    'is_read' => (bool)$n->is_read,
+                    'time'    => Carbon::parse($n->created_at)->diffForHumans(),
+                    'link'    => match($n->type) {
+                        'new_message'    => '/messages/' . ($n->related_id ?? ''),
+                        'new_subscriber' => '/dashboard/subscribers',
+                        'new_follower'   => '/profile/' . ($n->related_id ?? ''),
+                        'new_review'     => '/profile/me',
+                        'new_like'       => '/feed',
+                        default          => '/notifications',
+                    },
+                    'icon'    => match($n->type) {
+                        'new_message'    => '💬',
+                        'new_subscriber' => '🎉',
+                        'new_follower'   => '👤',
+                        'new_review'     => '⭐',
+                        'new_like'       => '❤️',
+                        default          => '🔔',
+                    },
+                ];
+            })->all();
 
         return Inertia::render('Dashboard/Index', [
-            'coach'              => [
-                'id'             => $coach->id,
-                'name'           => $user->name,
-                'avatar_url'     => $coach->avatar_path ? '/storage/' . $coach->avatar_path : null,
-                'specialization' => $coach->specialization,
-                'is_verified'    => $coach->is_verified,
+            'coach' => [
+                'id'               => $coach->id,
+                'name'             => $user->name,
+                'avatar_url'       => $coach->avatar_path ? '/storage/' . $coach->avatar_path : null,
+                'specialization'   => $coach->specialization,
+                'is_verified'      => $coach->is_verified,
                 'stripe_account_id' => $coach->stripe_account_id,
+                'price'            => $coach->monthly_price,
+                'stripe_price_id'  => $coach->stripe_price_id,
             ],
             'stats' => [
-                'subscriber_count'      => $subscriberCount,
-                'monthly_revenue'       => $monthlyRevenue,
-                'total_revenue'         => $totalRevenue,
-                'new_subscribers_week'  => $newThisWeek,
-                'total_posts'           => $totalPosts,
-                'total_views'           => $totalViews,
-                'unread_messages'       => $unreadMessages,
-                'rating_avg'            => (float) $coach->rating_avg,
-                'rating_count'          => (int) $coach->rating_count,
+                'subscriber_count'     => $subscribersCount,
+                'monthly_revenue'      => $monthlyEarnings,
+                'new_subscribers_week' => $newThisWeek,
+                'total_posts'          => $totalPosts,
+                'total_views'          => $totalViews,
+                'total_likes'          => $totalLikes,
+                'unread_messages'      => $totalMessages,
+                'rating_avg'           => (float) $coach->rating_avg,
+                'rating_count'         => (int) $coach->rating_count,
             ],
-            'top_post'       => $topPost ? [
-                'id'          => $topPost->id,
-                'title'       => $topPost->title,
-                'likes_count' => $topPost->likes_count,
-                'views'       => $topPost->views,
-            ] : null,
-            'revenue_chart'   => $revenueChart,
+            'best_post'       => $bestPostData,
+            'earnings_data'   => $earningsData,
             'recent_activity' => $recentActivity,
+            'dashboard_sidebar' => [
+                'total_likes'         => $totalLikes,
+                'total_posts'         => $totalPosts,
+                'unread_messages'     => $totalMessages,
+                'completeness'        => $completeness,
+                'missing_items'       => $missingItems,
+                'recent_subscribers'  => $recentSubscribers,
+            ],
         ]);
     }
 
@@ -104,22 +229,21 @@ class DashboardController extends Controller
             $fee     = round($gross * 0.15, 2);
             $net     = round($gross * $netRate, 2);
             $months[] = [
-                'month'  => $month->locale('sk')->isoFormat('MMMM YYYY'),
+                'month'       => $month->locale('sk')->isoFormat('MMMM YYYY'),
                 'month_short' => $month->locale('sk')->isoFormat('MMM'),
-                'year'   => $month->year,
-                'gross'  => $gross,
-                'fee'    => $fee,
-                'net'    => $net,
-                'status' => $i === 0 ? 'pending' : 'paid',
+                'year'        => $month->year,
+                'gross'       => $gross,
+                'fee'         => $fee,
+                'net'         => $net,
+                'status'      => $i === 0 ? 'pending' : 'paid',
                 'subscribers' => $subs,
             ];
         }
 
-        $totalEarned  = collect($months)->where('status', 'paid')->sum('net');
-        $pendingPayout = collect($months)->where('status', 'pending')->sum('net');
+        $totalEarned    = collect($months)->where('status', 'paid')->sum('net');
+        $pendingPayout  = collect($months)->where('status', 'pending')->sum('net');
         $nextPayoutDate = Carbon::now()->addMonthNoOverflow()->startOfMonth()->format('j. n. Y');
 
-        // Transaction history — last 20 (simulated from subscriber count)
         $transactions = $this->buildTransactions($subscriberCount, $monthlyPrice);
 
         return Inertia::render('Dashboard/Earnings', [
@@ -128,13 +252,13 @@ class DashboardController extends Controller
                 'avatar_url' => $coach->avatar_path ? '/storage/' . $coach->avatar_path : null,
             ],
             'summary' => [
-                'total_earned'    => round($totalEarned, 2),
-                'pending_payout'  => round($pendingPayout, 2),
+                'total_earned'     => round($totalEarned, 2),
+                'pending_payout'   => round($pendingPayout, 2),
                 'next_payout_date' => $nextPayoutDate,
-                'monthly_revenue' => round($subscriberCount * $monthlyPrice * $netRate, 2),
+                'monthly_revenue'  => round($subscriberCount * $monthlyPrice * $netRate, 2),
             ],
-            'monthly_table'  => $months,
-            'transactions'   => $transactions,
+            'monthly_table' => $months,
+            'transactions'  => $transactions,
         ]);
     }
 
@@ -149,13 +273,10 @@ class DashboardController extends Controller
         $subscriberCount = $coach->subscriber_count ?? 0;
         $monthlyPrice    = floatval($coach->monthly_price);
 
-        // Build simulated subscriber list from real fan users + fill to subscriber_count
-        $fans = User::where('role', 'fan')->orderBy('created_at')->get();
-
+        $fans       = \App\Models\User::where('role', 'fan')->orderBy('created_at')->get();
         $subscribers = [];
-        $names = $fans->pluck('name')->all();
+        $names      = $fans->pluck('name')->all();
 
-        // Supplement names if not enough real fans
         $extraNames = ['Maroš B.', 'Katka S.', 'Tomáš H.', 'Jana K.', 'Martin P.',
                        'Zuzana V.', 'Peter N.', 'Lucia M.', 'Radovan O.', 'Eva D.',
                        'Michal F.', 'Simona R.', 'Jakub T.', 'Andrea W.', 'Rastislav C.',
@@ -172,16 +293,15 @@ class DashboardController extends Controller
             $status     = $daysAgo < 150 ? 'active' : 'cancelled';
 
             $subscribers[] = [
-                'index'          => $i + 1,
-                'name_anon'      => $anon,
+                'index'               => $i + 1,
+                'name_anon'           => $anon,
                 'subscribed_days_ago' => $daysAgo,
                 'subscribed_since'    => Carbon::now()->subDays($daysAgo)->format('d.m.Y'),
-                'total_paid'     => round($paidMonths * $monthlyPrice * 0.85, 2),
-                'status'         => $status,
+                'total_paid'          => round($paidMonths * $monthlyPrice * 0.85, 2),
+                'status'              => $status,
             ];
         }
 
-        // Sort: active first, then by days subscribed desc
         usort($subscribers, fn($a, $b) =>
             $a['status'] === $b['status']
                 ? $b['subscribed_days_ago'] - $a['subscribed_days_ago']
@@ -201,91 +321,18 @@ class DashboardController extends Controller
                 'avatar_url' => $coach->avatar_path ? '/storage/' . $coach->avatar_path : null,
             ],
             'summary' => [
-                'total'          => $subscriberCount,
-                'active'         => $activeCount,
-                'cancelled'      => $cancelledCount,
-                'churn_rate'     => $churnRate,
-                'avg_days'       => $avgDays,
-                'monthly_price'  => $monthlyPrice,
+                'total'         => $subscriberCount,
+                'active'        => $activeCount,
+                'cancelled'     => $cancelledCount,
+                'churn_rate'    => $churnRate,
+                'avg_days'      => $avgDays,
+                'monthly_price' => $monthlyPrice,
             ],
             'subscribers' => $subscribers,
         ]);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private function buildRevenueChart(int $subscriberCount, float $monthlyPrice): array
-    {
-        $months = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $month   = Carbon::now()->subMonths($i);
-            $factor  = 1 - ($i * 0.07);
-            $subs    = max(1, (int) round($subscriberCount * $factor));
-            $months[] = [
-                'month'   => $month->locale('sk')->isoFormat('MMM'),
-                'net'     => round($subs * $monthlyPrice * 0.85, 2),
-                'current' => $i === 0,
-            ];
-        }
-        return $months;
-    }
-
-    private function buildRecentActivity(\App\Models\Coach $coach, $user): array
-    {
-        $activity = [];
-
-        // Recent likes on coach's posts
-        $recentLikes = PostLike::whereHas('post', fn($q) => $q->where('coach_id', $coach->id))
-            ->with('post:id,title')
-            ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
-
-        foreach ($recentLikes as $like) {
-            $activity[] = [
-                'type'    => 'like',
-                'text'    => 'Nový like na "' . ($like->post->title ?? 'príspevok') . '"',
-                'icon'    => '❤️',
-                'time'    => $like->created_at?->toISOString() ?? now()->toISOString(),
-            ];
-        }
-
-        // Recent messages received
-        $recentMessages = Message::where('receiver_id', $user->id)
-            ->orderByDesc('id')
-            ->limit(5)
-            ->get();
-
-        foreach ($recentMessages as $msg) {
-            $activity[] = [
-                'type' => 'message',
-                'text' => 'Nová ' . ($msg->message_type === 'voice' ? 'hlasová ' : '') . 'správa',
-                'icon' => '💬',
-                'time' => $msg->created_at?->toISOString() ?? now()->toISOString(),
-            ];
-        }
-
-        // Recent reviews
-        $recentReviews = Review::where('coach_id', $coach->id)
-            ->with('user:id,name')
-            ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
-
-        foreach ($recentReviews as $review) {
-            $stars = str_repeat('★', $review->rating);
-            $activity[] = [
-                'type' => 'review',
-                'text' => ($review->user->name ?? 'Fanúšik') . ' zanechal hodnotenie ' . $stars,
-                'icon' => '⭐',
-                'time' => $review->created_at?->toISOString() ?? now()->toISOString(),
-            ];
-        }
-
-        // Sort by time desc, take 10
-        usort($activity, fn($a, $b) => strcmp($b['time'], $a['time']));
-        return array_slice($activity, 0, 10);
-    }
 
     private function buildTransactions(int $subscriberCount, float $monthlyPrice): array
     {
@@ -302,12 +349,12 @@ class DashboardController extends Controller
                       'T*** B***', 'E*** D***', 'R*** O***', 'K*** M***', 'A*** F***'];
 
             $transactions[] = [
-                'date'   => $now->copy()->subDays($daysAgo)->format('d.m.Y'),
-                'type'   => $type,
-                'fan'    => $names[$i % count($names)],
-                'gross'  => round($gross, 2),
-                'fee'    => round($gross * 0.15, 2),
-                'net'    => $net,
+                'date'  => $now->copy()->subDays($daysAgo)->format('d.m.Y'),
+                'type'  => $type,
+                'fan'   => $names[$i % count($names)],
+                'gross' => round($gross, 2),
+                'fee'   => round($gross * 0.15, 2),
+                'net'   => $net,
             ];
         }
 

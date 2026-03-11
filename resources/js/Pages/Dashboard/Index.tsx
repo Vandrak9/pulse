@@ -1,8 +1,7 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { relativeTime } from '@/lib/utils';
 
 interface Coach {
     id: number;
@@ -11,28 +10,54 @@ interface Coach {
     specialization: string | null;
     is_verified: boolean;
     stripe_account_id: string | null;
+    price: number | null;
+    stripe_price_id: string | null;
 }
 
 interface Stats {
     subscriber_count: number;
     monthly_revenue: number;
-    total_revenue: number;
     new_subscribers_week: number;
     total_posts: number;
     total_views: number;
+    total_likes: number;
     unread_messages: number;
     rating_avg: number;
     rating_count: number;
 }
 
-interface RevenuePoint { month: string; net: number; current: boolean; }
-interface Activity { type: string; text: string; icon: string; time: string; }
+interface EarningsPoint {
+    month: string;
+    year: number;
+    earnings: number;
+    subscribers: number;
+    isCurrentMonth: boolean;
+}
+
+interface Activity {
+    id: number | string;
+    type: string;
+    title: string | null;
+    body: string | null;
+    is_read: boolean;
+    time: string;
+    link: string;
+    icon: string;
+}
+
+interface BestPost {
+    id: number;
+    title: string;
+    likes: number;
+    views: number;
+    created_at: string;
+}
 
 interface Props {
     coach: Coach;
     stats: Stats;
-    top_post: { id: number; title: string; likes_count: number; views: number } | null;
-    revenue_chart: RevenuePoint[];
+    best_post: BestPost | null;
+    earnings_data: EarningsPoint[];
     recent_activity: Activity[];
 }
 
@@ -40,15 +65,26 @@ function fmt(n: number) {
     return new Intl.NumberFormat('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
-const QUICK_ACTIONS = [
-    { icon: '📤', label: 'Pridať obsah', href: '/dashboard/profile', color: '#c4714a' },
-    { icon: '📢', label: 'Broadcast',    href: '/dashboard/broadcast', color: '#5a3e2b' },
-    { icon: '💳', label: 'Výplaty',      href: '/dashboard/earnings', color: '#4a7c59' },
-    { icon: '👥', label: 'Predplatitelia', href: '/dashboard/subscribers', color: '#9a8a7a' },
-];
-
-export default function DashboardIndex({ coach, stats, top_post, revenue_chart, recent_activity }: Props) {
+export default function DashboardIndex({ coach, stats, best_post, earnings_data, recent_activity }: Props) {
     const hasStripe = !!coach.stripe_account_id;
+    const [showContentDropdown, setShowContentDropdown] = useState(false);
+    const [showStripeModal, setShowStripeModal] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        if (!showContentDropdown) return;
+        function handler(e: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setShowContentDropdown(false);
+            }
+        }
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showContentDropdown]);
+
+    const viewLabel = stats.total_views > 0 ? 'Celkové zobrazenia' : 'Celkové lajky';
+    const viewValue = stats.total_views > 0 ? stats.total_views : stats.total_likes;
 
     return (
         <PulseLayout>
@@ -90,28 +126,80 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
 
                     {/* ── Stats grid ── */}
                     <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: 12, marginBottom: 24 }}>
-                        {[
-                            { label: 'Mesačný zárobok', value: `€${fmt(stats.monthly_revenue)}`, icon: '💰', color: '#c4714a', big: true },
-                            { label: 'Predplatitelia', value: stats.subscriber_count.toLocaleString('sk-SK'), icon: '👥', color: '#2d2118' },
-                            { label: 'Nových tento týždeň', value: `+${stats.new_subscribers_week}`, icon: '📈', color: '#4a7c59' },
-                            stats.rating_count > 0
-                                ? { label: `${stats.rating_count} recenzií`, value: `★ ${stats.rating_avg.toFixed(1)}`, icon: '⭐', color: '#c4714a' }
-                                : { label: 'Celkové zobrazenia', value: stats.total_views.toLocaleString('sk-SK'), icon: '📊', color: '#9a8a7a' },
-                        ].map((s, i) => (
-                            <div key={i} style={{
+                        {/* Monthly earnings */}
+                        <Link href="/dashboard/earnings" style={{ textDecoration: 'none' }}>
+                            <div style={{
                                 background: 'white', borderRadius: 16, padding: '18px 16px',
                                 border: '1px solid #e8d9c4', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                            }}>
-                                <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
-                                <div style={{ fontSize: s.big ? 26 : 22, fontWeight: 700, color: s.color, fontFamily: 'Georgia, serif' }}>
-                                    {s.value}
+                                cursor: 'pointer', transition: 'all 0.15s', height: '100%',
+                            }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(196,113,74,0.3)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; }}
+                            >
+                                <div style={{ fontSize: 22, marginBottom: 6 }}>💰</div>
+                                <div style={{ fontSize: 26, fontWeight: 700, color: '#c4714a', fontFamily: 'Georgia, serif' }}>
+                                    €{fmt(stats.monthly_revenue)}
                                 </div>
-                                <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 3 }}>{s.label}</div>
+                                <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 3 }}>Mesačný zárobok</div>
                             </div>
-                        ))}
+                        </Link>
+
+                        {/* Subscribers */}
+                        <Link href="/dashboard/subscribers" style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'white', borderRadius: 16, padding: '18px 16px',
+                                border: '1px solid #e8d9c4', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                                cursor: 'pointer', transition: 'all 0.15s', height: '100%',
+                            }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(196,113,74,0.3)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; }}
+                            >
+                                <div style={{ fontSize: 22, marginBottom: 6 }}>👥</div>
+                                <div style={{ fontSize: 22, fontWeight: 700, color: '#2d2118', fontFamily: 'Georgia, serif' }}>
+                                    {stats.subscriber_count.toLocaleString('sk-SK')}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 3 }}>Predplatitelia</div>
+                            </div>
+                        </Link>
+
+                        {/* New this week */}
+                        <Link href="/dashboard/subscribers" style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'white', borderRadius: 16, padding: '18px 16px',
+                                border: '1px solid #e8d9c4', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                                cursor: 'pointer', transition: 'all 0.15s', height: '100%',
+                            }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(196,113,74,0.3)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; }}
+                            >
+                                <div style={{ fontSize: 22, marginBottom: 6 }}>📈</div>
+                                <div style={{ fontSize: 22, fontWeight: 700, color: '#4a7c59', fontFamily: 'Georgia, serif' }}>
+                                    {stats.new_subscribers_week > 0 ? `+${stats.new_subscribers_week}` : '0'}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 3 }}>Nových tento týždeň</div>
+                            </div>
+                        </Link>
+
+                        {/* Views / likes */}
+                        <Link href="/feed" style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'white', borderRadius: 16, padding: '18px 16px',
+                                border: '1px solid #e8d9c4', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                                cursor: 'pointer', transition: 'all 0.15s', height: '100%',
+                            }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(196,113,74,0.3)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; }}
+                            >
+                                <div style={{ fontSize: 22, marginBottom: 6 }}>{stats.total_views > 0 ? '👁️' : '❤️'}</div>
+                                <div style={{ fontSize: 22, fontWeight: 700, color: '#9a8a7a', fontFamily: 'Georgia, serif' }}>
+                                    {viewValue.toLocaleString('sk-SK')}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#9a8a7a', marginTop: 3 }}>{viewLabel}</div>
+                            </div>
+                        </Link>
                     </div>
 
-                    {/* ── Revenue chart ── */}
+                    {/* ── Earnings chart ── */}
                     <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '24px 20px', marginBottom: 24 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                             <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 18, fontWeight: 700, color: '#2d2118', margin: 0 }}>
@@ -122,17 +210,22 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
                             </Link>
                         </div>
                         <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={revenue_chart} barSize={32} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                            <BarChart data={earnings_data} barSize={32} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9a8a7a' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 11, fill: '#9a8a7a' }} axisLine={false} tickLine={false}
                                     tickFormatter={(v) => `€${v}`} />
                                 <Tooltip
-                                    formatter={(v) => [`€${fmt(Number(v))}`, 'Čistý zárobok']}
+                                    formatter={(value, name) => [
+                                        name === 'earnings'
+                                            ? `€${fmt(Number(value))}`
+                                            : value,
+                                        name === 'earnings' ? 'Zárobky' : 'Noví predplatitelia',
+                                    ]}
                                     contentStyle={{ borderRadius: 10, border: '1px solid #e8d9c4', fontSize: 13 }}
                                 />
-                                <Bar dataKey="net" radius={[6, 6, 0, 0]}>
-                                    {revenue_chart.map((entry, i) => (
-                                        <Cell key={i} fill={entry.current ? '#c4714a' : '#f0c4a8'} />
+                                <Bar dataKey="earnings" radius={[6, 6, 0, 0]}>
+                                    {earnings_data.map((entry, i) => (
+                                        <Cell key={i} fill={entry.isCurrentMonth ? '#c4714a' : '#e8b898'} />
                                     ))}
                                 </Bar>
                             </BarChart>
@@ -142,76 +235,196 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
                                 <div style={{ width: 12, height: 12, borderRadius: 3, background: '#c4714a' }} /> Tento mesiac
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#9a8a7a' }}>
-                                <div style={{ width: 12, height: 12, borderRadius: 3, background: '#f0c4a8' }} /> Predchádzajúce mesiace
+                                <div style={{ width: 12, height: 12, borderRadius: 3, background: '#e8b898' }} /> Predchádzajúce mesiace
                             </div>
                         </div>
                     </div>
 
                     {/* ── Quick actions ── */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
-                        {QUICK_ACTIONS.map(a => (
-                            <Link key={a.href} href={a.href} style={{ textDecoration: 'none' }}>
-                                <div style={{
-                                    background: 'white', border: '1px solid #e8d9c4', borderRadius: 14,
-                                    padding: '14px 8px', textAlign: 'center', cursor: 'pointer',
-                                    transition: 'all 0.15s',
+
+                        {/* Pridať obsah — dropdown */}
+                        <div ref={dropdownRef} style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setShowContentDropdown(v => !v)}
+                                style={{
+                                    width: '100%', background: 'white', border: '1px solid #e8d9c4',
+                                    borderRadius: 14, padding: '14px 8px', textAlign: 'center',
+                                    cursor: 'pointer', transition: 'all 0.15s',
+                                    borderColor: showContentDropdown ? '#c4714a' : '#e8d9c4',
+                                    backgroundColor: showContentDropdown ? '#faf6f0' : 'white',
                                 }}
-                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#faf6f0'; (e.currentTarget as HTMLElement).style.borderColor = '#c4714a'; }}
-                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'white'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; }}
-                                >
-                                    <div style={{ fontSize: 22, marginBottom: 6 }}>{a.icon}</div>
-                                    <div style={{ fontSize: 11, fontWeight: 600, color: '#2d2118', lineHeight: '1.3' }}>{a.label}</div>
+                                onMouseEnter={e => { if (!showContentDropdown) { (e.currentTarget as HTMLElement).style.background = '#faf6f0'; (e.currentTarget as HTMLElement).style.borderColor = '#c4714a'; } }}
+                                onMouseLeave={e => { if (!showContentDropdown) { (e.currentTarget as HTMLElement).style.background = 'white'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; } }}
+                            >
+                                <div style={{ fontSize: 22, marginBottom: 6 }}>✏️</div>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: '#2d2118', lineHeight: '1.3' }}>Pridať obsah</div>
+                            </button>
+                            {showContentDropdown && (
+                                <div style={{
+                                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+                                    background: 'white', border: '1px solid #e8d9c4',
+                                    borderRadius: 12, overflow: 'hidden', zIndex: 50,
+                                    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                                }}>
+                                    <Link
+                                        href="/dashboard/posts/create"
+                                        onClick={() => setShowContentDropdown(false)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', textDecoration: 'none', fontSize: 13, color: '#2d2118', transition: 'background 0.12s' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                    >
+                                        📝 Príspevok
+                                    </Link>
+                                    <div style={{ height: 1, background: '#f0e8df' }} />
+                                    <Link
+                                        href="/dashboard/reels/create"
+                                        onClick={() => setShowContentDropdown(false)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', textDecoration: 'none', fontSize: 13, color: '#2d2118', transition: 'background 0.12s' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                    >
+                                        ⚡ Reel
+                                    </Link>
                                 </div>
-                            </Link>
-                        ))}
-                    </div>
-
-                    {/* ── Bottom row: top post + activity ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16 }}>
-
-                        {/* Top post */}
-                        <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '18px 16px' }}>
-                            <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 15, fontWeight: 700, color: '#2d2118', marginBottom: 12 }}>
-                                🏆 Najlepší príspevok
-                            </h3>
-                            {top_post ? (
-                                <>
-                                    <p style={{ fontSize: 14, color: '#2d2118', fontWeight: 600, marginBottom: 10, lineHeight: '1.4' }}>
-                                        {top_post.title}
-                                    </p>
-                                    <div style={{ display: 'flex', gap: 14 }}>
-                                        <div style={{ fontSize: 13, color: '#9a8a7a' }}>❤️ {top_post.likes_count} likeov</div>
-                                        <div style={{ fontSize: 13, color: '#9a8a7a' }}>👁 {top_post.views.toLocaleString()} zobrazení</div>
-                                    </div>
-                                </>
-                            ) : (
-                                <p style={{ fontSize: 14, color: '#9a8a7a' }}>Zatiaľ žiadne príspevky</p>
                             )}
-                            <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
-                                <div style={{ fontSize: 13 }}>
-                                    <span style={{ fontWeight: 700, color: '#2d2118' }}>{stats.total_posts}</span>
-                                    <span style={{ color: '#9a8a7a' }}> príspevkov celkom</span>
-                                </div>
-                            </div>
                         </div>
 
-                        {/* Recent activity */}
+                        {/* Broadcast */}
+                        <Link href="/dashboard/broadcast" style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'white', border: '1px solid #e8d9c4', borderRadius: 14,
+                                padding: '14px 8px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s',
+                            }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#faf6f0'; (e.currentTarget as HTMLElement).style.borderColor = '#c4714a'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'white'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; }}
+                            >
+                                <div style={{ fontSize: 22, marginBottom: 6 }}>📢</div>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: '#2d2118', lineHeight: '1.3' }}>Broadcast</div>
+                            </div>
+                        </Link>
+
+                        {/* Výplaty — modal if no Stripe */}
+                        <button
+                            onClick={() => {
+                                if (!coach.stripe_price_id) {
+                                    setShowStripeModal(true);
+                                } else {
+                                    router.visit('/dashboard/earnings');
+                                }
+                            }}
+                            style={{
+                                background: 'white', border: '1px solid #e8d9c4', borderRadius: 14,
+                                padding: '14px 8px', textAlign: 'center', cursor: 'pointer',
+                                transition: 'all 0.15s', width: '100%',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#faf6f0'; (e.currentTarget as HTMLElement).style.borderColor = '#c4714a'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'white'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; }}
+                        >
+                            <div style={{ fontSize: 22, marginBottom: 6 }}>💳</div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: '#2d2118', lineHeight: '1.3' }}>Výplaty</div>
+                        </button>
+
+                        {/* Predplatitelia */}
+                        <Link href="/dashboard/subscribers" style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'white', border: '1px solid #e8d9c4', borderRadius: 14,
+                                padding: '14px 8px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s',
+                            }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#faf6f0'; (e.currentTarget as HTMLElement).style.borderColor = '#c4714a'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'white'; (e.currentTarget as HTMLElement).style.borderColor = '#e8d9c4'; }}
+                            >
+                                <div style={{ fontSize: 22, marginBottom: 6 }}>👥</div>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: '#2d2118', lineHeight: '1.3' }}>Predplatitelia</div>
+                            </div>
+                        </Link>
+                    </div>
+
+                    {/* ── Bottom row: best post + activity ── */}
+                    <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16 }}>
+
+                        {/* Best post — clickable */}
+                        <Link href={best_post ? '/feed' : '/dashboard/posts/create'} style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'white', borderRadius: 16, border: '1px solid #e8d9c4',
+                                padding: '18px 16px', cursor: 'pointer', transition: 'all 0.15s', height: '100%',
+                            }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
+                            >
+                                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 15, fontWeight: 700, color: '#2d2118', marginBottom: 12 }}>
+                                    🏆 Najlepší príspevok
+                                </h3>
+                                {best_post ? (
+                                    <>
+                                        <p style={{ fontSize: 14, color: '#2d2118', fontWeight: 600, marginBottom: 8, lineHeight: '1.4' }}>
+                                            {best_post.title}
+                                        </p>
+                                        <div style={{ display: 'flex', gap: 14, marginBottom: 6 }}>
+                                            <span style={{ fontSize: 13, color: '#9a8a7a' }}>❤️ {best_post.likes} lajkov</span>
+                                            {best_post.views > 0 && (
+                                                <span style={{ fontSize: 13, color: '#9a8a7a' }}>👁️ {best_post.views.toLocaleString()} zobrazení</span>
+                                            )}
+                                        </div>
+                                        <div style={{ fontSize: 12, color: '#9a8a7a' }}>{best_post.created_at}</div>
+                                    </>
+                                ) : (
+                                    <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                                        <p style={{ fontSize: 13, color: '#9a8a7a', marginBottom: 6 }}>Zatiaľ žiadne príspevky</p>
+                                        <span style={{ fontSize: 12, color: '#c4714a', fontWeight: 600 }}>Pridaj prvý →</span>
+                                    </div>
+                                )}
+                                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0e8df' }}>
+                                    <span style={{ fontWeight: 700, color: '#2d2118', fontSize: 13 }}>{stats.total_posts}</span>
+                                    <span style={{ color: '#9a8a7a', fontSize: 13 }}> príspevkov celkom</span>
+                                </div>
+                            </div>
+                        </Link>
+
+                        {/* Recent activity — each item clickable */}
                         <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '18px 16px' }}>
-                            <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 15, fontWeight: 700, color: '#2d2118', marginBottom: 12 }}>
-                                🔔 Posledná aktivita
-                            </h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 15, fontWeight: 700, color: '#2d2118', margin: 0 }}>
+                                    🔔 Posledná aktivita
+                                </h3>
+                                <Link href="/notifications" style={{ fontSize: 12, color: '#c4714a', textDecoration: 'none', fontWeight: 600 }}>
+                                    Všetky →
+                                </Link>
+                            </div>
                             {recent_activity.length === 0 ? (
                                 <p style={{ fontSize: 13, color: '#9a8a7a' }}>Žiadna aktivita</p>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     {recent_activity.slice(0, 6).map((a, i) => (
-                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span style={{ fontSize: 16, flexShrink: 0 }}>{a.icon}</span>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontSize: 13, color: '#2d2118', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.text}</div>
-                                                <div style={{ fontSize: 11, color: '#9a8a7a' }}>{relativeTime(a.time)}</div>
+                                        <Link key={i} href={a.link} style={{ textDecoration: 'none' }}>
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', gap: 10,
+                                                padding: '8px 6px', borderRadius: 10,
+                                                transition: 'background 0.12s',
+                                                fontWeight: a.is_read ? 400 : 600,
+                                            }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                <div style={{
+                                                    width: 32, height: 32, borderRadius: '50%',
+                                                    background: '#fce8de', display: 'flex',
+                                                    alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 14, flexShrink: 0,
+                                                }}>
+                                                    {a.icon}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: 13, color: '#2d2118', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {a.title || a.body}
+                                                    </div>
+                                                    <div style={{ fontSize: 11, color: '#9a8a7a' }}>{a.time}</div>
+                                                </div>
+                                                {!a.is_read && (
+                                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#c4714a', flexShrink: 0 }} />
+                                                )}
                                             </div>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
@@ -219,6 +432,42 @@ export default function DashboardIndex({ coach, stats, top_post, revenue_chart, 
                     </div>
                 </div>
             </div>
+
+            {/* ── Stripe modal ── */}
+            {showStripeModal && (
+                <div
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+                    onClick={() => setShowStripeModal(false)}
+                >
+                    <div
+                        style={{ background: 'white', borderRadius: 20, padding: 24, maxWidth: 360, margin: '0 16px', width: '100%' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 18, color: '#2d2118', marginBottom: 8 }}>
+                            💳 Nastav výplaty
+                        </h3>
+                        <p style={{ fontSize: 14, color: '#5a4a3a', marginBottom: 12, lineHeight: '1.5' }}>
+                            Pre výber zarobených peňazí potrebuješ prepojiť bankový účet cez Stripe.
+                        </p>
+                        <p style={{ fontSize: 12, color: '#9a8a7a', marginBottom: 20, lineHeight: '1.5' }}>
+                            Stripe Connect nie je zatiaľ dostupný. Výplaty budú spracované manuálne každý mesiac.
+                        </p>
+                        <button
+                            onClick={() => setShowStripeModal(false)}
+                            style={{
+                                width: '100%', background: '#c4714a', color: 'white',
+                                padding: '12px 0', borderRadius: 12, border: 'none',
+                                fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                                transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#5a3e2b')}
+                            onMouseLeave={e => (e.currentTarget.style.background = '#c4714a')}
+                        >
+                            Rozumiem
+                        </button>
+                    </div>
+                </div>
+            )}
         </PulseLayout>
     );
 }

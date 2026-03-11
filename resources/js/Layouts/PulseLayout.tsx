@@ -15,6 +15,20 @@ interface SuggestedCoach {
     avatar_url: string | null;
 }
 
+interface DashboardSidebar {
+    total_likes: number;
+    total_posts: number;
+    unread_messages: number;
+    completeness: number;
+    missing_items: string[];
+    recent_subscribers: Array<{
+        id: number;
+        name: string;
+        avatar: string | null;
+        subscribed_at: string;
+    }>;
+}
+
 const TRENDING_CATS: { icon: React.ReactNode; label: string; k: string }[] = [
     { icon: <Dumbbell size={14} />, label: 'Silové',   k: 'silov' },
     { icon: <Flame size={14} />,    label: 'Joga',     k: 'joga' },
@@ -24,15 +38,11 @@ const TRENDING_CATS: { icon: React.ReactNode; label: string; k: string }[] = [
     { icon: <Zap size={14} />,      label: 'Box',      k: 'box' },
 ];
 
-const REVIEWS = [
-    { name: 'Marek B.', text: 'Najlepšia investícia do zdravia!', rating: 5 },
-    { name: 'Zuzana K.', text: 'Lucia mi zmenila pohľad na výživu.', rating: 5 },
-    { name: 'Peter H.', text: 'Konečne tréner ktorý rozumie.', rating: 5 },
-];
 
 export default function PulseLayout({ children }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { id: number; name: string; role?: string; coach_id?: number | null } | null } };
+    const dashboardSidebar = (page.props as any).dashboard_sidebar as DashboardSidebar | undefined;
     const user = auth?.user ?? null;
     const isCoach = user?.role === 'coach';
     const url = page.url;
@@ -364,133 +374,210 @@ export default function PulseLayout({ children }: Props) {
                     overflowY: 'auto',
                 }}
             >
-                {/* Search */}
-                <div style={{ marginBottom: 24 }}>
-                    <div style={{ position: 'relative' }}>
-                        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9a8a7a', fontSize: 13 }}>🔍</span>
-                        <input
-                            type="text"
-                            placeholder="Hľadaj koučov..."
-                            style={{
-                                width: '100%', padding: '10px 14px 10px 34px',
-                                borderRadius: 999, border: '1px solid #e8d9c4',
-                                fontSize: 13, color: '#2d2118', background: '#faf6f0',
-                                outline: 'none', boxSizing: 'border-box',
-                            }}
-                        />
-                    </div>
-                </div>
+                {dashboardSidebar && isCoach ? (
+                    /* ── Coach dashboard sidebar ── */
+                    <>
+                        {/* Quick stats */}
+                        <div style={{ marginBottom: 20 }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', fontFamily: 'Georgia, serif', margin: '0 0 12px 0' }}>
+                                📊 Rýchly prehľad
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#faf6f0', borderRadius: 10 }}>
+                                    <span style={{ fontSize: 13, color: '#5a4a3a' }}>❤️ Lajky celkom</span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#2d2118' }}>{dashboardSidebar.total_likes}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#faf6f0', borderRadius: 10 }}>
+                                    <span style={{ fontSize: 13, color: '#5a4a3a' }}>📝 Príspevky</span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#2d2118' }}>{dashboardSidebar.total_posts}</span>
+                                </div>
+                                <Link href="/messages" style={{ textDecoration: 'none' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: dashboardSidebar.unread_messages > 0 ? '#fce8de' : '#faf6f0', borderRadius: 10, cursor: 'pointer' }}>
+                                        <span style={{ fontSize: 13, color: '#5a4a3a' }}>✉️ Neprečítané správy</span>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: dashboardSidebar.unread_messages > 0 ? '#c4714a' : '#2d2118' }}>
+                                            {dashboardSidebar.unread_messages}
+                                        </span>
+                                    </div>
+                                </Link>
+                            </div>
+                        </div>
 
-                {/* Suggested coaches */}
-                {suggestedCoaches.length > 0 && (
-                    <div style={{ marginBottom: 24 }}>
-                        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', marginBottom: 12, fontFamily: 'Georgia, serif', margin: '0 0 12px 0' }}>
-                            Odporúčaní kouči
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {suggestedCoaches.map(coach => (
-                                <div key={coach.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <Link href={`/coaches/${coach.id}`} style={{ flexShrink: 0 }}>
-                                        <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: '2px solid #e8d9c4' }}>
-                                            {coach.avatar_url ? (
-                                                <img src={coach.avatar_url} alt={coach.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <div style={{ width: '100%', height: '100%', background: '#c4714a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
-                                                    {coach.name.charAt(0)}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Link>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <Link href={`/coaches/${coach.id}`} style={{ textDecoration: 'none' }}>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#2d2118', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {coach.name}
+                        {/* Profile completeness */}
+                        <div style={{ marginBottom: 20, padding: '14px', background: '#faf6f0', borderRadius: 12, border: '1px solid #e8d9c4' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: '#2d2118' }}>✅ Profil</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: dashboardSidebar.completeness === 100 ? '#4a7c59' : '#c4714a' }}>
+                                    {dashboardSidebar.completeness}%
+                                </span>
+                            </div>
+                            {/* Progress bar */}
+                            <div style={{ height: 6, background: '#e8d9c4', borderRadius: 999, overflow: 'hidden', marginBottom: 10 }}>
+                                <div style={{
+                                    height: '100%',
+                                    width: `${dashboardSidebar.completeness}%`,
+                                    background: dashboardSidebar.completeness === 100 ? '#4a7c59' : '#c4714a',
+                                    borderRadius: 999,
+                                    transition: 'width 0.3s',
+                                }} />
+                            </div>
+                            {dashboardSidebar.missing_items.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {dashboardSidebar.missing_items.slice(0, 2).map((item, i) => (
+                                        <Link key={i} href="/dashboard/profile" style={{ textDecoration: 'none' }}>
+                                            <div style={{ fontSize: 11, color: '#c4714a', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <span style={{ flexShrink: 0 }}>·</span> {item}
                                             </div>
                                         </Link>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                                            {coach.specialization && (
-                                                <span style={{ fontSize: 11, color: '#9a8a7a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {coach.specialization}
-                                                </span>
-                                            )}
-                                            {coach.rating_count > 0 && (
-                                                <span style={{ fontSize: 11, color: '#c4714a', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                                                    ★ {coach.rating_avg.toFixed(1)}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <Link
-                                        href={`/coaches/${coach.id}`}
-                                        style={{
-                                            flexShrink: 0, padding: '5px 10px', borderRadius: 999,
-                                            border: '1px solid #c4714a', color: '#c4714a',
-                                            fontSize: 12, fontWeight: 600, textDecoration: 'none',
-                                            transition: 'all 0.15s',
-                                        }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = '#c4714a'; e.currentTarget.style.color = 'white'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#c4714a'; }}
-                                    >
-                                        Zobraziť
-                                    </Link>
-                                </div>
-                            ))}
-                        </div>
-                        <Link href="/coaches" style={{ display: 'block', marginTop: 12, fontSize: 13, color: '#c4714a', textDecoration: 'none', fontWeight: 600 }}>
-                            Zobraziť všetkých →
-                        </Link>
-                    </div>
-                )}
-
-                {/* Trending categories */}
-                <div style={{ marginBottom: 24 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', marginBottom: 10, fontFamily: 'Georgia, serif', margin: '0 0 10px 0' }}>
-                        Trending kategórie
-                    </h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {TRENDING_CATS.map(cat => (
-                            <Link
-                                key={cat.k}
-                                href={`/coaches?category=${cat.k}`}
-                                style={{
-                                    padding: '5px 12px', borderRadius: 999,
-                                    background: '#faf6f0', border: '1px solid #e8d9c4',
-                                    fontSize: 12, color: '#2d2118', textDecoration: 'none',
-                                    transition: 'all 0.15s',
-                                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.background = '#fce8de'; e.currentTarget.style.borderColor = '#c4714a'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = '#faf6f0'; e.currentTarget.style.borderColor = '#e8d9c4'; }}
-                            >
-                                {cat.icon} {cat.label}
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Reviews */}
-                <div style={{ borderTop: '1px solid #f0e8df', paddingTop: 20 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', marginBottom: 12, fontFamily: 'Georgia, serif', margin: '0 0 12px 0' }}>
-                        ⭐ Recenzie
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                        {REVIEWS.map((r, i) => (
-                            <div key={r.name} style={{
-                                paddingBottom: i < REVIEWS.length - 1 ? 10 : 0,
-                                marginBottom: i < REVIEWS.length - 1 ? 10 : 0,
-                                borderBottom: i < REVIEWS.length - 1 ? '1px solid #f0e8dc' : 'none',
-                            }}>
-                                <div style={{ display: 'flex', gap: 2, marginBottom: 3 }}>
-                                    {'★'.repeat(r.rating).split('').map((_, si) => (
-                                        <span key={si} style={{ color: '#c4714a', fontSize: 11 }}>★</span>
                                     ))}
                                 </div>
-                                <p style={{ fontSize: 12, color: '#5a4a3a', fontStyle: 'italic', lineHeight: 1.4 }}>"{r.text}"</p>
-                                <p style={{ fontSize: 11, color: '#9a8a7a', marginTop: 3 }}>— {r.name}</p>
+                            )}
+                        </div>
+
+                        {/* Recent subscribers */}
+                        <div>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', fontFamily: 'Georgia, serif', margin: '0 0 12px 0' }}>
+                                👥 Noví predplatitelia
+                            </h3>
+                            {dashboardSidebar.recent_subscribers.length === 0 ? (
+                                <p style={{ fontSize: 13, color: '#9a8a7a' }}>Zatiaľ žiadni predplatitelia</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {dashboardSidebar.recent_subscribers.map((sub, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <div style={{
+                                                width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                                                background: '#c4714a', color: 'white',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontWeight: 700, fontSize: 13, overflow: 'hidden',
+                                                border: '2px solid #e8d9c4',
+                                            }}>
+                                                {sub.avatar ? (
+                                                    <img src={sub.avatar} alt={sub.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : sub.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: '#2d2118', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {sub.name}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: '#9a8a7a' }}>{sub.subscribed_at}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <Link href="/dashboard/subscribers" style={{ display: 'block', marginTop: 12, fontSize: 13, color: '#c4714a', textDecoration: 'none', fontWeight: 600 }}>
+                                → Zobraziť všetkých
+                            </Link>
+                        </div>
+                    </>
+                ) : (
+                    /* ── Default sidebar (fans / non-dashboard pages) ── */
+                    <>
+                        {/* Search */}
+                        <div style={{ marginBottom: 24 }}>
+                            <div style={{ position: 'relative' }}>
+                                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9a8a7a', fontSize: 13 }}>🔍</span>
+                                <input
+                                    type="text"
+                                    placeholder="Hľadaj koučov..."
+                                    style={{
+                                        width: '100%', padding: '10px 14px 10px 34px',
+                                        borderRadius: 999, border: '1px solid #e8d9c4',
+                                        fontSize: 13, color: '#2d2118', background: '#faf6f0',
+                                        outline: 'none', boxSizing: 'border-box',
+                                    }}
+                                />
                             </div>
-                        ))}
-                    </div>
-                </div>
+                        </div>
+
+                        {/* Suggested coaches */}
+                        {suggestedCoaches.length > 0 && (
+                            <div style={{ marginBottom: 24 }}>
+                                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', fontFamily: 'Georgia, serif', margin: '0 0 12px 0' }}>
+                                    Odporúčaní kouči
+                                </h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {suggestedCoaches.map(coach => (
+                                        <div key={coach.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <Link href={`/coaches/${coach.id}`} style={{ flexShrink: 0 }}>
+                                                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: '2px solid #e8d9c4' }}>
+                                                    {coach.avatar_url ? (
+                                                        <img src={coach.avatar_url} alt={coach.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <div style={{ width: '100%', height: '100%', background: '#c4714a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
+                                                            {coach.name.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </Link>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <Link href={`/coaches/${coach.id}`} style={{ textDecoration: 'none' }}>
+                                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#2d2118', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {coach.name}
+                                                    </div>
+                                                </Link>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                                                    {coach.specialization && (
+                                                        <span style={{ fontSize: 11, color: '#9a8a7a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {coach.specialization}
+                                                        </span>
+                                                    )}
+                                                    {coach.rating_count > 0 && (
+                                                        <span style={{ fontSize: 11, color: '#c4714a', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                            ★ {coach.rating_avg.toFixed(1)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <Link
+                                                href={`/coaches/${coach.id}`}
+                                                style={{
+                                                    flexShrink: 0, padding: '5px 10px', borderRadius: 999,
+                                                    border: '1px solid #c4714a', color: '#c4714a',
+                                                    fontSize: 12, fontWeight: 600, textDecoration: 'none',
+                                                    transition: 'all 0.15s',
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = '#c4714a'; e.currentTarget.style.color = 'white'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#c4714a'; }}
+                                            >
+                                                Zobraziť
+                                            </Link>
+                                        </div>
+                                    ))}
+                                </div>
+                                <Link href="/coaches" style={{ display: 'block', marginTop: 12, fontSize: 13, color: '#c4714a', textDecoration: 'none', fontWeight: 600 }}>
+                                    Zobraziť všetkých →
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* Trending categories */}
+                        <div style={{ marginBottom: 24 }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#2d2118', fontFamily: 'Georgia, serif', margin: '0 0 10px 0' }}>
+                                Trending kategórie
+                            </h3>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                {TRENDING_CATS.map(cat => (
+                                    <Link
+                                        key={cat.k}
+                                        href={`/coaches?category=${cat.k}`}
+                                        style={{
+                                            padding: '5px 12px', borderRadius: 999,
+                                            background: '#faf6f0', border: '1px solid #e8d9c4',
+                                            fontSize: 12, color: '#2d2118', textDecoration: 'none',
+                                            transition: 'all 0.15s',
+                                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#fce8de'; e.currentTarget.style.borderColor = '#c4714a'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = '#faf6f0'; e.currentTarget.style.borderColor = '#e8d9c4'; }}
+                                    >
+                                        {cat.icon} {cat.label}
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                )}
             </aside>
 
             {/* ── MOBILE TOP NAV — hidden on desktop ── */}
