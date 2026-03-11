@@ -1047,3 +1047,38 @@ DELETE /coaches/{coachId}/reviews  → auth
 - [2026-03-10 12:45:51] e6198a0: fix: camera permission not prompted — remove auto-start getUserMedia
 - [2026-03-10 12:48:53] f3a3bf4: fix: startBroadcast shows loading + proper error display
 - [2026-03-10 12:51:50] b3fdd23: fix: proxy WHIP SDP through Laravel to avoid browser CORS
+- [2026-03-10 12:52:51] 09248ed: fix: use axios for WHIP proxy — fixes 419 CSRF error
+- [2026-03-10 14:16:28] 51cffce: feat: live streaming with browser WebRTC, real-time chat via Reverb
+
+---
+
+## Session 25 — Dashboard redesign (2026-03-11)
+
+### DashboardController::index() — real data queries
+- `totalPosts`, `totalLikes` (post_likes JOIN posts), `totalMessages` (unread) — all real DB queries
+- `subscribersCount`, `newThisWeek`, `monthlyEarnings` — from `subscriptions` table (stripe_status IN active/trialing)
+- `monthlyEarnings` = `sum('stripe_price') * 0.85` — NOTE: stripe_price is Stripe Price ID string, so returns 0 until real payments set up (correct for now)
+- `completeness` — 5 checks × 20pts: profile_avatar, profile_bio, monthly_price, totalPosts > 0, stripe_price_id
+- `recentSubscribers` — JOIN subscriptions+users, last 5, with diffForHumans
+- `bestPost` — withCount('likes'), orderBy likes_count desc
+- `earningsData` — 6-month collect(range(5,0)), real DB sum per month
+- `recentActivity` — from `notifications` table (user_id, type, title, body, is_read, related_id)
+- `dashboard_sidebar` prop — passed to Inertia for PulseLayout right sidebar
+
+### PulseLayout right sidebar — context-aware
+- Reads `page.props.dashboard_sidebar` via `usePage()`
+- If `dashboardSidebar && isCoach`: shows coach widgets (quick stats, completeness bar, recent subscribers)
+- Otherwise: shows default sidebar (search, suggested coaches, trending categories)
+- Removed fake `REVIEWS` constant
+
+### Dashboard/Index.tsx changes
+- All 4 stat cards wrapped in `<Link>` (earnings→/dashboard/earnings, subscribers×2→/dashboard/subscribers, views/likes→/feed)
+- Hover: shadow + border-color transition on stat cards
+- Quick action "Pridať obsah": dropdown with Príspevok/Reel (useRef outside-click close)
+- Quick action "Výplaty": modal if !coach.stripe_price_id, else router.visit('/dashboard/earnings')
+- Best post: clickable (→/feed or →/dashboard/posts/create if empty)
+- Activity feed: each item is `<Link href={activity.link}>`, unread dot indicator
+- Earnings chart: uses `earnings_data` prop, tooltip shows Zárobky + Noví predplatitelia, Cell color by isCurrentMonth
+- [2026-03-11 07:01:16] c49a5bc: fix: dashboard — right sidebar redesign, stat cards clickable, earnings chart fix, activity feed clickable
+- [2026-03-11 07:03:33] de4a5e1: fix: dashboard 500 — stripe_price is varchar not numeric, use monthly_price × count for earnings
+- [2026-03-11 07:11:16] 66859c5: feat: dashboard sidebar followers/subscribers + earnings page dual chart

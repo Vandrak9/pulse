@@ -386,7 +386,7 @@ export default function PulseLayout({ children }: Props) {
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 {/* Followers */}
-                                <Link href={user ? `/profile/${user.id}` : '/login'} style={{ textDecoration: 'none' }}>
+                                <Link href="/dashboard/followers" style={{ textDecoration: 'none' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#faf6f0', borderRadius: 10, cursor: 'pointer', transition: 'background 0.12s' }}
                                         onMouseEnter={e => (e.currentTarget.style.background = '#f0e8df')}
                                         onMouseLeave={e => (e.currentTarget.style.background = '#faf6f0')}

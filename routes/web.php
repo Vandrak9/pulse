@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     // Coach dashboard
     Route::get('/dashboard/earnings', [DashboardController::class, 'earnings'])->name('dashboard.earnings');
     Route::get('/dashboard/subscribers', [DashboardController::class, 'subscribers'])->name('dashboard.subscribers');
+    Route::get('/dashboard/followers', [DashboardController::class, 'followers'])->name('dashboard.followers');
 
     Route::get('/dashboard/profile', [CoachController::class, 'edit'])->name('dashboard.profile.edit');
     Route::put('/dashboard/profile', [CoachController::class, 'update'])->name('dashboard.profile.update');

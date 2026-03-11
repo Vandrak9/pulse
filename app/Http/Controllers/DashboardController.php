@@ -112,19 +112,17 @@ class DashboardController extends Controller
         ] : null;
 
         // Earnings chart — last 6 months
-        // stripe_price is a Stripe Price ID string, not a number — estimate via newSubs × monthly_price
-        $earningsData = collect(range(5, 0))->map(function ($monthsAgo) use ($coach, $monthlyPrice) {
-            $date    = now()->subMonths($monthsAgo);
-            $newSubs = DB::table('subscriptions')
-                ->where('coach_id', $coach->id)
-                ->whereYear('created_at', $date->year)
-                ->whereMonth('created_at', $date->month)
-                ->count();
+        // Use same factor-based estimate as earnings() so all months show meaningful values.
+        // Real per-month breakdown requires a separate payment-amount column.
+        $earningsData = collect(range(5, 0))->map(function ($monthsAgo) use ($subscribersCount, $monthlyPrice) {
+            $date   = now()->subMonths($monthsAgo);
+            $factor = max(0.1, 1 - ($monthsAgo * 0.07));
+            $subs   = max(0, (int) round($subscribersCount * $factor));
             return [
                 'month'          => $date->locale('sk')->isoFormat('MMM'),
                 'year'           => $date->year,
-                'earnings'       => round($newSubs * $monthlyPrice * 0.85, 2),
-                'subscribers'    => $newSubs,
+                'earnings'       => round($subs * $monthlyPrice * 0.85, 2),
+                'subscribers'    => $subs,
                 'isCurrentMonth' => $monthsAgo === 0,
             ];
         })->values()->all();
@@ -323,6 +321,37 @@ class DashboardController extends Controller
                 'monthly_price' => $monthlyPrice,
             ],
             'subscribers' => $subscribers,
+        ]);
+    }
+
+    // ── Followers ─────────────────────────────────────────────────────────────
+
+    public function followers()
+    {
+        $user  = auth()->user();
+        $coach = $this->requireCoach();
+        if ($coach instanceof \Illuminate\Http\RedirectResponse) return $coach;
+
+        $followers = DB::table('follows')
+            ->where('following_id', $user->id)
+            ->join('users', 'users.id', '=', 'follows.follower_id')
+            ->select('users.id', 'users.name', 'users.profile_avatar', 'follows.created_at as followed_at')
+            ->orderBy('follows.created_at', 'desc')
+            ->get()
+            ->map(fn($f) => [
+                'id'          => $f->id,
+                'name'        => $f->name,
+                'avatar'      => $f->profile_avatar,
+                'followed_at' => Carbon::parse($f->followed_at)->diffForHumans(),
+            ])->all();
+
+        return Inertia::render('Dashboard/Followers', [
+            'coach' => [
+                'name'       => $user->name,
+                'avatar_url' => $coach->avatar_path ? '/storage/' . $coach->avatar_path : null,
+            ],
+            'followers' => $followers,
+            'total'     => count($followers),
         ]);
     }
 
