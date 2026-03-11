@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coach;
+use App\Models\Notification;
 use App\Models\Post;
 use App\Models\PostLike;
+use App\Services\EmailNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -162,7 +164,8 @@ class FeedController extends Controller
 
     public function like(Request $request, Post $post): RedirectResponse
     {
-        $userId = $request->user()->id;
+        $liker  = $request->user();
+        $userId = $liker->id;
 
         $existing = PostLike::where('user_id', $userId)
             ->where('post_id', $post->id)
@@ -172,6 +175,48 @@ class FeedController extends Controller
             $existing->delete();
         } else {
             PostLike::create(['user_id' => $userId, 'post_id' => $post->id]);
+
+            // Notify the coach who owns this post (skip if coach liked their own post)
+            $coachUser = DB::table('coaches')
+                ->join('users', 'users.id', '=', 'coaches.user_id')
+                ->where('coaches.id', $post->coach_id)
+                ->select('users.id as user_id', 'users.notif_new_like', 'users.email_notif_new_like',
+                         'users.email', 'users.email_verified_at', 'users.name')
+                ->first();
+
+            if ($coachUser && $coachUser->user_id !== $userId) {
+                // In-app notification (if pref enabled)
+                if ($coachUser->notif_new_like) {
+                    try {
+                        Notification::create([
+                            'user_id'    => $coachUser->user_id,
+                            'type'       => 'new_like',
+                            'title'      => $liker->name . ' lajkol tvoj príspevok',
+                            'body'       => '"' . ($post->title ?? \Illuminate\Support\Str::limit($post->content ?? '', 40)) . '"',
+                            'data'       => ['actor_id' => $userId, 'actor_name' => $liker->name, 'post_id' => $post->id],
+                            'related_id' => $userId,
+                            'is_read'    => false,
+                        ]);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::warning('Like notification failed: ' . $e->getMessage());
+                    }
+                }
+
+                // Email notification (if pref enabled)
+                if ($coachUser->email_notif_new_like && $coachUser->email_verified_at) {
+                    $coachUserModel = \App\Models\User::find($coachUser->user_id);
+                    if ($coachUserModel) {
+                        app(EmailNotificationService::class)->send(
+                            $coachUserModel,
+                            'new_like',
+                            [
+                                'name'       => $liker->name,
+                                'post_title' => $post->title ?? \Illuminate\Support\Str::limit($post->content ?? '', 40),
+                            ]
+                        );
+                    }
+                }
+            }
         }
 
         return back();
