@@ -1082,3 +1082,4 @@ DELETE /coaches/{coachId}/reviews  → auth
 - [2026-03-11 07:01:16] c49a5bc: fix: dashboard — right sidebar redesign, stat cards clickable, earnings chart fix, activity feed clickable
 - [2026-03-11 07:03:33] de4a5e1: fix: dashboard 500 — stripe_price is varchar not numeric, use monthly_price × count for earnings
 - [2026-03-11 07:11:16] 66859c5: feat: dashboard sidebar followers/subscribers + earnings page dual chart
+- [2026-03-11 07:26:38] 005556f: fix: followers page + earnings chart consistent values

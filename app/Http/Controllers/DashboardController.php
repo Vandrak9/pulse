@@ -65,17 +65,20 @@ class DashboardController extends Controller
             ->where('following_id', $user->id)
             ->count();
 
-        // Profile completeness
+        // Profile completeness — check avatar file actually exists on disk
+        $avatarOk = !empty($user->profile_avatar)
+            && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->profile_avatar);
+
         $completeness = 0;
-        if ($user->profile_avatar) $completeness += 20;
-        if ($user->profile_bio) $completeness += 20;
+        if ($avatarOk) $completeness += 20;
+        if (!empty($user->profile_bio)) $completeness += 20;
         if ($coach->monthly_price) $completeness += 20;
         if ($totalPosts > 0) $completeness += 20;
         if ($coach->stripe_price_id) $completeness += 20;
 
         $missingItems = [];
-        if (!$user->profile_avatar) $missingItems[] = 'Nahraj profilovú fotku';
-        if (!$user->profile_bio) $missingItems[] = 'Doplň bio';
+        if (!$avatarOk) $missingItems[] = 'Nahraj profilovú fotku';
+        if (empty($user->profile_bio)) $missingItems[] = 'Doplň bio';
         if (!$coach->monthly_price) $missingItems[] = 'Nastav cenu predplatného';
         if ($totalPosts === 0) $missingItems[] = 'Pridaj prvý príspevok';
         if (!$coach->stripe_price_id) $missingItems[] = 'Nastav platby';
@@ -94,22 +97,33 @@ class DashboardController extends Controller
                 'id'           => $s->id,
                 'name'         => $s->name,
                 'avatar'       => $s->profile_avatar,
-                'subscribed_at' => Carbon::parse($s->subscribed_at)->diffForHumans(),
+                'subscribed_at' => Carbon::parse($s->subscribed_at)->locale('sk')->diffForHumans(),
             ])->all();
 
-        // Best post (real)
-        $bestPost = Post::where('coach_id', $coach->id)
+        // Recent posts (last 3, with thumbnail)
+        $recentPosts = Post::where('coach_id', $coach->id)
             ->withCount('likes')
-            ->orderBy('likes_count', 'desc')
-            ->first();
+            ->with('media')
+            ->orderBy('created_at', 'desc')
+            ->take(3)
+            ->get()
+            ->map(function ($post) {
+                $firstMedia = $post->media->first();
+                $thumbnail  = $firstMedia?->media_thumbnail
+                    ? '/storage/' . $firstMedia->media_thumbnail
+                    : ($firstMedia?->media_path && str_starts_with($firstMedia->media_path, 'images/')
+                        ? '/storage/' . $firstMedia->media_path
+                        : ($post->thumbnail_path ? '/storage/' . $post->thumbnail_path : null));
 
-        $bestPostData = $bestPost ? [
-            'id'         => $bestPost->id,
-            'title'      => $bestPost->title ?? Str::limit($bestPost->content ?? '', 40),
-            'likes'      => $bestPost->likes_count,
-            'views'      => (int)($bestPost->views ?? 0),
-            'created_at' => $bestPost->created_at->diffForHumans(),
-        ] : null;
+                return [
+                    'id'           => $post->id,
+                    'title'        => $post->title ?? Str::limit($post->content ?? '', 50, '…'),
+                    'likes'        => $post->likes_count,
+                    'created_at'   => $post->created_at->locale('sk')->diffForHumans(),
+                    'thumbnail'    => $thumbnail,
+                    'is_exclusive' => (bool) $post->is_exclusive,
+                ];
+            })->all();
 
         // Earnings chart — last 6 months
         // Use same factor-based estimate as earnings() so all months show meaningful values.
@@ -127,24 +141,36 @@ class DashboardController extends Controller
             ];
         })->values()->all();
 
-        // Recent activity from notifications table
+        // Recent activity from notifications table — with actor names
         $recentActivity = DB::table('notifications')
             ->where('user_id', auth()->id())
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get()
             ->map(function ($n) {
+                $actorName = $n->related_id
+                    ? DB::table('users')->where('id', $n->related_id)->value('name')
+                    : null;
+
+                $displayTitle = match($n->type) {
+                    'new_message'    => ($actorName ?? 'Niekto') . ' ti poslal správu',
+                    'new_subscriber' => ($actorName ?? 'Niekto') . ' sa prihlásil na odber',
+                    'new_follower'   => ($actorName ?? 'Niekto') . ' ťa začal sledovať',
+                    'new_like'       => ($actorName ?? 'Niekto') . ' lajkol tvoj príspevok',
+                    'new_review'     => ($actorName ?? 'Niekto') . ' zanechal recenziu',
+                    default          => $n->title ?? $n->body ?? 'Nová aktivita',
+                };
+
                 return [
                     'id'      => $n->id,
                     'type'    => $n->type,
-                    'title'   => $n->title,
-                    'body'    => $n->body,
+                    'title'   => $displayTitle,
                     'is_read' => (bool)$n->is_read,
-                    'time'    => Carbon::parse($n->created_at)->diffForHumans(),
+                    'time'    => Carbon::parse($n->created_at)->locale('sk')->diffForHumans(),
                     'link'    => match($n->type) {
                         'new_message'    => '/messages/' . ($n->related_id ?? ''),
                         'new_subscriber' => '/dashboard/subscribers',
-                        'new_follower'   => '/profile/' . ($n->related_id ?? ''),
+                        'new_follower'   => '/dashboard/followers',
                         'new_review'     => '/profile/me',
                         'new_like'       => '/feed',
                         default          => '/notifications',
@@ -182,7 +208,7 @@ class DashboardController extends Controller
                 'rating_avg'           => (float) $coach->rating_avg,
                 'rating_count'         => (int) $coach->rating_count,
             ],
-            'best_post'       => $bestPostData,
+            'recent_posts'    => $recentPosts,
             'earnings_data'   => $earningsData,
             'recent_activity' => $recentActivity,
             'dashboard_sidebar' => [
@@ -342,7 +368,7 @@ class DashboardController extends Controller
                 'id'          => $f->id,
                 'name'        => $f->name,
                 'avatar'      => $f->profile_avatar,
-                'followed_at' => Carbon::parse($f->followed_at)->diffForHumans(),
+                'followed_at' => Carbon::parse($f->followed_at)->locale('sk')->diffForHumans(),
             ])->all();
 
         return Inertia::render('Dashboard/Followers', [

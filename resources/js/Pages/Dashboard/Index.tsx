@@ -45,18 +45,19 @@ interface Activity {
     icon: string;
 }
 
-interface BestPost {
+interface RecentPost {
     id: number;
     title: string;
     likes: number;
-    views: number;
     created_at: string;
+    thumbnail: string | null;
+    is_exclusive: boolean;
 }
 
 interface Props {
     coach: Coach;
     stats: Stats;
-    best_post: BestPost | null;
+    recent_posts: RecentPost[];
     earnings_data: EarningsPoint[];
     recent_activity: Activity[];
 }
@@ -65,7 +66,7 @@ function fmt(n: number) {
     return new Intl.NumberFormat('sk-SK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
-export default function DashboardIndex({ coach, stats, best_post, earnings_data, recent_activity }: Props) {
+export default function DashboardIndex({ coach, stats, recent_posts, earnings_data, recent_activity }: Props) {
     const hasStripe = !!coach.stripe_account_id;
     const [showContentDropdown, setShowContentDropdown] = useState(false);
     const [showStripeModal, setShowStripeModal] = useState(false);
@@ -343,43 +344,89 @@ export default function DashboardIndex({ coach, stats, best_post, earnings_data,
                     {/* ── Bottom row: best post + activity ── */}
                     <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16 }}>
 
-                        {/* Best post — clickable */}
-                        <Link href={best_post ? '/feed' : '/dashboard/posts/create'} style={{ textDecoration: 'none' }}>
-                            <div style={{
-                                background: 'white', borderRadius: 16, border: '1px solid #e8d9c4',
-                                padding: '18px 16px', cursor: 'pointer', transition: 'all 0.15s', height: '100%',
-                            }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
-                            >
-                                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 15, fontWeight: 700, color: '#2d2118', marginBottom: 12 }}>
-                                    🏆 Najlepší príspevok
+                        {/* Recent posts widget */}
+                        <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '18px 16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: 15, fontWeight: 700, color: '#2d2118', margin: 0 }}>
+                                    📝 Moje posledné príspevky
                                 </h3>
-                                {best_post ? (
-                                    <>
-                                        <p style={{ fontSize: 14, color: '#2d2118', fontWeight: 600, marginBottom: 8, lineHeight: '1.4' }}>
-                                            {best_post.title}
-                                        </p>
-                                        <div style={{ display: 'flex', gap: 14, marginBottom: 6 }}>
-                                            <span style={{ fontSize: 13, color: '#9a8a7a' }}>❤️ {best_post.likes} lajkov</span>
-                                            {best_post.views > 0 && (
-                                                <span style={{ fontSize: 13, color: '#9a8a7a' }}>👁️ {best_post.views.toLocaleString()} zobrazení</span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: 12, color: '#9a8a7a' }}>{best_post.created_at}</div>
-                                    </>
-                                ) : (
-                                    <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                                        <p style={{ fontSize: 13, color: '#9a8a7a', marginBottom: 6 }}>Zatiaľ žiadne príspevky</p>
-                                        <span style={{ fontSize: 12, color: '#c4714a', fontWeight: 600 }}>Pridaj prvý →</span>
-                                    </div>
-                                )}
-                                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0e8df' }}>
-                                    <span style={{ fontWeight: 700, color: '#2d2118', fontSize: 13 }}>{stats.total_posts}</span>
-                                    <span style={{ color: '#9a8a7a', fontSize: 13 }}> príspevkov celkom</span>
-                                </div>
+                                <Link href="/dashboard/posts/create"
+                                    style={{ fontSize: 12, color: '#c4714a', textDecoration: 'none', fontWeight: 600 }}
+                                    onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                                    onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                                >
+                                    + Pridať
+                                </Link>
                             </div>
-                        </Link>
+
+                            {recent_posts.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                                    <p style={{ fontSize: 13, color: '#9a8a7a', marginBottom: 8 }}>Zatiaľ žiadne príspevky</p>
+                                    <Link href="/dashboard/posts/create"
+                                        style={{ fontSize: 12, color: '#c4714a', textDecoration: 'none', fontWeight: 600 }}
+                                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                                    >
+                                        Pridaj prvý príspevok →
+                                    </Link>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {recent_posts.map(post => (
+                                        <Link key={post.id} href="/feed" style={{ textDecoration: 'none' }}>
+                                            <div style={{
+                                                display: 'flex', alignItems: 'center', gap: 10,
+                                                padding: '8px', borderRadius: 12, transition: 'background 0.12s',
+                                            }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                {/* Thumbnail */}
+                                                {post.thumbnail ? (
+                                                    <img src={post.thumbnail} alt=""
+                                                        style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                                                ) : (
+                                                    <div style={{
+                                                        width: 48, height: 48, borderRadius: 10, flexShrink: 0,
+                                                        background: '#fce8de', display: 'flex', alignItems: 'center',
+                                                        justifyContent: 'center', fontSize: 18,
+                                                    }}>📝</div>
+                                                )}
+
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                                        <span style={{
+                                                            fontSize: 13, fontWeight: 600, color: '#2d2118',
+                                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                        }}>
+                                                            {post.title}
+                                                        </span>
+                                                        {post.is_exclusive && (
+                                                            <span style={{
+                                                                fontSize: 10, background: '#fce8de', color: '#c4714a',
+                                                                padding: '1px 6px', borderRadius: 999, flexShrink: 0, fontWeight: 600,
+                                                            }}>🔒</span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: '#9a8a7a' }}>
+                                                        <span>❤️ {post.likes}</span>
+                                                        <span style={{ marginLeft: 'auto' }}>{post.created_at}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    ))}
+
+                                    <Link href="/feed"
+                                        style={{ display: 'block', textAlign: 'center', fontSize: 12, color: '#c4714a', textDecoration: 'none', fontWeight: 600, paddingTop: 6 }}
+                                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                                    >
+                                        Zobraziť všetky →
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Recent activity — each item clickable */}
                         <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '18px 16px' }}>
