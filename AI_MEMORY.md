@@ -1173,3 +1173,14 @@ DELETE /coaches/{coachId}/reviews  → auth
 - **Progress bar**: top strip, white fill on white/30 track
 - **Content states**: (1) video player if unlocked, (2) 🔒 locked CTA if exclusive+not subscribed, (3) 👤 no reel CTA
 - **Footer**: "Zobraziť profil" + "Predplatiť →" shown only when reel is viewable
+- [2026-03-12 19:12:04] df0af35: docs: update AI_MEMORY.md — Session 30 story modal
+- [2026-03-12 19:16:06] 951c244: feat: story avatar tap menu — Príbeh / Profil options
+
+## Session 31 — Story avatar tap menu (2026-03-12)
+
+- **Tap behavior**: story avatar click no longer opens modal directly — shows small popup menu first
+- **storyMenu state**: `useState<Story | null>(null)` — toggle on click, close on outside click via `menuRef` + `mousedown` listener
+- **Popup position**: `absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50` — floats above avatar
+- **Arrow**: white rotated square (`rotate-45`) pointing down toward avatar
+- **Menu options**: (1) 🎬 Príbeh → opens story modal (`setActiveStory`), subtitle "Najnovší reel" / "Žiadny obsah"; (2) 👤 Profil → `<Link href="/coaches/{slug}">`
+- **Outside click**: closes menu without opening modal
