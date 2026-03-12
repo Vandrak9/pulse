@@ -60,7 +60,7 @@ class MessageController extends Controller
         });
 
         $lastSeen = $partner->last_seen_at;
-        $isOnline = $lastSeen && now()->diffInMinutes($lastSeen) < 5;
+        $isOnline = $lastSeen && $lastSeen->gt(now()->subMinutes(5));
 
         return Inertia::render('Messages/Show', [
             'partner'       => [
