@@ -1158,3 +1158,18 @@ DELETE /coaches/{coachId}/reviews  → auth
 - **Online/offline text**: 10px label below name
 - **Guest path**: `coaches: []` → `stories: []` (key rename)
 - **Feed.tsx**: `Coach` interface replaced with `Story` interface; stories rendered with full new ring UI
+- [2026-03-12 19:04:58] c7eb8aa: docs: update AI_MEMORY.md — Session 29 stories row
+- [2026-03-12 19:05:46] f0d7211: fix: stories — qualify user_id column in subscriptions JOIN to avoid ambiguity
+- [2026-03-12 19:11:40] c5ef93e: feat: story modal — click shows latest reel with progress bar
+
+## Session 30 — Story modal with latest reel (2026-03-12)
+
+- **FeedController**: `stories` map fetches `latest_reel` per coach — queries `posts` WHERE `video_type IN (reel,video)` AND `media_path NOT NULL`, ordered `created_at DESC`
+- **latest_reel shape**: `id, title, video_url (=media_path), thumbnail_url, is_exclusive, created_at (diffForHumans sk locale)`
+- **No post_media table** — posts columns used directly: `media_path`, `thumbnail_path`
+- **Feed.tsx `Story` interface**: extended with `latest_reel: LatestReel | null`
+- **Story avatars**: changed from `<Link>` to `<button onClick={() => setActiveStory(story)}>`
+- **Story modal**: fullscreen black overlay (`z-50`), 10s auto-close via setInterval 100ms steps
+- **Progress bar**: top strip, white fill on white/30 track
+- **Content states**: (1) video player if unlocked, (2) 🔒 locked CTA if exclusive+not subscribed, (3) 👤 no reel CTA
+- **Footer**: "Zobraziť profil" + "Predplatiť →" shown only when reel is viewable
