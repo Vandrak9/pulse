@@ -87,9 +87,10 @@ export default function PostDetailModal({ postId, onClose, isGuest = false }: Pr
     }, [onClose]);
 
     useEffect(() => {
+        if (!postId) return;
         document.body.style.overflow = 'hidden';
         return () => { document.body.style.overflow = ''; };
-    }, []);
+    }, [postId]);
 
     function toggleLike() {
         if (!post || isGuest) return;
