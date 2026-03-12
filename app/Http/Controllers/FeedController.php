@@ -141,8 +141,8 @@ class FeedController extends Controller
             ->pluck('following_id');
 
         $subscribedCoachUserIds = DB::table('subscriptions')
-            ->where('user_id', $userId)
-            ->where('stripe_status', 'active')
+            ->where('subscriptions.user_id', $userId)
+            ->where('subscriptions.stripe_status', 'active')
             ->join('coaches', 'coaches.id', '=', 'subscriptions.coach_id')
             ->pluck('coaches.user_id');
 
@@ -159,8 +159,8 @@ class FeedController extends Controller
                     && \Carbon\Carbon::parse($u->last_seen_at)->gt(now()->subMinutes(5));
 
                 $isSubscribed = DB::table('subscriptions')
-                    ->where('user_id', $userId)
-                    ->where('stripe_status', 'active')
+                    ->where('subscriptions.user_id', $userId)
+                    ->where('subscriptions.stripe_status', 'active')
                     ->join('coaches', 'coaches.id', '=', 'subscriptions.coach_id')
                     ->where('coaches.user_id', $u->id)
                     ->exists();
