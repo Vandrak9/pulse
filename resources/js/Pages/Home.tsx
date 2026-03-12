@@ -12,8 +12,16 @@ interface Coach {
     avatar_url: string | null;
 }
 
+interface Stats {
+    coaches: number;
+    fans: number;
+    videos: number;
+    rating: number;
+}
+
 interface Props {
     featured: Coach[];
+    stats: Stats;
 }
 
 const CATEGORIES = [
@@ -31,7 +39,7 @@ const HOW_IT_WORKS = [
     { step: '03', icon: '💪', title: 'Trénuj',        desc: 'Získaj prístup k exkluzívnemu obsahu, videám a priamej komunikácii s koučom.' },
 ];
 
-export default function Home({ featured }: Props) {
+export default function Home({ featured, stats }: Props) {
     return (
         <PulseLayout>
             <Head title="PULSE — Fitness koučing" />
@@ -68,10 +76,10 @@ export default function Home({ featured }: Props) {
                                 Predplaťte si koučov ktorí vám skutočne pomôžu dosiahnuť vaše ciele — bez zbytočností, len výsledky.
                             </p>
 
-                            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row md:justify-start">
+                            <div className="mt-8 flex flex-col items-center justify-center gap-2 md:items-start">
                                 <Link
                                     href="/coaches"
-                                    className="w-full rounded-full px-8 py-4 text-lg font-semibold text-white shadow-lg transition-colors sm:w-auto"
+                                    className="w-full rounded-2xl px-8 py-4 text-center text-lg font-semibold text-white shadow-lg transition-colors sm:w-auto"
                                     style={{ backgroundColor: '#c4714a' }}
                                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#a85e3a')}
                                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#c4714a')}
@@ -79,23 +87,25 @@ export default function Home({ featured }: Props) {
                                     Objaviť koučov
                                 </Link>
                                 <Link
-                                    href="/register"
-                                    className="w-full rounded-full px-8 py-4 text-lg font-semibold transition sm:w-auto"
-                                    style={{ border: '2px solid rgba(196,113,74,0.4)', color: '#c4714a', background: 'transparent' }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#c4714a')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(196,113,74,0.4)')}
+                                    href="/register?role=coach"
+                                    className="w-full py-2 text-center text-sm font-medium"
+                                    style={{ color: '#c4714a' }}
                                 >
-                                    Staň sa koučom
+                                    Si tréner? Začni zarábať →
                                 </Link>
                             </div>
 
                             {/* Social proof */}
                             <div className="mt-8 flex flex-wrap items-center justify-center gap-5 text-sm md:justify-start" style={{ color: '#9a8a7a' }}>
-                                <span>⭐ 4.8 hodnotenie</span>
+                                <span>⭐ {stats.rating} hodnotenie</span>
                                 <span style={{ color: '#e8d9c4' }}>|</span>
-                                <span>👥 2 864 fanúšikov</span>
-                                <span style={{ color: '#e8d9c4' }}>|</span>
-                                <span>🎬 120+ videí</span>
+                                <span>👥 {Math.max(stats.fans, 1).toLocaleString()} fanúšikov</span>
+                                {stats.videos > 0 && (
+                                    <>
+                                        <span style={{ color: '#e8d9c4' }}>|</span>
+                                        <span>🎬 {stats.videos}+ videí</span>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -252,7 +262,7 @@ export default function Home({ featured }: Props) {
             </section>
 
             {/* ── CTA banner ── */}
-            <section className="mx-4 mb-14 overflow-hidden rounded-3xl sm:mx-6" style={{ background: 'linear-gradient(135deg, #c4714a 0%, #5a3e2b 100%)' }}>
+            <section className="mx-4 mb-8 overflow-hidden rounded-3xl sm:mx-6" style={{ background: 'linear-gradient(135deg, #c4714a 0%, #5a3e2b 100%)' }}>
                 <div className="px-8 py-12 text-center">
                     <h2 className="font-serif text-3xl font-bold text-white">Si tréner?</h2>
                     <p className="mt-2 text-base text-white/80">Zdieľaj svoje know-how a zarábaj na tom čo miluješ.</p>
@@ -277,7 +287,7 @@ function FeaturedCoachCard({ coach }: { coach: Coach }) {
     return (
         <Link
             href={`/coaches/${coach.id}`}
-            className="group flex w-40 flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-4 pt-5 shadow-sm transition hover:shadow-md md:w-auto"
+            className="group flex w-40 flex-shrink-0 flex-col items-center rounded-2xl bg-white px-3 pb-4 pt-5 shadow-sm transition hover:shadow-md active:scale-95 active:shadow-sm cursor-pointer md:w-auto"
             style={{ border: `1px solid ${hovered ? '#c4714a' : '#e8d9c4'}`, transition: 'border-color 0.2s, box-shadow 0.2s', position: 'relative' }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Rss, Compass, MessageCircle, Bell, User, LayoutDashboard, LogOut, PlusSquare, Megaphone, Radio, Dumbbell, Flame, Leaf, Activity, Heart, Zap } from 'lucide-react';
+import { Home, Rss, Compass, MessageCircle, Bell, User, LayoutDashboard, LogOut, PlusSquare, Megaphone, Radio, Dumbbell, Flame, Leaf, Activity, Heart, Zap, LogIn } from 'lucide-react';
 
 interface Props {
     children: React.ReactNode;
@@ -145,7 +145,13 @@ export default function PulseLayout({ children, hideFooter = false, hideTopNav =
         { label: 'Správy', icon: MessageCircle, href: '/messages',                                   badge: unreadCount },
         { label: 'Profil', icon: User,          href: user ? `/profile/${user.id}` : '/login',      badge: 0 },
     ];
-    const mobileNav = isCoach ? coachMobileNav : fanMobileNav;
+    const guestMobileNav = [
+        { label: 'Domov',     icon: Home,    href: '/',        badge: 0 },
+        { label: 'Feed',      icon: Rss,     href: '/feed',    badge: 0 },
+        { label: 'Objaviť',  icon: Compass, href: '/coaches', badge: 0 },
+        { label: 'Prihlásiť',icon: LogIn,   href: '/login',   badge: 0 },
+    ];
+    const mobileNav = user ? (isCoach ? coachMobileNav : fanMobileNav) : guestMobileNav;
 
     return (
         <div style={{ background: '#faf6f0', minHeight: '100vh' }}>
@@ -627,17 +633,17 @@ export default function PulseLayout({ children, hideFooter = false, hideTopNav =
                         <div className="flex items-center gap-2">
                             <Link
                                 href="/login"
-                                className="hidden rounded-full border px-4 py-1.5 text-sm font-medium transition hover:bg-gray-50 sm:block"
-                                style={{ borderColor: '#e8d9c4', color: '#2d2118' }}
-                            >
-                                Prihlásiť
-                            </Link>
-                            <Link
-                                href="/register"
-                                className="rounded-full px-4 py-1.5 text-sm font-semibold text-white"
+                                className="rounded-full px-4 py-2 text-sm font-semibold text-white"
                                 style={{ backgroundColor: '#c4714a' }}
                                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
                                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#c4714a')}
+                            >
+                                Prihlásiť sa
+                            </Link>
+                            <Link
+                                href="/register"
+                                className="hidden sm:inline text-sm font-medium"
+                                style={{ color: '#c4714a' }}
                             >
                                 Registrovať
                             </Link>
