@@ -432,7 +432,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <PulseLayout>
+        <PulseLayout hideFooter>
             <Head title={`Správy — ${partner.name}`} />
 
             {/* Lightbox (fixed — works for both mobile + desktop) */}
@@ -481,12 +481,12 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
             )}
 
             {/* Two-panel layout: flex row. Left = conversation list (desktop only). Right = chat. */}
-            <div style={{ display: 'flex', height: '100vh', background: '#faf6f0' }}>
+            <div className="chat-panel" style={{ display: 'flex', height: '100dvh', background: '#faf6f0' }}>
 
                 {/* Left panel — conversation list (desktop only) */}
                 <div className="hidden md:flex" style={{
                     width: 360, flexShrink: 0, flexDirection: 'column',
-                    borderRight: '1px solid #e8d9c4', background: 'white', height: '100vh',
+                    borderRight: '1px solid #e8d9c4', background: 'white', height: '100dvh',
                 }}>
                     <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid #e8d9c4', flexShrink: 0 }}>
                         <a href="/messages" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#c4714a', fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
@@ -545,7 +545,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                 </div>
 
                 {/* Right panel — chat (fills remaining space) */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100dvh' }}>
 
                 {/* Top bar */}
                 <div style={{
@@ -832,8 +832,10 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                     0%, 100% { opacity: 1; transform: scale(1); }
                     50% { opacity: 0.35; transform: scale(0.75); }
                 }
-                @media (min-width: 768px) {
-                    html, body { overflow: hidden; height: 100%; }
+                html, body { overflow: hidden; height: 100%; }
+                @media (max-width: 767px) {
+                    .chat-panel { height: calc(100dvh - 56px) !important; }
+                    .chat-panel > * { height: calc(100dvh - 56px) !important; }
                 }
             `}</style>
         </PulseLayout>

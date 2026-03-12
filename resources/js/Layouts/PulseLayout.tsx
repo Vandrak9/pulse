@@ -4,6 +4,7 @@ import { Home, Rss, Compass, MessageCircle, Bell, User, LayoutDashboard, LogOut,
 
 interface Props {
     children: React.ReactNode;
+    hideFooter?: boolean;
 }
 
 interface SuggestedCoach {
@@ -41,7 +42,7 @@ const TRENDING_CATS: { icon: React.ReactNode; label: string; k: string }[] = [
 ];
 
 
-export default function PulseLayout({ children }: Props) {
+export default function PulseLayout({ children, hideFooter = false }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { id: number; name: string; role?: string; coach_id?: number | null } | null } };
     const dashboardSidebar = (page.props as any).dashboard_sidebar as DashboardSidebar | undefined;
@@ -681,6 +682,7 @@ export default function PulseLayout({ children }: Props) {
                 <main className="animate-fade-in flex-1 pb-20 md:pb-0">
                     {children}
                 </main>
+                {!hideFooter && (
                 <footer style={{ borderTop: '1px solid #e8d9c4', padding: '32px 16px 16px', textAlign: 'center' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 16, marginBottom: 8 }}>
                         {[
@@ -708,6 +710,7 @@ export default function PulseLayout({ children }: Props) {
                         Platby sú spracované bezpečne cez Stripe · PULSE neposkytuje medicínske poradenstvo
                     </p>
                 </footer>
+                )}
             </div>
 
             {/* ── MOBILE BOTTOM TAB BAR — hidden on desktop ── */}
