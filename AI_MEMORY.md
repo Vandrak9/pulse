@@ -1097,3 +1097,4 @@ DELETE /coaches/{coachId}/reviews  → auth
 - **Completeness avatar**: `Storage::disk('public')->exists($user->profile_avatar)` instead of simple truthy check
 - **Dashboard/Index.tsx**: "Moje posledné príspevky" widget — thumbnail/placeholder, title, 🔒 exclusive badge, ❤️ likes, relative time, hover, "+ Pridať" link
 - [2026-03-11 07:41:35] fdba4a1: fix: create like notification + email on post like
+- [2026-03-12 06:54:45] d17fc95: fix: closes #3 — Dashboard/Earnings — layout nezarovnaný na mobile
