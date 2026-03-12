@@ -564,16 +564,20 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                                 alt={partner.name}
                                 style={{
                                     width: '40px', height: '40px', minWidth: '40px', minHeight: '40px',
-                                    borderRadius: '50%', objectFit: 'cover', objectPosition: 'center',
                                     display: 'block', flexShrink: 0,
-                                }}
+                                    objectFit: 'cover', objectPosition: 'center',
+                                    clipPath: 'circle(50%)',
+                                    WebkitClipPath: 'circle(50%)',
+                                    transform: 'translateZ(0)',
+                                    WebkitTransform: 'translateZ(0)',
+                                } as React.CSSProperties}
                             />
                         ) : (
                             <div style={{
                                 width: '40px', height: '40px', minWidth: '40px', borderRadius: '50%',
                                 background: '#c4714a', display: 'flex', alignItems: 'center',
                                 justifyContent: 'center', color: 'white', fontWeight: 700,
-                                fontSize: '16px', flexShrink: 0,
+                                fontSize: '16px', flexShrink: 0, flexGrow: 0,
                             }}>
                                 {partner.name.charAt(0).toUpperCase()}
                             </div>

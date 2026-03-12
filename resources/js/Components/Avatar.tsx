@@ -25,7 +25,6 @@ export default function Avatar({ src, name, size = 40, showRing = false, style, 
         height: size,
         borderRadius: '50%',
         flexShrink: 0,
-        overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -35,13 +34,23 @@ export default function Avatar({ src, name, size = 40, showRing = false, style, 
 
     if (src) {
         return (
-            <div style={base} className={className}>
-                <img
-                    src={src}
-                    alt={name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-            </div>
+            <img
+                src={src}
+                alt={name}
+                className={className}
+                style={{
+                    width: size, height: size,
+                    minWidth: size, minHeight: size,
+                    display: 'block', flexShrink: 0,
+                    objectFit: 'cover', objectPosition: 'center',
+                    clipPath: 'circle(50%)',
+                    WebkitClipPath: 'circle(50%)',
+                    transform: 'translateZ(0)',
+                    WebkitTransform: 'translateZ(0)',
+                    ...(showRing ? { outline: '4px solid white' } : {}),
+                    ...style,
+                } as React.CSSProperties}
+            />
         );
     }
 
