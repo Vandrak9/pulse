@@ -1098,3 +1098,26 @@ DELETE /coaches/{coachId}/reviews  → auth
 - **Dashboard/Index.tsx**: "Moje posledné príspevky" widget — thumbnail/placeholder, title, 🔒 exclusive badge, ❤️ likes, relative time, hover, "+ Pridať" link
 - [2026-03-11 07:41:35] fdba4a1: fix: create like notification + email on post like
 - [2026-03-12 06:54:45] d17fc95: fix: closes #3 — Dashboard/Earnings — layout nezarovnaný na mobile
+- [2026-03-12 06:55:48] 743cd1e: fix: closes #3 — Dashboard/Earnings — layout nezarovnaný na mobile
+- [] ccb5dea: 
+- [] 647c99f: 
+- [2026-03-12 11:52:49] 0f183d0: fix: closes #7 — mobile chat safe-area + spacer fix
+- [2026-03-12 12:00:48] 1d2186c: fix: chat top bar cut off — add safe-area-inset-top padding
+- [2026-03-12 12:21:47] 06c50d7: fix: closes #9 — mobile chat 3 layout fixes (messages alignment, avatar, online status)
+- [2026-03-12 12:25:39] 8714056: fix: closes #10 — chat header avatar clipped on iOS Safari
+- [2026-03-12 12:28:33] 3bc6c50: fix: chat header avatar clipping on iOS Safari
+- [2026-03-12 12:31:48] 65c2f17: fix: chat header avatar — use plain img with inline styles, bypass Avatar component
+- [2026-03-12 12:37:14] a14232c: fix: iOS Safari avatar clipping — clipPath instead of border-radius overflow
+- [2026-03-12 18:20:28] 3c3301b: feat: homepage mobile UX — guest nav, real stats, CTA hierarchy
+
+## Session 27 — Homepage & guest nav UX (2026-03-12)
+
+- **Top nav guest buttons**: primary = "Prihlásiť sa" → /login (filled terracotta), secondary = "Registrovať" → /register (text-only, hidden on xs)
+- **Guest mobile bottom nav**: `guestMobileNav` with Home/Feed/Coaches/LogIn — no Správy/Profil for unauthenticated
+- **mobileNav logic**: `user ? (isCoach ? coachMobileNav : fanMobileNav) : guestMobileNav`
+- **LogIn icon** imported from lucide-react
+- **Hero CTA hierarchy**: "Objaviť koučov" = big filled primary; "Si tréner? Začni zarábať →" = small text-only link to /register?role=coach
+- **Hero stats**: real DB queries in HomeController — `Coach::count()`, `User::where('role','fan')->count()`, `DB::table('post_media')->where('type','video')->count()`, `Coach::avg('rating_avg') ?? 4.8`
+- **stats prop**: passed from HomeController, used in Home.tsx — hide videos stat if 0, fans fallback max(fans,1)
+- **CTA banner**: `mb-14` → `mb-8` (less gap before footer)
+- **Coach cards**: `active:scale-95` tap feedback on mobile
