@@ -88,6 +88,20 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
     const [activeStory, setActiveStory] = useState<Story | null>(null);
     const [storyProgress, setStoryProgress] = useState(0);
 
+    // Story tap menu
+    const [storyMenu, setStoryMenu] = useState<Story | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setStoryMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     useEffect(() => {
         if (!activeStory) return;
         setStoryProgress(0);
@@ -226,8 +240,8 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                                 {stories.map(story => (
                                     <button
                                         key={story.id}
-                                        onClick={() => setActiveStory(story)}
-                                        className="flex flex-col items-center gap-1 shrink-0"
+                                        onClick={() => setStoryMenu(storyMenu?.id === story.id ? null : story)}
+                                        className="flex flex-col items-center gap-1 shrink-0 relative"
                                     >
                                         <div className="relative">
                                             {/* Outer ring — green if online, gray if offline */}
@@ -335,6 +349,52 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                                         <span className={`text-[10px] font-medium -mt-1 ${story.is_online ? 'text-green-500' : 'text-gray-400'}`}>
                                             {story.is_online ? 'online' : 'offline'}
                                         </span>
+
+                                        {/* Tap menu */}
+                                        {storyMenu?.id === story.id && (
+                                            <div
+                                                ref={menuRef}
+                                                className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50"
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                {/* Arrow */}
+                                                <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 shadow-md" />
+
+                                                {/* Menu card */}
+                                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#f0e8dc]" style={{ minWidth: 140 }}>
+
+                                                    {/* Príbeh */}
+                                                    <button
+                                                        onClick={() => { setStoryMenu(null); setActiveStory(story); }}
+                                                        className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#faf6f0] transition-colors border-b border-[#f0e8dc]"
+                                                    >
+                                                        <span className="text-lg">🎬</span>
+                                                        <div className="text-left">
+                                                            <p className="text-sm font-medium text-[#2d2118]">Príbeh</p>
+                                                            <p className="text-[10px] text-[#9a8a7a]">
+                                                                {story.latest_reel ? 'Najnovší reel' : 'Žiadny obsah'}
+                                                            </p>
+                                                        </div>
+                                                        {!story.latest_reel && (
+                                                            <span className="ml-auto text-[10px] text-[#9a8a7a]">—</span>
+                                                        )}
+                                                    </button>
+
+                                                    {/* Profil */}
+                                                    <Link
+                                                        href={`/coaches/${story.coach_slug}`}
+                                                        onClick={() => setStoryMenu(null)}
+                                                        className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#faf6f0] transition-colors"
+                                                    >
+                                                        <span className="text-lg">👤</span>
+                                                        <div className="text-left">
+                                                            <p className="text-sm font-medium text-[#2d2118]">Profil</p>
+                                                            <p className="text-[10px] text-[#9a8a7a]">{story.first_name}</p>
+                                                        </div>
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        )}
                                     </button>
                                 ))}
                             </div>
