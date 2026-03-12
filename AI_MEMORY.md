@@ -1140,3 +1140,21 @@ DELETE /coaches/{coachId}/reviews  → auth
 - **web.php `/api/coaches/suggested`**: `is_online` added
 - **Pages updated**: Coaches/Show (hero dot + text), Coaches/Index (card dot), Profile/Show (dot + text), Messages/Index (Avatar with dot), PulseLayout right sidebar (Avatar component)
 - **PulseLayout**: imports `Avatar` component for suggested coaches sidebar
+- [2026-03-12 18:34:42] efbed7a: docs: update AI_MEMORY.md — Session 28 online status indicators
+- [2026-03-12 18:36:51] c549b87: fix: is_online in chat — diffInMinutes returns negative, use gt(now()->subMinutes(5))
+- [2026-03-12 18:40:21] 3d66157: feat: profile status — show own online dot + last seen time when offline
+- [2026-03-12 18:41:42] 6499c52: fix: UpdateLastSeen — diffInMinutes returns negative in Carbon 3, use lt(now()->subMinutes(2))
+- [2026-03-12 18:43:59] 79d7e4f: feat: chat header avatar+name clickable — links to partner profile
+- [2026-03-12 19:04:41] 1a59546: feat: stories row — only followed/subscribed coaches + online status ring
+
+## Session 29 — Stories row — followed/subscribed only + online ring (2026-03-12)
+
+- **FeedController**: `coaches` prop replaced with `stories` prop — only coaches the auth user follows (follows table) OR has active subscription to
+- **Fallback**: if user follows/subscribes nobody → top 5 coaches shown with `is_suggestion: true`
+- **stories shape**: `id, name, first_name, profile_avatar, coach_slug, is_online, is_subscribed, is_suggestion?`
+- **Online ring**: green gradient if `is_online`, gray if offline; 68px outer / 62px white gap / 58px avatar
+- **Online dot**: absolute, bottom-right, 14px, green/gray
+- **Subscribed badge**: terracotta ✓ circle, top-right, 18px — only if `is_subscribed`
+- **Online/offline text**: 10px label below name
+- **Guest path**: `coaches: []` → `stories: []` (key rename)
+- **Feed.tsx**: `Coach` interface replaced with `Story` interface; stories rendered with full new ring UI
