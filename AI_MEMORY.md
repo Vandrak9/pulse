@@ -1184,3 +1184,7 @@ DELETE /coaches/{coachId}/reviews  → auth
 - **Arrow**: white rotated square (`rotate-45`) pointing down toward avatar
 - **Menu options**: (1) 🎬 Príbeh → opens story modal (`setActiveStory`), subtitle "Najnovší reel" / "Žiadny obsah"; (2) 👤 Profil → `<Link href="/coaches/{slug}">`
 - **Outside click**: closes menu without opening modal
+- [2026-03-12 19:16:21] cd2a307: docs: update AI_MEMORY.md — Session 31 story tap menu
+- [2026-03-12 19:19:02] 7826277: fix: story menu position — show below avatar, add backdrop
+- [2026-03-12 19:22:33] 8225994: fix: story menu — use React portal to escape overflow:hidden container
+- [2026-03-12 19:25:11] 84fe7bc: fix: story menu Profil link — use coach_id not coach_slug (slug doesn't exist)
