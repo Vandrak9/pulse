@@ -20,7 +20,7 @@ interface Story {
     name: string;
     first_name: string;
     profile_avatar: string | null;
-    coach_slug: string | null;
+    coach_id: number | null;
     is_online: boolean;
     is_subscribed: boolean;
     is_suggestion?: boolean;
@@ -568,7 +568,7 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
 
                             {/* Profil */}
                             <a
-                                href={`/coaches/${storyMenu.coach_slug}`}
+                                href={`/coaches/${storyMenu.coach_id}`}
                                 onClick={() => setStoryMenu(null)}
                                 style={{
                                     display: 'flex',
@@ -669,7 +669,7 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                                         Predplať si {activeStory.first_name} a sleduj všetok exkluzívny obsah
                                     </p>
                                     <Link
-                                        href={`/coaches/${activeStory.coach_slug}`}
+                                        href={`/coaches/${activeStory.coach_id}`}
                                         className="bg-[#c4714a] text-white px-6 py-3 rounded-full font-medium"
                                         onClick={() => setActiveStory(null)}
                                     >
@@ -695,7 +695,7 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                                     {activeStory.first_name} zatiaľ nemá reely
                                 </p>
                                 <Link
-                                    href={`/coaches/${activeStory.coach_slug}`}
+                                    href={`/coaches/${activeStory.coach_id}`}
                                     className="bg-[#c4714a] text-white px-6 py-3 rounded-full font-medium"
                                     onClick={() => setActiveStory(null)}
                                 >
@@ -709,14 +709,14 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                     {activeStory.latest_reel && (!activeStory.latest_reel.is_exclusive || activeStory.is_subscribed) && (
                         <div className="absolute bottom-20 left-0 right-0 flex items-center justify-between px-6 py-3">
                             <Link
-                                href={`/coaches/${activeStory.coach_slug}`}
+                                href={`/coaches/${activeStory.coach_id}`}
                                 className="text-white text-sm font-medium bg-white/20 px-4 py-2 rounded-full"
                                 onClick={() => setActiveStory(null)}
                             >
                                 Zobraziť profil
                             </Link>
                             <Link
-                                href={`/coaches/${activeStory.coach_slug}`}
+                                href={`/coaches/${activeStory.coach_id}`}
                                 className="bg-[#c4714a] text-white text-sm font-medium px-4 py-2 rounded-full"
                                 onClick={() => setActiveStory(null)}
                             >

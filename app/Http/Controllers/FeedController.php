@@ -189,7 +189,7 @@ class FeedController extends Controller
                 'name'           => $u->name,
                 'first_name'     => explode(' ', $u->name)[0],
                 'profile_avatar' => $u->profile_avatar,
-                'coach_slug'     => $u->coach?->slug,
+                'coach_id'       => $u->coach?->id,
                 'is_online'      => $isOnline,
                 'is_subscribed'  => $isSubscribed,
                 'is_suggestion'  => $isSuggestion,
