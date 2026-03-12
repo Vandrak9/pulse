@@ -25,6 +25,8 @@ interface Partner {
     role: string;
     avatar: string | null;
     is_verified: boolean;
+    is_online: boolean;
+    last_seen_at: string | null;
 }
 
 interface Conversation {
@@ -555,17 +557,33 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                     gap: 12, flexShrink: 0, zIndex: 10,
                 }}>
                     <a href="/messages" className="md:hidden" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
-                    <Avatar src={partner.avatar} name={partner.name} size={40} />
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <Avatar src={partner.avatar} name={partner.name} size={40} />
+                        <span style={{
+                            position: 'absolute', bottom: 1, right: 1,
+                            width: 11, height: 11, borderRadius: '50%',
+                            background: partner.is_online ? '#22c55e' : '#9ca3af',
+                            border: '2px solid white',
+                        }} />
+                    </div>
                     <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 15, color: '#2d2118' }}>{partner.name}</div>
-                        {partner.is_verified && (
-                            <div style={{ fontSize: 11, color: '#4a7c59', fontWeight: 600 }}>Predplatené ✓</div>
-                        )}
+                        <div style={{ fontSize: 11, color: partner.is_online ? '#22c55e' : '#9a8a7a', fontWeight: partner.is_online ? 600 : 400 }}>
+                            {partner.is_online
+                                ? 'Online'
+                                : partner.last_seen_at
+                                    ? relativeTime(partner.last_seen_at)
+                                    : 'Offline'
+                            }
+                        </div>
                     </div>
                 </div>
 
                 {/* Messages area */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px' }} className="messages-scroll-area">
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }} className="messages-scroll-area">
+                    {/* Spacer pushes messages to the bottom when there are few */}
+                    <div style={{ flex: 1 }} />
+                    <div style={{ padding: '16px 16px 8px' }}>
                     {messages.length === 0 && (
                         <div style={{ textAlign: 'center', color: '#9a8a7a', fontSize: 14, marginTop: 40 }}>
                             Začni konverzáciu s {partner.name} 👋
@@ -657,6 +675,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                             </React.Fragment>
                         );
                     })}
+                    </div>
                     <div ref={bottomRef} />
                 </div>
 

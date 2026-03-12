@@ -59,13 +59,18 @@ class MessageController extends Controller
             ];
         });
 
+        $lastSeen = $partner->last_seen_at;
+        $isOnline = $lastSeen && now()->diffInMinutes($lastSeen) < 5;
+
         return Inertia::render('Messages/Show', [
             'partner'       => [
-                'id'          => $partner->id,
-                'name'        => $partner->name,
-                'role'        => $partner->role,
-                'avatar'      => $avatarUrl,
-                'is_verified' => $coach ? $coach->is_verified : false,
+                'id'           => $partner->id,
+                'name'         => $partner->name,
+                'role'         => $partner->role,
+                'avatar'       => $avatarUrl,
+                'is_verified'  => $coach ? $coach->is_verified : false,
+                'is_online'    => $isOnline,
+                'last_seen_at' => $lastSeen ? $lastSeen->toISOString() : null,
             ],
             'messages'      => $formattedMessages,
             'conversations' => $this->buildConversations($user),
