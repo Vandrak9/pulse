@@ -39,7 +39,7 @@ class HomeController extends Controller
         $stats = [
             'coaches' => Coach::count(),
             'fans'    => User::where('role', 'fan')->count(),
-            'videos'  => DB::table('post_media')->where('type', 'video')->count(),
+            'videos'  => DB::table('post_media')->where('media_type', 'video')->count(),
             'rating'  => round(Coach::avg('rating_avg') ?? 4.8, 1),
         ];
 
