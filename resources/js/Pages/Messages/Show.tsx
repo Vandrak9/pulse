@@ -550,7 +550,8 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                 {/* Top bar */}
                 <div style={{
                     background: 'white', borderBottom: '1px solid #e8d9c4',
-                    padding: '12px 16px', display: 'flex', alignItems: 'center',
+                    padding: '12px 16px', paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+                    display: 'flex', alignItems: 'center',
                     gap: 12, flexShrink: 0, zIndex: 10,
                 }}>
                     <a href="/messages" className="md:hidden" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
