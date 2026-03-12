@@ -838,14 +838,14 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                     .chat-panel > div { height: 100dvh !important; }
                     .chat-input-bar {
                         position: fixed !important;
-                        bottom: 56px !important;
+                        bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
                         left: 0 !important;
                         right: 0 !important;
                         z-index: 40 !important;
-                        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
                     }
                     .messages-scroll-area {
-                        padding-bottom: 130px !important;
+                        padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px)) !important;
+                        -webkit-overflow-scrolling: touch;
                     }
                 }
             `}</style>

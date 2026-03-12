@@ -717,7 +717,7 @@ export default function PulseLayout({ children, hideFooter = false, hideTopNav =
             {/* ── MOBILE BOTTOM TAB BAR — hidden on desktop ── */}
             <nav
                 className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden"
-                style={{ background: 'white', borderTop: '1px solid #e8d9c4' }}
+                style={{ background: 'white', borderTop: '1px solid #e8d9c4', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
                 {mobileNav.map((tab) => {
                     const active = isActive(tab.href);
@@ -760,8 +760,8 @@ export default function PulseLayout({ children, hideFooter = false, hideTopNav =
                 })}
             </nav>
 
-            {/* Mobile bottom padding */}
-            <div className="h-16 md:hidden" />
+            {/* Mobile bottom padding — hidden on full-screen pages (chat) */}
+            {!hideTopNav && <div className="h-16 md:hidden" />}
         </div>
     );
 }
