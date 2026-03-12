@@ -1121,3 +1121,22 @@ DELETE /coaches/{coachId}/reviews  → auth
 - **stats prop**: passed from HomeController, used in Home.tsx — hide videos stat if 0, fans fallback max(fans,1)
 - **CTA banner**: `mb-14` → `mb-8` (less gap before footer)
 - **Coach cards**: `active:scale-95` tap feedback on mobile
+- [2026-03-12 18:20:58] da73056: docs: update AI_MEMORY.md — Session 27 homepage guest nav UX
+- [2026-03-12 18:21:48] 608a534: fix: post_media column is media_type not type — 500 on homepage
+- [2026-03-12 18:26:20] c8e475f: fix: cast last_seen_at to datetime in User model — 500 on Messages/Show
+- [2026-03-12 18:34:12] 5cb23eb: feat: online/offline status indicator on all avatars
+
+## Session 28 — Online/offline status indicators (2026-03-12)
+
+- **Avatar component**: new props `showOnlineStatus` + `isOnline` — wraps in `position:relative` div + absolute dot (green #22c55e / gray #9ca3af, 2px white border)
+- **Dot size**: 8px (<32), 10px (<48), 13px (48+)
+- **Online threshold**: `last_seen_at > now()->subMinutes(5)` — consistent everywhere
+- **last_seen_at cast**: `'datetime'` in User model (fixes toISOString() 500)
+- **UpdateLastSeen middleware**: throttles DB write every 2 min via `diffInMinutes` check
+- **CoachController::index()**: `is_online` per coach in paginated list
+- **CoachController::show()**: `is_online` in coach prop
+- **UserProfileController::show()**: `is_online` in `profileUser` — NOT shown on own profile (`!isOwn` guard)
+- **MessageController::buildConversations()**: `partner_is_online` per conversation
+- **web.php `/api/coaches/suggested`**: `is_online` added
+- **Pages updated**: Coaches/Show (hero dot + text), Coaches/Index (card dot), Profile/Show (dot + text), Messages/Index (Avatar with dot), PulseLayout right sidebar (Avatar component)
+- **PulseLayout**: imports `Avatar` component for suggested coaches sidebar
