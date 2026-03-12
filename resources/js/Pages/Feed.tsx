@@ -5,12 +5,15 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { formatDuration, relativeTime as relativeTimeUtil } from '@/lib/utils';
 
-interface Coach {
+interface Story {
     id: number;
-    user_id: number;
     name: string;
-    avatar_url: string | null;
-    is_followed: boolean;
+    first_name: string;
+    profile_avatar: string | null;
+    coach_slug: string | null;
+    is_online: boolean;
+    is_subscribed: boolean;
+    is_suggestion?: boolean;
 }
 
 interface FeedCoach {
@@ -43,7 +46,7 @@ interface Props {
     posts: Post[];
     reels: Post[];
     videos: Post[];
-    coaches: Coach[];
+    stories: Story[];
     isGuest?: boolean;
 }
 
@@ -52,7 +55,7 @@ const relativeTime = relativeTimeUtil;
 
 type Tab = 'feed' | 'reels' | 'videos';
 
-export default function Feed({ posts, reels, videos, coaches, isGuest = false }: Props) {
+export default function Feed({ posts, reels, videos, stories, isGuest = false }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { name: string; role?: string } | null } };
     const isCoach = auth?.user?.role === 'coach';
@@ -173,50 +176,138 @@ export default function Feed({ posts, reels, videos, coaches, isGuest = false }:
                     <div className="border-b bg-white" style={{ borderColor: '#e8d9c4' }}>
                         <div className="no-scrollbar overflow-x-auto">
                             <div className="mx-auto flex max-w-2xl gap-4 px-4 py-3 md:gap-5 md:py-4" style={{ width: 'max-content' }}>
-                                <Link href="/coaches" className="flex flex-col items-center gap-1">
-                                    <div
-                                        className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed text-2xl font-light"
-                                        style={{ borderColor: '#c4714a', color: '#c4714a' }}
-                                    >
-                                        +
+                                {/* Objaviť — always first */}
+                                <Link href="/coaches" className="flex flex-col items-center gap-1 shrink-0">
+                                    <div style={{
+                                        width: 68,
+                                        height: 68,
+                                        borderRadius: '50%',
+                                        border: '2px dashed #c4714a',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: '#fce8de',
+                                    }}>
+                                        <span style={{ fontSize: 24 }}>+</span>
                                     </div>
-                                    <span className="w-14 truncate text-center text-xs" style={{ color: '#9a8a7a' }}>
-                                        Objavit
-                                    </span>
+                                    <span className="text-xs font-medium" style={{ color: '#c4714a' }}>Objaviť</span>
+                                    <span className="text-[10px] text-transparent">·</span>
                                 </Link>
-                                {coaches.map((coach) => {
-                                    // Ring color: terracotta if subscribed (not implemented yet → default),
-                                    // orange if followed, grey if neither
-                                    const ringGradient = coach.is_followed
-                                        ? 'linear-gradient(135deg, #c4714a, #f5a623)'
-                                        : 'linear-gradient(135deg, #e8d9c4, #d0c5b8)';
-                                    return (
-                                        <Link key={coach.id} href={`/coaches/${coach.id}`} className="flex flex-col items-center gap-1">
-                                            <div
-                                                className="h-14 w-14 flex-shrink-0 rounded-full p-0.5"
-                                                style={{ background: ringGradient }}
-                                            >
-                                                <div className="flex h-full w-full items-center justify-center rounded-full bg-white p-0.5">
-                                                    <div className="h-full w-full overflow-hidden rounded-full">
-                                                        {coach.avatar_url ? (
-                                                            <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
-                                                        ) : (
-                                                            <div
-                                                                className="flex h-full w-full items-center justify-center text-lg font-bold text-white"
-                                                                style={{ backgroundColor: '#c4714a' }}
-                                                            >
-                                                                {coach.name.charAt(0)}
-                                                            </div>
-                                                        )}
-                                                    </div>
+
+                                {stories.map(story => (
+                                    <Link
+                                        href={story.coach_slug ? `/coaches/${story.coach_slug}` : '/coaches'}
+                                        key={story.id}
+                                        className="flex flex-col items-center gap-1 shrink-0"
+                                    >
+                                        <div className="relative">
+                                            {/* Outer ring — green if online, gray if offline */}
+                                            <div style={{
+                                                width: 68,
+                                                height: 68,
+                                                borderRadius: '50%',
+                                                padding: 2,
+                                                background: story.is_online
+                                                    ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                                                    : '#d1d5db',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}>
+                                                {/* White gap ring */}
+                                                <div style={{
+                                                    width: 62,
+                                                    height: 62,
+                                                    borderRadius: '50%',
+                                                    padding: 2,
+                                                    background: 'white',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}>
+                                                    {/* Avatar */}
+                                                    {story.profile_avatar ? (
+                                                        <img
+                                                            src={story.profile_avatar.startsWith('http')
+                                                                ? story.profile_avatar
+                                                                : `/storage/${story.profile_avatar}`}
+                                                            alt={story.name}
+                                                            style={{
+                                                                width: 58,
+                                                                height: 58,
+                                                                minWidth: 58,
+                                                                clipPath: 'circle(50%)',
+                                                                WebkitClipPath: 'circle(50%)',
+                                                                objectFit: 'cover',
+                                                                objectPosition: 'center',
+                                                                transform: 'translateZ(0)',
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{
+                                                            width: 58,
+                                                            height: 58,
+                                                            borderRadius: '50%',
+                                                            background: '#c4714a',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: 'white',
+                                                            fontWeight: 'bold',
+                                                            fontSize: 20,
+                                                        }}>
+                                                            {story.first_name?.charAt(0)}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <span className="w-14 truncate text-center text-xs" style={{ color: coach.is_followed ? '#c4714a' : '#2d2118' }}>
-                                                {coach.name.split(' ')[0]}
-                                            </span>
-                                        </Link>
-                                    );
-                                })}
+
+                                            {/* Online dot bottom right */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: 2,
+                                                right: 2,
+                                                width: 14,
+                                                height: 14,
+                                                borderRadius: '50%',
+                                                backgroundColor: story.is_online ? '#22c55e' : '#9ca3af',
+                                                border: '2px solid white',
+                                                zIndex: 10,
+                                            }} />
+
+                                            {/* Subscribed badge */}
+                                            {story.is_subscribed && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    right: 0,
+                                                    width: 18,
+                                                    height: 18,
+                                                    borderRadius: '50%',
+                                                    backgroundColor: '#c4714a',
+                                                    border: '2px solid white',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: 9,
+                                                    zIndex: 10,
+                                                }}>
+                                                    ✓
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Name */}
+                                        <span className="text-xs text-center max-w-[64px] truncate" style={{ color: '#2d2118' }}>
+                                            {story.first_name}
+                                        </span>
+
+                                        {/* Online text */}
+                                        <span className={`text-[10px] font-medium -mt-1 ${story.is_online ? 'text-green-500' : 'text-gray-400'}`}>
+                                            {story.is_online ? 'online' : 'offline'}
+                                        </span>
+                                    </Link>
+                                ))}
                             </div>
                         </div>
                     </div>
