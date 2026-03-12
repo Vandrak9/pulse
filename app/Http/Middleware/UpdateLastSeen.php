@@ -13,7 +13,7 @@ class UpdateLastSeen
         if (auth()->check()) {
             $user = auth()->user();
             // Update at most once every 2 minutes to reduce DB writes
-            if (! $user->last_seen_at || now()->diffInMinutes($user->last_seen_at) >= 2) {
+            if (! $user->last_seen_at || $user->last_seen_at->lt(now()->subMinutes(2))) {
                 DB::table('users')->where('id', $user->id)->update(['last_seen_at' => now()]);
             }
         }
