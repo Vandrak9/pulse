@@ -56,11 +56,11 @@ function EarningsCharts({
     return (
         <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '20px 16px', marginBottom: 24 }}>
             {/* Tab switcher */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div className="earnings-chart-header">
                 <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 17, fontWeight: 700, color: '#2d2118', margin: 0 }}>
                     {tab === 'earnings' ? 'Zárobky za posledných 6 mesiacov' : 'Rast predplatiteľov (12 mesiacov)'}
                 </h2>
-                <div style={{ display: 'flex', gap: 4, background: '#faf6f0', borderRadius: 10, padding: 3, border: '1px solid #e8d9c4' }}>
+                <div className="earnings-chart-tabs">
                     {(['earnings', 'subscribers'] as const).map(t => (
                         <button
                             key={t}
@@ -78,7 +78,8 @@ function EarningsCharts({
                 </div>
             </div>
 
-            {tab === 'earnings' ? (
+            <div className="earnings-chart-wrap">
+        {tab === 'earnings' ? (
                 /* Bar chart — gross vs net, last 6 months */
                 <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={chartData} barSize={24} barGap={4} margin={{ top: 4, right: 4, left: -15, bottom: 0 }}>
@@ -123,10 +124,11 @@ function EarningsCharts({
                     </LineChart>
                 </ResponsiveContainer>
             )}
+        </div>
 
             {/* Legend for earnings tab */}
             {tab === 'earnings' && (
-                <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                <div className="earnings-legend">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#9a8a7a' }}>
                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#c4714a' }} /> Tento mesiac (čistý)
                     </div>
@@ -172,7 +174,7 @@ export default function Earnings({ coach, summary, monthly_table, transactions }
                     </div>
 
                     {/* Summary cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+                    <div className="earnings-stats-grid">
                         <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e8d9c4', padding: '18px 16px' }}>
                             <div style={{ fontSize: 12, color: '#9a8a7a', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Celkový zárobok</div>
                             <div style={{ fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: 700, color: '#c4714a' }}>€{fmt(summary.total_earned)}</div>

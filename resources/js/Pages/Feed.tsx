@@ -3,14 +3,28 @@ import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { formatDuration, relativeTime as relativeTimeUtil } from '@/lib/utils';
 
-interface Coach {
+interface LatestReel {
     id: number;
-    user_id: number;
+    title: string | null;
+    video_url: string;
+    thumbnail_url: string | null;
+    is_exclusive: boolean;
+    created_at: string;
+}
+
+interface Story {
+    id: number;
     name: string;
-    avatar_url: string | null;
-    is_followed: boolean;
+    first_name: string;
+    profile_avatar: string | null;
+    coach_id: number | null;
+    is_online: boolean;
+    is_subscribed: boolean;
+    is_suggestion?: boolean;
+    latest_reel: LatestReel | null;
 }
 
 interface FeedCoach {
@@ -43,7 +57,7 @@ interface Props {
     posts: Post[];
     reels: Post[];
     videos: Post[];
-    coaches: Coach[];
+    stories: Story[];
     isGuest?: boolean;
 }
 
@@ -52,7 +66,7 @@ const relativeTime = relativeTimeUtil;
 
 type Tab = 'feed' | 'reels' | 'videos';
 
-export default function Feed({ posts, reels, videos, coaches, isGuest = false }: Props) {
+export default function Feed({ posts, reels, videos, stories, isGuest = false }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { name: string; role?: string } | null } };
     const isCoach = auth?.user?.role === 'coach';
@@ -70,6 +84,30 @@ export default function Feed({ posts, reels, videos, coaches, isGuest = false }:
     );
     const [saved, setSaved] = useState<Set<number>>(new Set());
     const [activeVideo, setActiveVideo] = useState<Post | null>(null);
+
+    // Story modal
+    const [activeStory, setActiveStory] = useState<Story | null>(null);
+    const [storyProgress, setStoryProgress] = useState(0);
+
+    // Story tap menu
+    const [storyMenu, setStoryMenu] = useState<Story | null>(null);
+    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!activeStory) return;
+        setStoryProgress(0);
+        const interval = setInterval(() => {
+            setStoryProgress(prev => {
+                if (prev >= 100) {
+                    setActiveStory(null);
+                    return 0;
+                }
+                return prev + 1;
+            });
+        }, 100);
+        return () => clearInterval(interval);
+    }, [activeStory]);
 
     // Comment toggle + count state (content managed inside CommentSection)
     const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
@@ -173,50 +211,150 @@ export default function Feed({ posts, reels, videos, coaches, isGuest = false }:
                     <div className="border-b bg-white" style={{ borderColor: '#e8d9c4' }}>
                         <div className="no-scrollbar overflow-x-auto">
                             <div className="mx-auto flex max-w-2xl gap-4 px-4 py-3 md:gap-5 md:py-4" style={{ width: 'max-content' }}>
-                                <Link href="/coaches" className="flex flex-col items-center gap-1">
-                                    <div
-                                        className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed text-2xl font-light"
-                                        style={{ borderColor: '#c4714a', color: '#c4714a' }}
-                                    >
-                                        +
+                                {/* Objaviť — always first */}
+                                <Link href="/coaches" className="flex flex-col items-center gap-1 shrink-0">
+                                    <div style={{
+                                        width: 68,
+                                        height: 68,
+                                        borderRadius: '50%',
+                                        border: '2px dashed #c4714a',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: '#fce8de',
+                                    }}>
+                                        <span style={{ fontSize: 24 }}>+</span>
                                     </div>
-                                    <span className="w-14 truncate text-center text-xs" style={{ color: '#9a8a7a' }}>
-                                        Objavit
-                                    </span>
+                                    <span className="text-xs font-medium" style={{ color: '#c4714a' }}>Objaviť</span>
+                                    <span className="text-[10px] text-transparent">·</span>
                                 </Link>
-                                {coaches.map((coach) => {
-                                    // Ring color: terracotta if subscribed (not implemented yet → default),
-                                    // orange if followed, grey if neither
-                                    const ringGradient = coach.is_followed
-                                        ? 'linear-gradient(135deg, #c4714a, #f5a623)'
-                                        : 'linear-gradient(135deg, #e8d9c4, #d0c5b8)';
-                                    return (
-                                        <Link key={coach.id} href={`/coaches/${coach.id}`} className="flex flex-col items-center gap-1">
-                                            <div
-                                                className="h-14 w-14 flex-shrink-0 rounded-full p-0.5"
-                                                style={{ background: ringGradient }}
-                                            >
-                                                <div className="flex h-full w-full items-center justify-center rounded-full bg-white p-0.5">
-                                                    <div className="h-full w-full overflow-hidden rounded-full">
-                                                        {coach.avatar_url ? (
-                                                            <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
-                                                        ) : (
-                                                            <div
-                                                                className="flex h-full w-full items-center justify-center text-lg font-bold text-white"
-                                                                style={{ backgroundColor: '#c4714a' }}
-                                                            >
-                                                                {coach.name.charAt(0)}
-                                                            </div>
-                                                        )}
-                                                    </div>
+
+                                {stories.map(story => (
+                                    <button
+                                        key={story.id}
+                                        onClick={(e) => {
+                                            if (storyMenu?.id === story.id) {
+                                                setStoryMenu(null);
+                                                return;
+                                            }
+                                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                            setMenuPosition({
+                                                x: rect.left + rect.width / 2,
+                                                y: rect.bottom + window.scrollY + 8,
+                                            });
+                                            setStoryMenu(story);
+                                        }}
+                                        className="flex flex-col items-center gap-1 shrink-0"
+                                    >
+                                        <div className="relative">
+                                            {/* Outer ring — green if online, gray if offline */}
+                                            <div style={{
+                                                width: 68,
+                                                height: 68,
+                                                borderRadius: '50%',
+                                                padding: 2,
+                                                background: story.is_online
+                                                    ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                                                    : '#d1d5db',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}>
+                                                {/* White gap ring */}
+                                                <div style={{
+                                                    width: 62,
+                                                    height: 62,
+                                                    borderRadius: '50%',
+                                                    padding: 2,
+                                                    background: 'white',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}>
+                                                    {/* Avatar */}
+                                                    {story.profile_avatar ? (
+                                                        <img
+                                                            src={story.profile_avatar.startsWith('http')
+                                                                ? story.profile_avatar
+                                                                : `/storage/${story.profile_avatar}`}
+                                                            alt={story.name}
+                                                            style={{
+                                                                width: 58,
+                                                                height: 58,
+                                                                minWidth: 58,
+                                                                clipPath: 'circle(50%)',
+                                                                WebkitClipPath: 'circle(50%)',
+                                                                objectFit: 'cover',
+                                                                objectPosition: 'center',
+                                                                transform: 'translateZ(0)',
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{
+                                                            width: 58,
+                                                            height: 58,
+                                                            borderRadius: '50%',
+                                                            background: '#c4714a',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: 'white',
+                                                            fontWeight: 'bold',
+                                                            fontSize: 20,
+                                                        }}>
+                                                            {story.first_name?.charAt(0)}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <span className="w-14 truncate text-center text-xs" style={{ color: coach.is_followed ? '#c4714a' : '#2d2118' }}>
-                                                {coach.name.split(' ')[0]}
-                                            </span>
-                                        </Link>
-                                    );
-                                })}
+
+                                            {/* Online dot bottom right */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: 2,
+                                                right: 2,
+                                                width: 14,
+                                                height: 14,
+                                                borderRadius: '50%',
+                                                backgroundColor: story.is_online ? '#22c55e' : '#9ca3af',
+                                                border: '2px solid white',
+                                                zIndex: 10,
+                                            }} />
+
+                                            {/* Subscribed badge */}
+                                            {story.is_subscribed && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    right: 0,
+                                                    width: 18,
+                                                    height: 18,
+                                                    borderRadius: '50%',
+                                                    backgroundColor: '#c4714a',
+                                                    border: '2px solid white',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: 9,
+                                                    zIndex: 10,
+                                                }}>
+                                                    ✓
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Name */}
+                                        <span className="text-xs text-center max-w-[64px] truncate" style={{ color: '#2d2118' }}>
+                                            {story.first_name}
+                                        </span>
+
+                                        {/* Online text */}
+                                        <span className={`text-[10px] font-medium -mt-1 ${story.is_online ? 'text-green-500' : 'text-gray-400'}`}>
+                                            {story.is_online ? 'online' : 'offline'}
+                                        </span>
+
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -360,6 +498,234 @@ export default function Feed({ posts, reels, videos, coaches, isGuest = false }:
                     </div>
                 )}
             </div>
+
+            {/* Story menu portal */}
+            {storyMenu && typeof document !== 'undefined' && createPortal(
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 z-[9998]"
+                        onClick={() => setStoryMenu(null)}
+                    />
+
+                    {/* Menu — portalled to body */}
+                    <div
+                        ref={menuRef}
+                        style={{
+                            position: 'absolute',
+                            top: menuPosition.y,
+                            left: menuPosition.x,
+                            transform: 'translateX(-50%)',
+                            zIndex: 9999,
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Arrow pointing up */}
+                        <div style={{
+                            position: 'absolute',
+                            top: -6,
+                            left: '50%',
+                            transform: 'translateX(-50%) rotate(45deg)',
+                            width: 12,
+                            height: 12,
+                            background: 'white',
+                            borderLeft: '1px solid #f0e8dc',
+                            borderTop: '1px solid #f0e8dc',
+                            zIndex: 1,
+                        }} />
+
+                        {/* Menu card */}
+                        <div style={{
+                            background: 'white',
+                            borderRadius: 16,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                            border: '1px solid #f0e8dc',
+                            overflow: 'hidden',
+                            minWidth: 160,
+                        }}>
+                            {/* Príbeh */}
+                            <button
+                                onClick={() => { setStoryMenu(null); setActiveStory(storyMenu); }}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    padding: '12px 16px',
+                                    borderBottom: '1px solid #f0e8dc',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <span style={{ fontSize: 20 }}>🎬</span>
+                                <div style={{ textAlign: 'left' }}>
+                                    <p style={{ fontSize: 14, fontWeight: 600, color: '#2d2118', margin: 0 }}>Príbeh</p>
+                                    <p style={{ fontSize: 11, color: '#9a8a7a', margin: 0 }}>
+                                        {storyMenu.latest_reel ? 'Najnovší reel' : 'Žiadny obsah'}
+                                    </p>
+                                </div>
+                            </button>
+
+                            {/* Profil */}
+                            <a
+                                href={`/coaches/${storyMenu.coach_id}`}
+                                onClick={() => setStoryMenu(null)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    padding: '12px 16px',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    textDecoration: 'none',
+                                }}
+                            >
+                                <span style={{ fontSize: 20 }}>👤</span>
+                                <div style={{ textAlign: 'left' }}>
+                                    <p style={{ fontSize: 14, fontWeight: 600, color: '#2d2118', margin: 0 }}>Profil</p>
+                                    <p style={{ fontSize: 11, color: '#9a8a7a', margin: 0 }}>{storyMenu.first_name}</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </>,
+                document.body
+            )}
+
+            {/* Story modal */}
+            {activeStory && (
+                <div
+                    className="fixed inset-0 z-50 bg-black flex flex-col"
+                    onClick={() => setActiveStory(null)}
+                >
+                    {/* Progress bar */}
+                    <div className="absolute top-0 left-0 right-0 z-10 px-2 pt-2">
+                        <div className="h-0.5 bg-white/30 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-white rounded-full transition-none"
+                                style={{ width: `${storyProgress}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Header */}
+                    <div className="absolute top-6 left-0 right-0 z-10 flex items-center justify-between px-4 py-2">
+                        <div className="flex items-center gap-2">
+                            {activeStory.profile_avatar ? (
+                                <img
+                                    src={activeStory.profile_avatar.startsWith('http')
+                                        ? activeStory.profile_avatar
+                                        : `/storage/${activeStory.profile_avatar}`}
+                                    alt={activeStory.name}
+                                    style={{
+                                        width: 36, height: 36,
+                                        clipPath: 'circle(50%)',
+                                        WebkitClipPath: 'circle(50%)',
+                                        objectFit: 'cover',
+                                        border: '2px solid white',
+                                    }}
+                                />
+                            ) : (
+                                <div style={{
+                                    width: 36, height: 36, borderRadius: '50%',
+                                    background: '#c4714a', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    color: 'white', fontWeight: 'bold',
+                                    border: '2px solid white',
+                                }}>
+                                    {activeStory.first_name?.charAt(0)}
+                                </div>
+                            )}
+                            <div>
+                                <p className="text-white text-sm font-semibold">{activeStory.name}</p>
+                                {activeStory.latest_reel && (
+                                    <p className="text-white/70 text-xs">{activeStory.latest_reel.created_at}</p>
+                                )}
+                            </div>
+                            <div style={{
+                                width: 8, height: 8, borderRadius: '50%',
+                                backgroundColor: activeStory.is_online ? '#22c55e' : '#9ca3af',
+                            }} />
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setActiveStory(null); }}
+                            className="text-white text-2xl w-8 h-8 flex items-center justify-center"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    {/* Content */}
+                    <div
+                        className="flex-1 flex items-center justify-center"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {activeStory.latest_reel ? (
+                            activeStory.latest_reel.is_exclusive && !activeStory.is_subscribed ? (
+                                <div className="flex flex-col items-center gap-4 px-8">
+                                    <div className="text-6xl">🔒</div>
+                                    <p className="text-white text-xl font-serif text-center">Exkluzívny obsah</p>
+                                    <p className="text-white/70 text-sm text-center">
+                                        Predplať si {activeStory.first_name} a sleduj všetok exkluzívny obsah
+                                    </p>
+                                    <Link
+                                        href={`/coaches/${activeStory.coach_id}`}
+                                        className="bg-[#c4714a] text-white px-6 py-3 rounded-full font-medium"
+                                        onClick={() => setActiveStory(null)}
+                                    >
+                                        Predplatiť →
+                                    </Link>
+                                </div>
+                            ) : (
+                                <video
+                                    src={activeStory.latest_reel.video_url.startsWith('http')
+                                        ? activeStory.latest_reel.video_url
+                                        : `/storage/${activeStory.latest_reel.video_url}`}
+                                    className="w-full h-full object-contain"
+                                    autoPlay
+                                    controls
+                                    playsInline
+                                    style={{ maxHeight: '80vh' }}
+                                />
+                            )
+                        ) : (
+                            <div className="flex flex-col items-center gap-4 px-8">
+                                <div className="text-6xl">👤</div>
+                                <p className="text-white text-xl font-serif text-center">
+                                    {activeStory.first_name} zatiaľ nemá reely
+                                </p>
+                                <Link
+                                    href={`/coaches/${activeStory.coach_id}`}
+                                    className="bg-[#c4714a] text-white px-6 py-3 rounded-full font-medium"
+                                    onClick={() => setActiveStory(null)}
+                                >
+                                    Zobraziť profil →
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer actions */}
+                    {activeStory.latest_reel && (!activeStory.latest_reel.is_exclusive || activeStory.is_subscribed) && (
+                        <div className="absolute bottom-20 left-0 right-0 flex items-center justify-between px-6 py-3">
+                            <Link
+                                href={`/coaches/${activeStory.coach_id}`}
+                                className="text-white text-sm font-medium bg-white/20 px-4 py-2 rounded-full"
+                                onClick={() => setActiveStory(null)}
+                            >
+                                Zobraziť profil
+                            </Link>
+                            <Link
+                                href={`/coaches/${activeStory.coach_id}`}
+                                className="bg-[#c4714a] text-white text-sm font-medium px-4 py-2 rounded-full"
+                                onClick={() => setActiveStory(null)}
+                            >
+                                Predplatiť →
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            )}
         </PulseLayout>
     );
 }

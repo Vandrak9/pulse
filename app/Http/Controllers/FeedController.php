@@ -6,6 +6,7 @@ use App\Models\Coach;
 use App\Models\Notification;
 use App\Models\Post;
 use App\Models\PostLike;
+use App\Models\User;
 use App\Services\EmailNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,7 +57,7 @@ class FeedController extends Controller
                 'posts'   => $previewPosts->map($mapPreview)->values(),
                 'reels'   => [],
                 'videos'  => [],
-                'coaches' => [],
+                'stories' => [],
                 'isGuest' => true,
             ]);
         }
@@ -134,32 +135,88 @@ class FeedController extends Controller
         $mappedReels  = $reelPosts->map($mapPost)->values();
         $mappedVideos = $videoPosts->map($mapPost)->values();
 
-        // Followed coach user_ids for ring differentiation
-        $followedUserIds = DB::table('follows')
+        // Stories: followed + subscribed coaches only
+        $followedCoachUserIds = DB::table('follows')
             ->where('follower_id', $userId)
-            ->pluck('following_id')
-            ->toArray();
+            ->pluck('following_id');
 
-        $coaches = Coach::with('user')
-            ->orderByDesc('subscriber_count')
-            ->limit(12)
+        $subscribedCoachUserIds = DB::table('subscriptions')
+            ->where('subscriptions.user_id', $userId)
+            ->where('subscriptions.stripe_status', 'active')
+            ->join('coaches', 'coaches.id', '=', 'subscriptions.coach_id')
+            ->pluck('coaches.user_id');
+
+        $relevantCoachUserIds = $followedCoachUserIds
+            ->merge($subscribedCoachUserIds)
+            ->unique();
+
+        $buildStory = function ($u, bool $isSuggestion = false) use ($userId) {
+            $isOnline = $u->last_seen_at
+                && \Carbon\Carbon::parse($u->last_seen_at)->gt(now()->subMinutes(5));
+
+            $isSubscribed = !$isSuggestion && DB::table('subscriptions')
+                ->where('subscriptions.user_id', $userId)
+                ->where('subscriptions.stripe_status', 'active')
+                ->join('coaches', 'coaches.id', '=', 'subscriptions.coach_id')
+                ->where('coaches.user_id', $u->id)
+                ->exists();
+
+            $latestReel = null;
+            if ($u->coach) {
+                $reel = DB::table('posts')
+                    ->where('coach_id', $u->coach->id)
+                    ->whereIn('video_type', ['reel', 'video'])
+                    ->whereNotNull('media_path')
+                    ->orderByDesc('created_at')
+                    ->select('id', 'title', 'media_path', 'thumbnail_path', 'is_exclusive', 'created_at')
+                    ->first();
+
+                if ($reel) {
+                    $latestReel = [
+                        'id'            => $reel->id,
+                        'title'         => $reel->title,
+                        'video_url'     => $reel->media_path,
+                        'thumbnail_url' => $reel->thumbnail_path,
+                        'is_exclusive'  => (bool) $reel->is_exclusive,
+                        'created_at'    => \Carbon\Carbon::parse($reel->created_at)
+                            ->locale('sk')->diffForHumans(),
+                    ];
+                }
+            }
+
+            return [
+                'id'             => $u->id,
+                'name'           => $u->name,
+                'first_name'     => explode(' ', $u->name)[0],
+                'profile_avatar' => $u->profile_avatar,
+                'coach_id'       => $u->coach?->id,
+                'is_online'      => $isOnline,
+                'is_subscribed'  => $isSubscribed,
+                'is_suggestion'  => $isSuggestion,
+                'latest_reel'    => $latestReel,
+            ];
+        };
+
+        $stories = User::whereIn('id', $relevantCoachUserIds)
+            ->where('role', 'coach')
+            ->with('coach')
             ->get()
-            ->map(fn ($coach) => [
-                'id'            => $coach->id,
-                'user_id'       => $coach->user_id,
-                'name'          => $coach->user->name,
-                'is_followed'   => in_array($coach->user_id, $followedUserIds),
-                'is_subscribed' => in_array($coach->id, $subscribedCoachIds),
-                'avatar_url'    => $coach->avatar_path
-                    ? Storage::url($coach->avatar_path)
-                    : null,
-            ]);
+            ->map(fn ($u) => $buildStory($u));
+
+        // If user follows/subscribes nobody yet — show top 5 coaches as suggestions
+        if ($stories->isEmpty()) {
+            $stories = User::where('role', 'coach')
+                ->with('coach')
+                ->take(5)
+                ->get()
+                ->map(fn ($u) => $buildStory($u, true));
+        }
 
         return Inertia::render('Feed', [
             'posts'   => $mappedPosts,
             'reels'   => $mappedReels,
             'videos'  => $mappedVideos,
-            'coaches' => $coaches,
+            'stories' => $stories,
         ]);
     }
 

@@ -25,6 +25,8 @@ interface Partner {
     role: string;
     avatar: string | null;
     is_verified: boolean;
+    is_online: boolean;
+    last_seen_at: string | null;
 }
 
 interface Conversation {
@@ -432,7 +434,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <PulseLayout>
+        <PulseLayout hideFooter hideTopNav>
             <Head title={`Správy — ${partner.name}`} />
 
             {/* Lightbox (fixed — works for both mobile + desktop) */}
@@ -481,12 +483,12 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
             )}
 
             {/* Two-panel layout: flex row. Left = conversation list (desktop only). Right = chat. */}
-            <div style={{ display: 'flex', height: '100vh', background: '#faf6f0' }}>
+            <div className="chat-panel" style={{ display: 'flex', height: '100dvh', background: '#faf6f0' }}>
 
                 {/* Left panel — conversation list (desktop only) */}
                 <div className="hidden md:flex" style={{
                     width: 360, flexShrink: 0, flexDirection: 'column',
-                    borderRight: '1px solid #e8d9c4', background: 'white', height: '100vh',
+                    borderRight: '1px solid #e8d9c4', background: 'white', height: '100dvh',
                 }}>
                     <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid #e8d9c4', flexShrink: 0 }}>
                         <a href="/messages" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: '#c4714a', fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
@@ -545,26 +547,68 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                 </div>
 
                 {/* Right panel — chat (fills remaining space) */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100dvh' }}>
 
                 {/* Top bar */}
                 <div style={{
                     background: 'white', borderBottom: '1px solid #e8d9c4',
-                    padding: '12px 16px', display: 'flex', alignItems: 'center',
+                    padding: '12px 16px', paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+                    display: 'flex', alignItems: 'center',
                     gap: 12, flexShrink: 0, zIndex: 10,
                 }}>
                     <a href="/messages" className="md:hidden" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
-                    <Avatar src={partner.avatar} name={partner.name} size={40} />
+                    <a href={`/profile/${partner.id}`} style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', flexShrink: 0 }}>
+                    <div style={{ position: 'relative', flexShrink: 0, width: '40px', height: '40px', minWidth: '40px' }}>
+                        {partner.avatar ? (
+                            <img
+                                src={partner.avatar}
+                                alt={partner.name}
+                                style={{
+                                    width: '40px', height: '40px', minWidth: '40px', minHeight: '40px',
+                                    display: 'block', flexShrink: 0,
+                                    objectFit: 'cover', objectPosition: 'center',
+                                    clipPath: 'circle(50%)',
+                                    WebkitClipPath: 'circle(50%)',
+                                    transform: 'translateZ(0)',
+                                    WebkitTransform: 'translateZ(0)',
+                                } as React.CSSProperties}
+                            />
+                        ) : (
+                            <div style={{
+                                width: '40px', height: '40px', minWidth: '40px', borderRadius: '50%',
+                                background: '#c4714a', display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', color: 'white', fontWeight: 700,
+                                fontSize: '16px', flexShrink: 0, flexGrow: 0,
+                            }}>
+                                {partner.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                        <span style={{
+                            position: 'absolute', bottom: 1, right: 1,
+                            width: 11, height: 11, borderRadius: '50%',
+                            background: partner.is_online ? '#22c55e' : '#9ca3af',
+                            border: '2px solid white',
+                        }} />
+                    </div>
                     <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: 15, color: '#2d2118' }}>{partner.name}</div>
-                        {partner.is_verified && (
-                            <div style={{ fontSize: 11, color: '#4a7c59', fontWeight: 600 }}>Predplatené ✓</div>
-                        )}
+                        <div style={{ fontSize: 11, color: partner.is_online ? '#22c55e' : '#9a8a7a', fontWeight: partner.is_online ? 600 : 400 }}>
+                            {partner.is_online
+                                ? 'Online'
+                                : partner.last_seen_at
+                                    ? relativeTime(partner.last_seen_at)
+                                    : 'Offline'
+                            }
+                        </div>
                     </div>
+                    </a>
                 </div>
 
                 {/* Messages area */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }} className="messages-scroll-area">
+                    {/* Spacer pushes messages to the bottom when there are few */}
+                    <div style={{ flex: 1 }} />
+                    <div style={{ padding: '16px 16px 8px' }}>
                     {messages.length === 0 && (
                         <div style={{ textAlign: 'center', color: '#9a8a7a', fontSize: 14, marginTop: 40 }}>
                             Začni konverzáciu s {partner.name} 👋
@@ -656,6 +700,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                             </React.Fragment>
                         );
                     })}
+                    </div>
                     <div ref={bottomRef} />
                 </div>
 
@@ -706,7 +751,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                 />
 
                 {/* Bottom input bar */}
-                <div style={{
+                <div className="chat-input-bar" style={{
                     background: 'white', borderTop: '1px solid #e8d9c4',
                     padding: '10px 16px', display: 'flex', alignItems: 'flex-end',
                     gap: 8, flexShrink: 0,
@@ -832,8 +877,21 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                     0%, 100% { opacity: 1; transform: scale(1); }
                     50% { opacity: 0.35; transform: scale(0.75); }
                 }
-                @media (min-width: 768px) {
-                    html, body { overflow: hidden; height: 100%; }
+                html, body { overflow: hidden; height: 100%; }
+                @media (max-width: 767px) {
+                    .chat-panel { height: 100dvh !important; }
+                    .chat-panel > div { height: 100dvh !important; }
+                    .chat-input-bar {
+                        position: fixed !important;
+                        bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        z-index: 40 !important;
+                    }
+                    .messages-scroll-area {
+                        padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px)) !important;
+                        -webkit-overflow-scrolling: touch;
+                    }
                 }
             `}</style>
         </PulseLayout>

@@ -59,13 +59,18 @@ class MessageController extends Controller
             ];
         });
 
+        $lastSeen = $partner->last_seen_at;
+        $isOnline = $lastSeen && $lastSeen->gt(now()->subMinutes(5));
+
         return Inertia::render('Messages/Show', [
             'partner'       => [
-                'id'          => $partner->id,
-                'name'        => $partner->name,
-                'role'        => $partner->role,
-                'avatar'      => $avatarUrl,
-                'is_verified' => $coach ? $coach->is_verified : false,
+                'id'           => $partner->id,
+                'name'         => $partner->name,
+                'role'         => $partner->role,
+                'avatar'       => $avatarUrl,
+                'is_verified'  => $coach ? $coach->is_verified : false,
+                'is_online'    => $isOnline,
+                'last_seen_at' => $lastSeen ? $lastSeen->toISOString() : null,
             ],
             'messages'      => $formattedMessages,
             'conversations' => $this->buildConversations($user),
@@ -105,11 +110,12 @@ class MessageController extends Controller
             $avatarUrl = $c && $c->avatar_path ? '/storage/' . $c->avatar_path : null;
             $lastMsg   = $data['last'];
             $conversations[] = [
-                'partner_id'     => $partnerId,
-                'partner_name'   => $partner->name,
-                'partner_role'   => $partner->role,
-                'partner_avatar' => $avatarUrl,
-                'last_message'   => [
+                'partner_id'        => $partnerId,
+                'partner_name'      => $partner->name,
+                'partner_role'      => $partner->role,
+                'partner_avatar'    => $avatarUrl,
+                'partner_is_online' => $partner->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
+                'last_message'      => [
                     'content'      => $lastMsg->content,
                     'created_at'   => $lastMsg->created_at,
                     'is_mine'      => $lastMsg->sender_id === $user->id,

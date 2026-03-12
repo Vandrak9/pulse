@@ -18,6 +18,7 @@ interface Coach {
     image_count: number;
     is_following: boolean;
     is_live: boolean;
+    is_online: boolean;
 }
 
 interface PaginatedCoaches {
@@ -203,18 +204,26 @@ function CoachCard({
             className="flex flex-col items-center rounded-2xl bg-white px-4 pb-5 pt-6 shadow-sm transition-all duration-150 hover:shadow-lg hover:scale-[1.02]"
             style={{ border: '1px solid #e8d9c4', cursor: 'pointer' }}
         >
-            {/* Avatar */}
-            <div
-                className="mb-3 h-20 w-20 flex-shrink-0 overflow-hidden rounded-full"
-                style={{ outline: '2px solid #e8d9c4', outlineOffset: '2px' }}
-            >
-                {coach.avatar_url ? (
-                    <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
-                ) : (
-                    <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-white" style={{ backgroundColor: '#c4714a' }}>
-                        {coach.name.charAt(0).toUpperCase()}
-                    </div>
-                )}
+            {/* Avatar with online dot */}
+            <div className="relative mb-3 flex-shrink-0">
+                <div
+                    className="h-20 w-20 overflow-hidden rounded-full"
+                    style={{ outline: '2px solid #e8d9c4', outlineOffset: '2px' }}
+                >
+                    {coach.avatar_url ? (
+                        <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-white" style={{ backgroundColor: '#c4714a' }}>
+                            {coach.name.charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                </div>
+                <div style={{
+                    position: 'absolute', bottom: 2, right: 2,
+                    width: 13, height: 13, borderRadius: '50%',
+                    backgroundColor: coach.is_online ? '#22c55e' : '#9ca3af',
+                    border: '2px solid white', zIndex: 10,
+                }} />
             </div>
 
             <h3 className="text-center text-sm font-semibold leading-tight sm:text-base" style={{ color: '#2d2118' }}>

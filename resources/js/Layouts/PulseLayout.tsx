@@ -1,9 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Rss, Compass, MessageCircle, Bell, User, LayoutDashboard, LogOut, PlusSquare, Megaphone, Radio, Dumbbell, Flame, Leaf, Activity, Heart, Zap } from 'lucide-react';
+import Avatar from '@/Components/Avatar';
+import { Home, Rss, Compass, MessageCircle, Bell, User, LayoutDashboard, LogOut, PlusSquare, Megaphone, Radio, Dumbbell, Flame, Leaf, Activity, Heart, Zap, LogIn } from 'lucide-react';
 
 interface Props {
     children: React.ReactNode;
+    hideFooter?: boolean;
+    hideTopNav?: boolean;
 }
 
 interface SuggestedCoach {
@@ -13,6 +16,7 @@ interface SuggestedCoach {
     rating_avg: number;
     rating_count: number;
     avatar_url: string | null;
+    is_online: boolean;
 }
 
 interface DashboardSidebar {
@@ -41,7 +45,7 @@ const TRENDING_CATS: { icon: React.ReactNode; label: string; k: string }[] = [
 ];
 
 
-export default function PulseLayout({ children }: Props) {
+export default function PulseLayout({ children, hideFooter = false, hideTopNav = false }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { id: number; name: string; role?: string; coach_id?: number | null } | null } };
     const dashboardSidebar = (page.props as any).dashboard_sidebar as DashboardSidebar | undefined;
@@ -143,7 +147,13 @@ export default function PulseLayout({ children }: Props) {
         { label: 'Správy', icon: MessageCircle, href: '/messages',                                   badge: unreadCount },
         { label: 'Profil', icon: User,          href: user ? `/profile/${user.id}` : '/login',      badge: 0 },
     ];
-    const mobileNav = isCoach ? coachMobileNav : fanMobileNav;
+    const guestMobileNav = [
+        { label: 'Domov',     icon: Home,    href: '/',        badge: 0 },
+        { label: 'Feed',      icon: Rss,     href: '/feed',    badge: 0 },
+        { label: 'Objaviť',  icon: Compass, href: '/coaches', badge: 0 },
+        { label: 'Prihlásiť',icon: LogIn,   href: '/login',   badge: 0 },
+    ];
+    const mobileNav = user ? (isCoach ? coachMobileNav : fanMobileNav) : guestMobileNav;
 
     return (
         <div style={{ background: '#faf6f0', minHeight: '100vh' }}>
@@ -525,15 +535,13 @@ export default function PulseLayout({ children }: Props) {
                                     {suggestedCoaches.map(coach => (
                                         <div key={coach.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                             <Link href={`/coaches/${coach.id}`} style={{ flexShrink: 0 }}>
-                                                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: '2px solid #e8d9c4' }}>
-                                                    {coach.avatar_url ? (
-                                                        <img src={coach.avatar_url} alt={coach.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    ) : (
-                                                        <div style={{ width: '100%', height: '100%', background: '#c4714a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
-                                                            {coach.name.charAt(0)}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <Avatar
+                                                    src={coach.avatar_url}
+                                                    name={coach.name}
+                                                    size={40}
+                                                    showOnlineStatus={true}
+                                                    isOnline={coach.is_online}
+                                                />
                                             </Link>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <Link href={`/coaches/${coach.id}`} style={{ textDecoration: 'none' }}>
@@ -606,7 +614,7 @@ export default function PulseLayout({ children }: Props) {
             </aside>
 
             {/* ── MOBILE TOP NAV — hidden on desktop ── */}
-            <nav
+            {!hideTopNav && <nav
                 className="sticky top-0 z-50 border-b bg-white md:hidden"
                 style={{ borderColor: '#e8d9c4' }}
             >
@@ -625,17 +633,17 @@ export default function PulseLayout({ children }: Props) {
                         <div className="flex items-center gap-2">
                             <Link
                                 href="/login"
-                                className="hidden rounded-full border px-4 py-1.5 text-sm font-medium transition hover:bg-gray-50 sm:block"
-                                style={{ borderColor: '#e8d9c4', color: '#2d2118' }}
-                            >
-                                Prihlásiť
-                            </Link>
-                            <Link
-                                href="/register"
-                                className="rounded-full px-4 py-1.5 text-sm font-semibold text-white"
+                                className="rounded-full px-4 py-2 text-sm font-semibold text-white"
                                 style={{ backgroundColor: '#c4714a' }}
                                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#5a3e2b')}
                                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#c4714a')}
+                            >
+                                Prihlásiť sa
+                            </Link>
+                            <Link
+                                href="/register"
+                                className="hidden sm:inline text-sm font-medium"
+                                style={{ color: '#c4714a' }}
                             >
                                 Registrovať
                             </Link>
@@ -674,13 +682,14 @@ export default function PulseLayout({ children }: Props) {
                         </div>
                     )}
                 </div>
-            </nav>
+            </nav>}
 
             {/* ── MAIN CONTENT — offset by sidebars on desktop ── */}
             <div className="md:ml-64 lg:mr-72" style={{ minHeight: '100vh', background: '#faf6f0', display: 'flex', flexDirection: 'column' }}>
-                <main className="animate-fade-in flex-1 pb-20 md:pb-0">
+                <main className={`animate-fade-in flex-1 md:pb-0${hideTopNav ? '' : ' pb-20'}`}>
                     {children}
                 </main>
+                {!hideFooter && (
                 <footer style={{ borderTop: '1px solid #e8d9c4', padding: '32px 16px 16px', textAlign: 'center' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 16, marginBottom: 8 }}>
                         {[
@@ -708,12 +717,13 @@ export default function PulseLayout({ children }: Props) {
                         Platby sú spracované bezpečne cez Stripe · PULSE neposkytuje medicínske poradenstvo
                     </p>
                 </footer>
+                )}
             </div>
 
             {/* ── MOBILE BOTTOM TAB BAR — hidden on desktop ── */}
             <nav
                 className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden"
-                style={{ background: 'white', borderTop: '1px solid #e8d9c4' }}
+                style={{ background: 'white', borderTop: '1px solid #e8d9c4', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
                 {mobileNav.map((tab) => {
                     const active = isActive(tab.href);
@@ -756,8 +766,8 @@ export default function PulseLayout({ children }: Props) {
                 })}
             </nav>
 
-            {/* Mobile bottom padding */}
-            <div className="h-16 md:hidden" />
+            {/* Mobile bottom padding — hidden on full-screen pages (chat) */}
+            {!hideTopNav && <div className="h-16 md:hidden" />}
         </div>
     );
 }

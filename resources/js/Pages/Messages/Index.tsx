@@ -17,6 +17,7 @@ interface Conversation {
     partner_name: string;
     partner_role: string;
     partner_avatar: string | null;
+    partner_is_online: boolean;
     last_message: LastMessage | null;
     unread_count: number;
 }
@@ -40,7 +41,13 @@ function ConversationRow({ conv, compact = false }: { conv: Conversation; compac
                 onMouseLeave={e => (e.currentTarget.style.background = 'white')}
             >
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <Avatar src={conv.partner_avatar} name={conv.partner_name} size={compact ? 42 : 48} />
+                    <Avatar
+                        src={conv.partner_avatar}
+                        name={conv.partner_name}
+                        size={compact ? 42 : 48}
+                        showOnlineStatus={true}
+                        isOnline={conv.partner_is_online}
+                    />
                     {conv.unread_count > 0 && (
                         <div style={{
                             position: 'absolute', bottom: 0, right: -2,

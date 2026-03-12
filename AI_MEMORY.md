@@ -1097,3 +1097,94 @@ DELETE /coaches/{coachId}/reviews  → auth
 - **Completeness avatar**: `Storage::disk('public')->exists($user->profile_avatar)` instead of simple truthy check
 - **Dashboard/Index.tsx**: "Moje posledné príspevky" widget — thumbnail/placeholder, title, 🔒 exclusive badge, ❤️ likes, relative time, hover, "+ Pridať" link
 - [2026-03-11 07:41:35] fdba4a1: fix: create like notification + email on post like
+- [2026-03-12 06:54:45] d17fc95: fix: closes #3 — Dashboard/Earnings — layout nezarovnaný na mobile
+- [2026-03-12 06:55:48] 743cd1e: fix: closes #3 — Dashboard/Earnings — layout nezarovnaný na mobile
+- [] ccb5dea: 
+- [] 647c99f: 
+- [2026-03-12 11:52:49] 0f183d0: fix: closes #7 — mobile chat safe-area + spacer fix
+- [2026-03-12 12:00:48] 1d2186c: fix: chat top bar cut off — add safe-area-inset-top padding
+- [2026-03-12 12:21:47] 06c50d7: fix: closes #9 — mobile chat 3 layout fixes (messages alignment, avatar, online status)
+- [2026-03-12 12:25:39] 8714056: fix: closes #10 — chat header avatar clipped on iOS Safari
+- [2026-03-12 12:28:33] 3bc6c50: fix: chat header avatar clipping on iOS Safari
+- [2026-03-12 12:31:48] 65c2f17: fix: chat header avatar — use plain img with inline styles, bypass Avatar component
+- [2026-03-12 12:37:14] a14232c: fix: iOS Safari avatar clipping — clipPath instead of border-radius overflow
+- [2026-03-12 18:20:28] 3c3301b: feat: homepage mobile UX — guest nav, real stats, CTA hierarchy
+
+## Session 27 — Homepage & guest nav UX (2026-03-12)
+
+- **Top nav guest buttons**: primary = "Prihlásiť sa" → /login (filled terracotta), secondary = "Registrovať" → /register (text-only, hidden on xs)
+- **Guest mobile bottom nav**: `guestMobileNav` with Home/Feed/Coaches/LogIn — no Správy/Profil for unauthenticated
+- **mobileNav logic**: `user ? (isCoach ? coachMobileNav : fanMobileNav) : guestMobileNav`
+- **LogIn icon** imported from lucide-react
+- **Hero CTA hierarchy**: "Objaviť koučov" = big filled primary; "Si tréner? Začni zarábať →" = small text-only link to /register?role=coach
+- **Hero stats**: real DB queries in HomeController — `Coach::count()`, `User::where('role','fan')->count()`, `DB::table('post_media')->where('type','video')->count()`, `Coach::avg('rating_avg') ?? 4.8`
+- **stats prop**: passed from HomeController, used in Home.tsx — hide videos stat if 0, fans fallback max(fans,1)
+- **CTA banner**: `mb-14` → `mb-8` (less gap before footer)
+- **Coach cards**: `active:scale-95` tap feedback on mobile
+- [2026-03-12 18:20:58] da73056: docs: update AI_MEMORY.md — Session 27 homepage guest nav UX
+- [2026-03-12 18:21:48] 608a534: fix: post_media column is media_type not type — 500 on homepage
+- [2026-03-12 18:26:20] c8e475f: fix: cast last_seen_at to datetime in User model — 500 on Messages/Show
+- [2026-03-12 18:34:12] 5cb23eb: feat: online/offline status indicator on all avatars
+
+## Session 28 — Online/offline status indicators (2026-03-12)
+
+- **Avatar component**: new props `showOnlineStatus` + `isOnline` — wraps in `position:relative` div + absolute dot (green #22c55e / gray #9ca3af, 2px white border)
+- **Dot size**: 8px (<32), 10px (<48), 13px (48+)
+- **Online threshold**: `last_seen_at > now()->subMinutes(5)` — consistent everywhere
+- **last_seen_at cast**: `'datetime'` in User model (fixes toISOString() 500)
+- **UpdateLastSeen middleware**: throttles DB write every 2 min via `diffInMinutes` check
+- **CoachController::index()**: `is_online` per coach in paginated list
+- **CoachController::show()**: `is_online` in coach prop
+- **UserProfileController::show()**: `is_online` in `profileUser` — NOT shown on own profile (`!isOwn` guard)
+- **MessageController::buildConversations()**: `partner_is_online` per conversation
+- **web.php `/api/coaches/suggested`**: `is_online` added
+- **Pages updated**: Coaches/Show (hero dot + text), Coaches/Index (card dot), Profile/Show (dot + text), Messages/Index (Avatar with dot), PulseLayout right sidebar (Avatar component)
+- **PulseLayout**: imports `Avatar` component for suggested coaches sidebar
+- [2026-03-12 18:34:42] efbed7a: docs: update AI_MEMORY.md — Session 28 online status indicators
+- [2026-03-12 18:36:51] c549b87: fix: is_online in chat — diffInMinutes returns negative, use gt(now()->subMinutes(5))
+- [2026-03-12 18:40:21] 3d66157: feat: profile status — show own online dot + last seen time when offline
+- [2026-03-12 18:41:42] 6499c52: fix: UpdateLastSeen — diffInMinutes returns negative in Carbon 3, use lt(now()->subMinutes(2))
+- [2026-03-12 18:43:59] 79d7e4f: feat: chat header avatar+name clickable — links to partner profile
+- [2026-03-12 19:04:41] 1a59546: feat: stories row — only followed/subscribed coaches + online status ring
+
+## Session 29 — Stories row — followed/subscribed only + online ring (2026-03-12)
+
+- **FeedController**: `coaches` prop replaced with `stories` prop — only coaches the auth user follows (follows table) OR has active subscription to
+- **Fallback**: if user follows/subscribes nobody → top 5 coaches shown with `is_suggestion: true`
+- **stories shape**: `id, name, first_name, profile_avatar, coach_slug, is_online, is_subscribed, is_suggestion?`
+- **Online ring**: green gradient if `is_online`, gray if offline; 68px outer / 62px white gap / 58px avatar
+- **Online dot**: absolute, bottom-right, 14px, green/gray
+- **Subscribed badge**: terracotta ✓ circle, top-right, 18px — only if `is_subscribed`
+- **Online/offline text**: 10px label below name
+- **Guest path**: `coaches: []` → `stories: []` (key rename)
+- **Feed.tsx**: `Coach` interface replaced with `Story` interface; stories rendered with full new ring UI
+- [2026-03-12 19:04:58] c7eb8aa: docs: update AI_MEMORY.md — Session 29 stories row
+- [2026-03-12 19:05:46] f0d7211: fix: stories — qualify user_id column in subscriptions JOIN to avoid ambiguity
+- [2026-03-12 19:11:40] c5ef93e: feat: story modal — click shows latest reel with progress bar
+
+## Session 30 — Story modal with latest reel (2026-03-12)
+
+- **FeedController**: `stories` map fetches `latest_reel` per coach — queries `posts` WHERE `video_type IN (reel,video)` AND `media_path NOT NULL`, ordered `created_at DESC`
+- **latest_reel shape**: `id, title, video_url (=media_path), thumbnail_url, is_exclusive, created_at (diffForHumans sk locale)`
+- **No post_media table** — posts columns used directly: `media_path`, `thumbnail_path`
+- **Feed.tsx `Story` interface**: extended with `latest_reel: LatestReel | null`
+- **Story avatars**: changed from `<Link>` to `<button onClick={() => setActiveStory(story)}>`
+- **Story modal**: fullscreen black overlay (`z-50`), 10s auto-close via setInterval 100ms steps
+- **Progress bar**: top strip, white fill on white/30 track
+- **Content states**: (1) video player if unlocked, (2) 🔒 locked CTA if exclusive+not subscribed, (3) 👤 no reel CTA
+- **Footer**: "Zobraziť profil" + "Predplatiť →" shown only when reel is viewable
+- [2026-03-12 19:12:04] df0af35: docs: update AI_MEMORY.md — Session 30 story modal
+- [2026-03-12 19:16:06] 951c244: feat: story avatar tap menu — Príbeh / Profil options
+
+## Session 31 — Story avatar tap menu (2026-03-12)
+
+- **Tap behavior**: story avatar click no longer opens modal directly — shows small popup menu first
+- **storyMenu state**: `useState<Story | null>(null)` — toggle on click, close on outside click via `menuRef` + `mousedown` listener
+- **Popup position**: `absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50` — floats above avatar
+- **Arrow**: white rotated square (`rotate-45`) pointing down toward avatar
+- **Menu options**: (1) 🎬 Príbeh → opens story modal (`setActiveStory`), subtitle "Najnovší reel" / "Žiadny obsah"; (2) 👤 Profil → `<Link href="/coaches/{slug}">`
+- **Outside click**: closes menu without opening modal
+- [2026-03-12 19:16:21] cd2a307: docs: update AI_MEMORY.md — Session 31 story tap menu
+- [2026-03-12 19:19:02] 7826277: fix: story menu position — show below avatar, add backdrop
+- [2026-03-12 19:22:33] 8225994: fix: story menu — use React portal to escape overflow:hidden container
+- [2026-03-12 19:25:11] 84fe7bc: fix: story menu Profil link — use coach_id not coach_slug (slug doesn't exist)

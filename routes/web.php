@@ -144,6 +144,7 @@ Route::get('/api/coaches/suggested', function () {
             'avatar_url'     => $c->avatar_path
                 ? \Illuminate\Support\Facades\Storage::url($c->avatar_path)
                 : null,
+            'is_online'      => $c->user->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
         ]);
     return response()->json($coaches);
 });

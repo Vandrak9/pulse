@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coach;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,8 +36,16 @@ class HomeController extends Controller
                     : null,
             ]);
 
+        $stats = [
+            'coaches' => Coach::count(),
+            'fans'    => User::where('role', 'fan')->count(),
+            'videos'  => DB::table('post_media')->where('media_type', 'video')->count(),
+            'rating'  => round(Coach::avg('rating_avg') ?? 4.8, 1),
+        ];
+
         return Inertia::render('Home', [
             'featured' => $featured,
+            'stats'    => $stats,
         ]);
     }
 }

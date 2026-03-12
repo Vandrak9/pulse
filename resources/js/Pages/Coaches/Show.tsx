@@ -20,6 +20,7 @@ interface CoachData {
     is_following: boolean;
     is_live: boolean;
     messages_access: 'everyone' | 'followers' | 'subscribers' | 'nobody';
+    is_online: boolean;
     avatar_url: string | null;
 }
 
@@ -219,14 +220,23 @@ export default function CoachShow({ coach, posts, isSubscribed, reviews: initial
                         </Link>
                     </div>
                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 md:left-8 md:translate-x-0">
-                        <div className="h-[120px] w-[120px] overflow-hidden rounded-full border-4 border-white shadow-lg md:h-[140px] md:w-[140px]" style={{ backgroundColor: '#c4714a' }}>
-                            {coach.avatar_url ? (
-                                <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
-                            ) : (
-                                <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-white">
-                                    {coach.name.charAt(0).toUpperCase()}
-                                </div>
-                            )}
+                        <div style={{ position: 'relative', display: 'inline-flex' }}>
+                            <div className="h-[120px] w-[120px] overflow-hidden rounded-full border-4 border-white shadow-lg md:h-[140px] md:w-[140px]" style={{ backgroundColor: '#c4714a' }}>
+                                {coach.avatar_url ? (
+                                    <img src={coach.avatar_url} alt={coach.name} className="h-full w-full object-cover" />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-white">
+                                        {coach.name.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
+                            {/* Online status dot */}
+                            <div style={{
+                                position: 'absolute', bottom: 6, right: 6,
+                                width: 18, height: 18, borderRadius: '50%',
+                                backgroundColor: coach.is_online ? '#22c55e' : '#9ca3af',
+                                border: '3px solid white', zIndex: 10,
+                            }} />
                         </div>
                     </div>
                 </div>
@@ -241,6 +251,12 @@ export default function CoachShow({ coach, posts, isSubscribed, reviews: initial
                             {/* Coach info */}
                             <div className="pt-20 text-center md:pt-16 md:pl-44 md:text-left">
                                 <h1 className="font-serif text-2xl font-bold md:text-3xl" style={{ color: '#2d2118' }}>{coach.name}</h1>
+                                <div className="mt-1 flex items-center justify-center gap-1.5 md:justify-start">
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block', backgroundColor: coach.is_online ? '#22c55e' : '#9ca3af' }} />
+                                    <span style={{ fontSize: 12, fontWeight: 500, color: coach.is_online ? '#16a34a' : '#9ca3af' }}>
+                                        {coach.is_online ? 'Online' : 'Offline'}
+                                    </span>
+                                </div>
                                 {coach.specialization && (
                                     <span className="mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold" style={{ backgroundColor: '#fce8de', color: '#c4714a' }}>
                                         {coach.specialization}

@@ -25,6 +25,7 @@ class User extends Authenticatable
         'notif_new_message',
         'notif_new_review',
         'notif_new_like',
+        'last_seen_at',
     ];
 
     protected $hidden = [
@@ -36,7 +37,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'last_seen_at'      => 'datetime',
+            'password'          => 'hashed',
         ];
     }
 
