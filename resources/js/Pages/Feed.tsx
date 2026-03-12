@@ -352,48 +352,54 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
 
                                         {/* Tap menu */}
                                         {storyMenu?.id === story.id && (
-                                            <div
-                                                ref={menuRef}
-                                                className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50"
-                                                onClick={e => e.stopPropagation()}
-                                            >
-                                                {/* Arrow */}
-                                                <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 shadow-md" />
+                                            <>
+                                                {/* Backdrop */}
+                                                <div
+                                                    className="fixed inset-0 z-40"
+                                                    onClick={() => setStoryMenu(null)}
+                                                />
 
-                                                {/* Menu card */}
-                                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#f0e8dc]" style={{ minWidth: 140 }}>
+                                                {/* Menu — below avatar */}
+                                                <div
+                                                    ref={menuRef}
+                                                    className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50"
+                                                    onClick={e => e.stopPropagation()}
+                                                >
+                                                    {/* Arrow pointing up */}
+                                                    <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-l border-t border-[#f0e8dc]" />
 
-                                                    {/* Príbeh */}
-                                                    <button
-                                                        onClick={() => { setStoryMenu(null); setActiveStory(story); }}
-                                                        className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#faf6f0] transition-colors border-b border-[#f0e8dc]"
-                                                    >
-                                                        <span className="text-lg">🎬</span>
-                                                        <div className="text-left">
-                                                            <p className="text-sm font-medium text-[#2d2118]">Príbeh</p>
-                                                            <p className="text-[10px] text-[#9a8a7a]">
-                                                                {story.latest_reel ? 'Najnovší reel' : 'Žiadny obsah'}
-                                                            </p>
-                                                        </div>
-                                                        {!story.latest_reel && (
-                                                            <span className="ml-auto text-[10px] text-[#9a8a7a]">—</span>
-                                                        )}
-                                                    </button>
+                                                    {/* Menu card */}
+                                                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#f0e8dc]" style={{ minWidth: 150 }}>
 
-                                                    {/* Profil */}
-                                                    <Link
-                                                        href={`/coaches/${story.coach_slug}`}
-                                                        onClick={() => setStoryMenu(null)}
-                                                        className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#faf6f0] transition-colors"
-                                                    >
-                                                        <span className="text-lg">👤</span>
-                                                        <div className="text-left">
-                                                            <p className="text-sm font-medium text-[#2d2118]">Profil</p>
-                                                            <p className="text-[10px] text-[#9a8a7a]">{story.first_name}</p>
-                                                        </div>
-                                                    </Link>
+                                                        {/* Príbeh */}
+                                                        <button
+                                                            onClick={() => { setStoryMenu(null); setActiveStory(story); }}
+                                                            className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#faf6f0] active:bg-[#faf6f0] transition-colors border-b border-[#f0e8dc]"
+                                                        >
+                                                            <span className="text-lg">🎬</span>
+                                                            <div className="text-left">
+                                                                <p className="text-sm font-medium text-[#2d2118]">Príbeh</p>
+                                                                <p className="text-[10px] text-[#9a8a7a]">
+                                                                    {story.latest_reel ? 'Najnovší reel' : 'Žiadny obsah'}
+                                                                </p>
+                                                            </div>
+                                                        </button>
+
+                                                        {/* Profil */}
+                                                        <Link
+                                                            href={`/coaches/${story.coach_slug}`}
+                                                            onClick={() => setStoryMenu(null)}
+                                                            className="flex items-center gap-2.5 px-4 py-3 hover:bg-[#faf6f0] active:bg-[#faf6f0] transition-colors"
+                                                        >
+                                                            <span className="text-lg">👤</span>
+                                                            <div className="text-left">
+                                                                <p className="text-sm font-medium text-[#2d2118]">Profil</p>
+                                                                <p className="text-[10px] text-[#9a8a7a]">{story.first_name}</p>
+                                                            </div>
+                                                        </Link>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </>
                                         )}
                                     </button>
                                 ))}
