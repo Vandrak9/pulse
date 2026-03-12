@@ -432,7 +432,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <PulseLayout hideFooter>
+        <PulseLayout hideFooter hideTopNav>
             <Head title={`Správy — ${partner.name}`} />
 
             {/* Lightbox (fixed — works for both mobile + desktop) */}
@@ -564,7 +564,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                 </div>
 
                 {/* Messages area */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px' }} className="messages-scroll-area">
                     {messages.length === 0 && (
                         <div style={{ textAlign: 'center', color: '#9a8a7a', fontSize: 14, marginTop: 40 }}>
                             Začni konverzáciu s {partner.name} 👋
@@ -706,7 +706,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                 />
 
                 {/* Bottom input bar */}
-                <div style={{
+                <div className="chat-input-bar" style={{
                     background: 'white', borderTop: '1px solid #e8d9c4',
                     padding: '10px 16px', display: 'flex', alignItems: 'flex-end',
                     gap: 8, flexShrink: 0,
@@ -834,8 +834,19 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                 }
                 html, body { overflow: hidden; height: 100%; }
                 @media (max-width: 767px) {
-                    .chat-panel { height: calc(100dvh - 56px) !important; }
-                    .chat-panel > * { height: calc(100dvh - 56px) !important; }
+                    .chat-panel { height: 100dvh !important; }
+                    .chat-panel > div { height: 100dvh !important; }
+                    .chat-input-bar {
+                        position: fixed !important;
+                        bottom: 56px !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        z-index: 40 !important;
+                        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+                    }
+                    .messages-scroll-area {
+                        padding-bottom: 130px !important;
+                    }
                 }
             `}</style>
         </PulseLayout>
