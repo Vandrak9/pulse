@@ -3,6 +3,7 @@ import VideoModal from '@/Components/VideoModal';
 import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { formatDuration, relativeTime as relativeTimeUtil } from '@/lib/utils';
 
 interface LatestReel {
@@ -90,17 +91,8 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
 
     // Story tap menu
     const [storyMenu, setStoryMenu] = useState<Story | null>(null);
+    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const menuRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setStoryMenu(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     useEffect(() => {
         if (!activeStory) return;
@@ -240,8 +232,19 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                                 {stories.map(story => (
                                     <button
                                         key={story.id}
-                                        onClick={() => setStoryMenu(storyMenu?.id === story.id ? null : story)}
-                                        className="flex flex-col items-center gap-1 shrink-0 relative"
+                                        onClick={(e) => {
+                                            if (storyMenu?.id === story.id) {
+                                                setStoryMenu(null);
+                                                return;
+                                            }
+                                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                            setMenuPosition({
+                                                x: rect.left + rect.width / 2,
+                                                y: rect.bottom + window.scrollY + 8,
+                                            });
+                                            setStoryMenu(story);
+                                        }}
+                                        className="flex flex-col items-center gap-1 shrink-0"
                                     >
                                         <div className="relative">
                                             {/* Outer ring — green if online, gray if offline */}
@@ -350,57 +353,6 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                                             {story.is_online ? 'online' : 'offline'}
                                         </span>
 
-                                        {/* Tap menu */}
-                                        {storyMenu?.id === story.id && (
-                                            <>
-                                                {/* Backdrop */}
-                                                <div
-                                                    className="fixed inset-0 z-40"
-                                                    onClick={() => setStoryMenu(null)}
-                                                />
-
-                                                {/* Menu — below avatar */}
-                                                <div
-                                                    ref={menuRef}
-                                                    className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-50"
-                                                    onClick={e => e.stopPropagation()}
-                                                >
-                                                    {/* Arrow pointing up */}
-                                                    <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-l border-t border-[#f0e8dc]" />
-
-                                                    {/* Menu card */}
-                                                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#f0e8dc]" style={{ minWidth: 150 }}>
-
-                                                        {/* Príbeh */}
-                                                        <button
-                                                            onClick={() => { setStoryMenu(null); setActiveStory(story); }}
-                                                            className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-[#faf6f0] active:bg-[#faf6f0] transition-colors border-b border-[#f0e8dc]"
-                                                        >
-                                                            <span className="text-lg">🎬</span>
-                                                            <div className="text-left">
-                                                                <p className="text-sm font-medium text-[#2d2118]">Príbeh</p>
-                                                                <p className="text-[10px] text-[#9a8a7a]">
-                                                                    {story.latest_reel ? 'Najnovší reel' : 'Žiadny obsah'}
-                                                                </p>
-                                                            </div>
-                                                        </button>
-
-                                                        {/* Profil */}
-                                                        <Link
-                                                            href={`/coaches/${story.coach_slug}`}
-                                                            onClick={() => setStoryMenu(null)}
-                                                            className="flex items-center gap-2.5 px-4 py-3 hover:bg-[#faf6f0] active:bg-[#faf6f0] transition-colors"
-                                                        >
-                                                            <span className="text-lg">👤</span>
-                                                            <div className="text-left">
-                                                                <p className="text-sm font-medium text-[#2d2118]">Profil</p>
-                                                                <p className="text-[10px] text-[#9a8a7a]">{story.first_name}</p>
-                                                            </div>
-                                                        </Link>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
                                     </button>
                                 ))}
                             </div>
@@ -546,6 +498,99 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                     </div>
                 )}
             </div>
+
+            {/* Story menu portal */}
+            {storyMenu && typeof document !== 'undefined' && createPortal(
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 z-[9998]"
+                        onClick={() => setStoryMenu(null)}
+                    />
+
+                    {/* Menu — portalled to body */}
+                    <div
+                        ref={menuRef}
+                        style={{
+                            position: 'absolute',
+                            top: menuPosition.y,
+                            left: menuPosition.x,
+                            transform: 'translateX(-50%)',
+                            zIndex: 9999,
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Arrow pointing up */}
+                        <div style={{
+                            position: 'absolute',
+                            top: -6,
+                            left: '50%',
+                            transform: 'translateX(-50%) rotate(45deg)',
+                            width: 12,
+                            height: 12,
+                            background: 'white',
+                            borderLeft: '1px solid #f0e8dc',
+                            borderTop: '1px solid #f0e8dc',
+                            zIndex: 1,
+                        }} />
+
+                        {/* Menu card */}
+                        <div style={{
+                            background: 'white',
+                            borderRadius: 16,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                            border: '1px solid #f0e8dc',
+                            overflow: 'hidden',
+                            minWidth: 160,
+                        }}>
+                            {/* Príbeh */}
+                            <button
+                                onClick={() => { setStoryMenu(null); setActiveStory(storyMenu); }}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    padding: '12px 16px',
+                                    borderBottom: '1px solid #f0e8dc',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <span style={{ fontSize: 20 }}>🎬</span>
+                                <div style={{ textAlign: 'left' }}>
+                                    <p style={{ fontSize: 14, fontWeight: 600, color: '#2d2118', margin: 0 }}>Príbeh</p>
+                                    <p style={{ fontSize: 11, color: '#9a8a7a', margin: 0 }}>
+                                        {storyMenu.latest_reel ? 'Najnovší reel' : 'Žiadny obsah'}
+                                    </p>
+                                </div>
+                            </button>
+
+                            {/* Profil */}
+                            <a
+                                href={`/coaches/${storyMenu.coach_slug}`}
+                                onClick={() => setStoryMenu(null)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    padding: '12px 16px',
+                                    background: 'white',
+                                    cursor: 'pointer',
+                                    textDecoration: 'none',
+                                }}
+                            >
+                                <span style={{ fontSize: 20 }}>👤</span>
+                                <div style={{ textAlign: 'left' }}>
+                                    <p style={{ fontSize: 14, fontWeight: 600, color: '#2d2118', margin: 0 }}>Profil</p>
+                                    <p style={{ fontSize: 11, color: '#9a8a7a', margin: 0 }}>{storyMenu.first_name}</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </>,
+                document.body
+            )}
 
             {/* Story modal */}
             {activeStory && (
