@@ -6,3 +6,53 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+/* Earnings page — responsive layout */
+.earnings-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+}
+@media (max-width: 640px) {
+    .earnings-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.earnings-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.earnings-chart-header h2 {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.earnings-chart-tabs {
+    flex-shrink: 0;
+    display: flex;
+    gap: 4px;
+    background: #faf6f0;
+    border-radius: 10px;
+    padding: 3px;
+    border: 1px solid #e8d9c4;
+}
+
+.earnings-legend {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
+.earnings-chart-wrap {
+    width: 100%;
+    overflow: hidden;
+}
