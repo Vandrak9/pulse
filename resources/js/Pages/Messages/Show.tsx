@@ -557,7 +557,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                     gap: 12, flexShrink: 0, zIndex: 10,
                 }}>
                     <a href="/messages" className="md:hidden" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{ position: 'relative', flexShrink: 0, width: 40, height: 40 }}>
                         <Avatar src={partner.avatar} name={partner.name} size={40} />
                         <span style={{
                             position: 'absolute', bottom: 1, right: 1,
