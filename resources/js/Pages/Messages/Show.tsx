@@ -557,6 +557,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                     gap: 12, flexShrink: 0, zIndex: 10,
                 }}>
                     <a href="/messages" className="md:hidden" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
+                    <a href={`/profile/${partner.id}`} style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', flexShrink: 0 }}>
                     <div style={{ position: 'relative', flexShrink: 0, width: '40px', height: '40px', minWidth: '40px' }}>
                         {partner.avatar ? (
                             <img
@@ -600,6 +601,7 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                             }
                         </div>
                     </div>
+                    </a>
                 </div>
 
                 {/* Messages area */}
