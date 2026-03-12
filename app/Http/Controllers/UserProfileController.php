@@ -260,6 +260,7 @@ class UserProfileController extends Controller
                 'rating_count'          => (int) ($coach?->rating_count ?? 0),
                 'monthly_price'         => $coach ? (float) $coach->monthly_price : null,
                 'is_online'             => $profileUser->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
+                'last_seen_at'          => $profileUser->last_seen_at?->toISOString(),
                 // Notification prefs (own profile only)
                 'notif_new_subscriber'        => $isOwn ? (bool) $profileUser->notif_new_subscriber : null,
                 'notif_new_message'           => $isOwn ? (bool) $profileUser->notif_new_message : null,
