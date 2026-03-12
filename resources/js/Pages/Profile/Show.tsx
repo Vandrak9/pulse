@@ -23,6 +23,7 @@ interface ProfileUser {
     rating_avg: number;
     rating_count: number;
     monthly_price: number | null;
+    is_online: boolean;
     notif_new_subscriber: boolean | null;
     notif_new_message: boolean | null;
     notif_new_review: boolean | null;
@@ -484,6 +485,7 @@ export default function ProfileShow({
 
                     {/* Avatar overlapping cover */}
                     <div style={{ position: 'absolute', bottom: -50, left: '50%', transform: 'translateX(-50%)' }}>
+                        <div style={{ position: 'relative', display: 'inline-flex' }}>
                         <div
                             onClick={() => isOwn && fileRef.current?.click()}
                             style={{
@@ -510,6 +512,16 @@ export default function ProfileShow({
                                 </div>
                             )}
                         </div>
+                        {/* Online status dot */}
+                        {!isOwn && (
+                            <div style={{
+                                position: 'absolute', bottom: 4, right: 4,
+                                width: 16, height: 16, borderRadius: '50%',
+                                backgroundColor: profileUser.is_online ? '#22c55e' : '#9ca3af',
+                                border: '3px solid white', zIndex: 10,
+                            }} />
+                        )}
+                        </div>
                         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                     </div>
                 </div>
@@ -521,6 +533,14 @@ export default function ProfileShow({
                         <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 700, color: '#2d2118', margin: 0 }}>
                             {profileUser.name}
                         </h1>
+                        {!isOwn && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block', backgroundColor: profileUser.is_online ? '#22c55e' : '#9ca3af' }} />
+                                <span style={{ fontSize: 12, fontWeight: 500, color: profileUser.is_online ? '#16a34a' : '#9ca3af' }}>
+                                    {profileUser.is_online ? 'Online' : 'Offline'}
+                                </span>
+                            </div>
+                        )}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
                             <span style={{ padding: '3px 12px', borderRadius: 999, background: profileUser.role === 'coach' ? '#fce8de' : '#e8f4ec', color: profileUser.role === 'coach' ? '#c4714a' : '#4a7c59', fontSize: 12, fontWeight: 600 }}>
                                 {profileUser.role === 'coach' ? '💪 Kouč' : '👤 Člen'}

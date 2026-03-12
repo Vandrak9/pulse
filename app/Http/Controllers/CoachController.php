@@ -47,6 +47,7 @@ class CoachController extends Controller
                     'is_following'     => $isFollowing,
                     'is_live'          => LiveStream::where('coach_id', $coach->id)
                         ->where('status', 'active')->exists(),
+                    'is_online'        => $coach->user->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
                     'avatar_url'       => $coach->avatar_path
                         ? Storage::url($coach->avatar_path)
                         : null,
@@ -139,6 +140,7 @@ class CoachController extends Controller
                 'is_live'         => LiveStream::where('coach_id', $coach->id)
                     ->where('status', 'active')->exists(),
                 'messages_access' => $coach->messages_access ?? 'everyone',
+                'is_online'       => $coach->user->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
                 'avatar_url'      => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
+import Avatar from '@/Components/Avatar';
 import { Home, Rss, Compass, MessageCircle, Bell, User, LayoutDashboard, LogOut, PlusSquare, Megaphone, Radio, Dumbbell, Flame, Leaf, Activity, Heart, Zap, LogIn } from 'lucide-react';
 
 interface Props {
@@ -15,6 +16,7 @@ interface SuggestedCoach {
     rating_avg: number;
     rating_count: number;
     avatar_url: string | null;
+    is_online: boolean;
 }
 
 interface DashboardSidebar {
@@ -533,15 +535,13 @@ export default function PulseLayout({ children, hideFooter = false, hideTopNav =
                                     {suggestedCoaches.map(coach => (
                                         <div key={coach.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                             <Link href={`/coaches/${coach.id}`} style={{ flexShrink: 0 }}>
-                                                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: '2px solid #e8d9c4' }}>
-                                                    {coach.avatar_url ? (
-                                                        <img src={coach.avatar_url} alt={coach.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    ) : (
-                                                        <div style={{ width: '100%', height: '100%', background: '#c4714a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
-                                                            {coach.name.charAt(0)}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <Avatar
+                                                    src={coach.avatar_url}
+                                                    name={coach.name}
+                                                    size={40}
+                                                    showOnlineStatus={true}
+                                                    isOnline={coach.is_online}
+                                                />
                                             </Link>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <Link href={`/coaches/${coach.id}`} style={{ textDecoration: 'none' }}>
