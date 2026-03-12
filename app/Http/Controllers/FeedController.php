@@ -150,31 +150,58 @@ class FeedController extends Controller
             ->merge($subscribedCoachUserIds)
             ->unique();
 
+        $buildStory = function ($u, bool $isSuggestion = false) use ($userId) {
+            $isOnline = $u->last_seen_at
+                && \Carbon\Carbon::parse($u->last_seen_at)->gt(now()->subMinutes(5));
+
+            $isSubscribed = !$isSuggestion && DB::table('subscriptions')
+                ->where('subscriptions.user_id', $userId)
+                ->where('subscriptions.stripe_status', 'active')
+                ->join('coaches', 'coaches.id', '=', 'subscriptions.coach_id')
+                ->where('coaches.user_id', $u->id)
+                ->exists();
+
+            $latestReel = null;
+            if ($u->coach) {
+                $reel = DB::table('posts')
+                    ->where('coach_id', $u->coach->id)
+                    ->whereIn('video_type', ['reel', 'video'])
+                    ->whereNotNull('media_path')
+                    ->orderByDesc('created_at')
+                    ->select('id', 'title', 'media_path', 'thumbnail_path', 'is_exclusive', 'created_at')
+                    ->first();
+
+                if ($reel) {
+                    $latestReel = [
+                        'id'            => $reel->id,
+                        'title'         => $reel->title,
+                        'video_url'     => $reel->media_path,
+                        'thumbnail_url' => $reel->thumbnail_path,
+                        'is_exclusive'  => (bool) $reel->is_exclusive,
+                        'created_at'    => \Carbon\Carbon::parse($reel->created_at)
+                            ->locale('sk')->diffForHumans(),
+                    ];
+                }
+            }
+
+            return [
+                'id'             => $u->id,
+                'name'           => $u->name,
+                'first_name'     => explode(' ', $u->name)[0],
+                'profile_avatar' => $u->profile_avatar,
+                'coach_slug'     => $u->coach?->slug,
+                'is_online'      => $isOnline,
+                'is_subscribed'  => $isSubscribed,
+                'is_suggestion'  => $isSuggestion,
+                'latest_reel'    => $latestReel,
+            ];
+        };
+
         $stories = User::whereIn('id', $relevantCoachUserIds)
             ->where('role', 'coach')
             ->with('coach')
             ->get()
-            ->map(function ($u) use ($userId) {
-                $isOnline = $u->last_seen_at
-                    && \Carbon\Carbon::parse($u->last_seen_at)->gt(now()->subMinutes(5));
-
-                $isSubscribed = DB::table('subscriptions')
-                    ->where('subscriptions.user_id', $userId)
-                    ->where('subscriptions.stripe_status', 'active')
-                    ->join('coaches', 'coaches.id', '=', 'subscriptions.coach_id')
-                    ->where('coaches.user_id', $u->id)
-                    ->exists();
-
-                return [
-                    'id'             => $u->id,
-                    'name'           => $u->name,
-                    'first_name'     => explode(' ', $u->name)[0],
-                    'profile_avatar' => $u->profile_avatar,
-                    'coach_slug'     => $u->coach?->slug,
-                    'is_online'      => $isOnline,
-                    'is_subscribed'  => $isSubscribed,
-                ];
-            });
+            ->map(fn ($u) => $buildStory($u));
 
         // If user follows/subscribes nobody yet — show top 5 coaches as suggestions
         if ($stories->isEmpty()) {
@@ -182,16 +209,7 @@ class FeedController extends Controller
                 ->with('coach')
                 ->take(5)
                 ->get()
-                ->map(fn ($u) => [
-                    'id'             => $u->id,
-                    'name'           => $u->name,
-                    'first_name'     => explode(' ', $u->name)[0],
-                    'profile_avatar' => $u->profile_avatar,
-                    'coach_slug'     => $u->coach?->slug,
-                    'is_online'      => false,
-                    'is_subscribed'  => false,
-                    'is_suggestion'  => true,
-                ]);
+                ->map(fn ($u) => $buildStory($u, true));
         }
 
         return Inertia::render('Feed', [

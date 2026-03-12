@@ -5,6 +5,15 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { formatDuration, relativeTime as relativeTimeUtil } from '@/lib/utils';
 
+interface LatestReel {
+    id: number;
+    title: string | null;
+    video_url: string;
+    thumbnail_url: string | null;
+    is_exclusive: boolean;
+    created_at: string;
+}
+
 interface Story {
     id: number;
     name: string;
@@ -14,6 +23,7 @@ interface Story {
     is_online: boolean;
     is_subscribed: boolean;
     is_suggestion?: boolean;
+    latest_reel: LatestReel | null;
 }
 
 interface FeedCoach {
@@ -73,6 +83,25 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
     );
     const [saved, setSaved] = useState<Set<number>>(new Set());
     const [activeVideo, setActiveVideo] = useState<Post | null>(null);
+
+    // Story modal
+    const [activeStory, setActiveStory] = useState<Story | null>(null);
+    const [storyProgress, setStoryProgress] = useState(0);
+
+    useEffect(() => {
+        if (!activeStory) return;
+        setStoryProgress(0);
+        const interval = setInterval(() => {
+            setStoryProgress(prev => {
+                if (prev >= 100) {
+                    setActiveStory(null);
+                    return 0;
+                }
+                return prev + 1;
+            });
+        }, 100);
+        return () => clearInterval(interval);
+    }, [activeStory]);
 
     // Comment toggle + count state (content managed inside CommentSection)
     const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
@@ -195,9 +224,9 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                                 </Link>
 
                                 {stories.map(story => (
-                                    <Link
-                                        href={story.coach_slug ? `/coaches/${story.coach_slug}` : '/coaches'}
+                                    <button
                                         key={story.id}
+                                        onClick={() => setActiveStory(story)}
                                         className="flex flex-col items-center gap-1 shrink-0"
                                     >
                                         <div className="relative">
@@ -306,7 +335,7 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                                         <span className={`text-[10px] font-medium -mt-1 ${story.is_online ? 'text-green-500' : 'text-gray-400'}`}>
                                             {story.is_online ? 'online' : 'offline'}
                                         </span>
-                                    </Link>
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -451,6 +480,141 @@ export default function Feed({ posts, reels, videos, stories, isGuest = false }:
                     </div>
                 )}
             </div>
+
+            {/* Story modal */}
+            {activeStory && (
+                <div
+                    className="fixed inset-0 z-50 bg-black flex flex-col"
+                    onClick={() => setActiveStory(null)}
+                >
+                    {/* Progress bar */}
+                    <div className="absolute top-0 left-0 right-0 z-10 px-2 pt-2">
+                        <div className="h-0.5 bg-white/30 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-white rounded-full transition-none"
+                                style={{ width: `${storyProgress}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Header */}
+                    <div className="absolute top-6 left-0 right-0 z-10 flex items-center justify-between px-4 py-2">
+                        <div className="flex items-center gap-2">
+                            {activeStory.profile_avatar ? (
+                                <img
+                                    src={activeStory.profile_avatar.startsWith('http')
+                                        ? activeStory.profile_avatar
+                                        : `/storage/${activeStory.profile_avatar}`}
+                                    alt={activeStory.name}
+                                    style={{
+                                        width: 36, height: 36,
+                                        clipPath: 'circle(50%)',
+                                        WebkitClipPath: 'circle(50%)',
+                                        objectFit: 'cover',
+                                        border: '2px solid white',
+                                    }}
+                                />
+                            ) : (
+                                <div style={{
+                                    width: 36, height: 36, borderRadius: '50%',
+                                    background: '#c4714a', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    color: 'white', fontWeight: 'bold',
+                                    border: '2px solid white',
+                                }}>
+                                    {activeStory.first_name?.charAt(0)}
+                                </div>
+                            )}
+                            <div>
+                                <p className="text-white text-sm font-semibold">{activeStory.name}</p>
+                                {activeStory.latest_reel && (
+                                    <p className="text-white/70 text-xs">{activeStory.latest_reel.created_at}</p>
+                                )}
+                            </div>
+                            <div style={{
+                                width: 8, height: 8, borderRadius: '50%',
+                                backgroundColor: activeStory.is_online ? '#22c55e' : '#9ca3af',
+                            }} />
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setActiveStory(null); }}
+                            className="text-white text-2xl w-8 h-8 flex items-center justify-center"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    {/* Content */}
+                    <div
+                        className="flex-1 flex items-center justify-center"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {activeStory.latest_reel ? (
+                            activeStory.latest_reel.is_exclusive && !activeStory.is_subscribed ? (
+                                <div className="flex flex-col items-center gap-4 px-8">
+                                    <div className="text-6xl">🔒</div>
+                                    <p className="text-white text-xl font-serif text-center">Exkluzívny obsah</p>
+                                    <p className="text-white/70 text-sm text-center">
+                                        Predplať si {activeStory.first_name} a sleduj všetok exkluzívny obsah
+                                    </p>
+                                    <Link
+                                        href={`/coaches/${activeStory.coach_slug}`}
+                                        className="bg-[#c4714a] text-white px-6 py-3 rounded-full font-medium"
+                                        onClick={() => setActiveStory(null)}
+                                    >
+                                        Predplatiť →
+                                    </Link>
+                                </div>
+                            ) : (
+                                <video
+                                    src={activeStory.latest_reel.video_url.startsWith('http')
+                                        ? activeStory.latest_reel.video_url
+                                        : `/storage/${activeStory.latest_reel.video_url}`}
+                                    className="w-full h-full object-contain"
+                                    autoPlay
+                                    controls
+                                    playsInline
+                                    style={{ maxHeight: '80vh' }}
+                                />
+                            )
+                        ) : (
+                            <div className="flex flex-col items-center gap-4 px-8">
+                                <div className="text-6xl">👤</div>
+                                <p className="text-white text-xl font-serif text-center">
+                                    {activeStory.first_name} zatiaľ nemá reely
+                                </p>
+                                <Link
+                                    href={`/coaches/${activeStory.coach_slug}`}
+                                    className="bg-[#c4714a] text-white px-6 py-3 rounded-full font-medium"
+                                    onClick={() => setActiveStory(null)}
+                                >
+                                    Zobraziť profil →
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer actions */}
+                    {activeStory.latest_reel && (!activeStory.latest_reel.is_exclusive || activeStory.is_subscribed) && (
+                        <div className="absolute bottom-20 left-0 right-0 flex items-center justify-between px-6 py-3">
+                            <Link
+                                href={`/coaches/${activeStory.coach_slug}`}
+                                className="text-white text-sm font-medium bg-white/20 px-4 py-2 rounded-full"
+                                onClick={() => setActiveStory(null)}
+                            >
+                                Zobraziť profil
+                            </Link>
+                            <Link
+                                href={`/coaches/${activeStory.coach_slug}`}
+                                className="bg-[#c4714a] text-white text-sm font-medium px-4 py-2 rounded-full"
+                                onClick={() => setActiveStory(null)}
+                            >
+                                Predplatiť →
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            )}
         </PulseLayout>
     );
 }
