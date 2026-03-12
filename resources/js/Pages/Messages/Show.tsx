@@ -557,13 +557,27 @@ export default function MessagesShow({ partner, messages: initialMessages, conve
                     gap: 12, flexShrink: 0, zIndex: 10,
                 }}>
                     <a href="/messages" className="md:hidden" style={{ color: '#c4714a', fontSize: 22, textDecoration: 'none', lineHeight: 1 }}>←</a>
-                    <div style={{ position: 'relative', flexShrink: 0, width: 40, height: 40, minWidth: 40 }}>
-                        <div style={{
-                            width: '40px', height: '40px', borderRadius: '50%',
-                            overflow: 'hidden', flexShrink: 0, minWidth: '40px',
-                        }}>
-                            <Avatar src={partner.avatar} name={partner.name} size={40} />
-                        </div>
+                    <div style={{ position: 'relative', flexShrink: 0, width: '40px', height: '40px', minWidth: '40px' }}>
+                        {partner.avatar ? (
+                            <img
+                                src={partner.avatar}
+                                alt={partner.name}
+                                style={{
+                                    width: '40px', height: '40px', minWidth: '40px', minHeight: '40px',
+                                    borderRadius: '50%', objectFit: 'cover', objectPosition: 'center',
+                                    display: 'block', flexShrink: 0,
+                                }}
+                            />
+                        ) : (
+                            <div style={{
+                                width: '40px', height: '40px', minWidth: '40px', borderRadius: '50%',
+                                background: '#c4714a', display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', color: 'white', fontWeight: 700,
+                                fontSize: '16px', flexShrink: 0,
+                            }}>
+                                {partner.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
                         <span style={{
                             position: 'absolute', bottom: 1, right: 1,
                             width: 11, height: 11, borderRadius: '50%',
