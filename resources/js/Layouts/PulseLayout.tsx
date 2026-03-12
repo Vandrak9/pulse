@@ -5,6 +5,7 @@ import { Home, Rss, Compass, MessageCircle, Bell, User, LayoutDashboard, LogOut,
 interface Props {
     children: React.ReactNode;
     hideFooter?: boolean;
+    hideTopNav?: boolean;
 }
 
 interface SuggestedCoach {
@@ -42,7 +43,7 @@ const TRENDING_CATS: { icon: React.ReactNode; label: string; k: string }[] = [
 ];
 
 
-export default function PulseLayout({ children, hideFooter = false }: Props) {
+export default function PulseLayout({ children, hideFooter = false, hideTopNav = false }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { id: number; name: string; role?: string; coach_id?: number | null } | null } };
     const dashboardSidebar = (page.props as any).dashboard_sidebar as DashboardSidebar | undefined;
@@ -607,7 +608,7 @@ export default function PulseLayout({ children, hideFooter = false }: Props) {
             </aside>
 
             {/* ── MOBILE TOP NAV — hidden on desktop ── */}
-            <nav
+            {!hideTopNav && <nav
                 className="sticky top-0 z-50 border-b bg-white md:hidden"
                 style={{ borderColor: '#e8d9c4' }}
             >
@@ -675,11 +676,11 @@ export default function PulseLayout({ children, hideFooter = false }: Props) {
                         </div>
                     )}
                 </div>
-            </nav>
+            </nav>}
 
             {/* ── MAIN CONTENT — offset by sidebars on desktop ── */}
             <div className="md:ml-64 lg:mr-72" style={{ minHeight: '100vh', background: '#faf6f0', display: 'flex', flexDirection: 'column' }}>
-                <main className="animate-fade-in flex-1 pb-20 md:pb-0">
+                <main className={`animate-fade-in flex-1 md:pb-0${hideTopNav ? '' : ' pb-20'}`}>
                     {children}
                 </main>
                 {!hideFooter && (
