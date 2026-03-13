@@ -79,36 +79,45 @@ class MessageController extends Controller
 
     private function buildConversations($user): array
     {
-        $allMessages = Message::where('sender_id', $user->id)
-            ->orWhere('receiver_id', $user->id)
-            ->orderByDesc('id')
-            ->limit(500)
-            ->get();
+        // Query 1: latest message per conversation partner using DISTINCT ON (PostgreSQL).
+        // This replaces loading up to 500 messages and grouping them in PHP.
+        $lastMessages = DB::select("
+            SELECT DISTINCT ON (partner_id)
+                CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS partner_id,
+                id, content, sender_id, receiver_id, created_at, message_type, is_read
+            FROM messages
+            WHERE sender_id = ? OR receiver_id = ?
+            ORDER BY partner_id, id DESC
+        ", [$user->id, $user->id, $user->id]);
 
-        if ($allMessages->isEmpty()) return [];
+        if (empty($lastMessages)) return [];
 
-        $conversationMap = [];
-        foreach ($allMessages as $msg) {
-            $partnerId = $msg->sender_id === $user->id ? $msg->receiver_id : $msg->sender_id;
-            if (!isset($conversationMap[$partnerId])) {
-                $conversationMap[$partnerId] = ['last' => $msg, 'unread' => 0];
-            }
-            if ($msg->receiver_id === $user->id && !$msg->is_read) {
-                $conversationMap[$partnerId]['unread']++;
-            }
-        }
+        $partnerIds = array_column($lastMessages, 'partner_id');
 
+        // Query 2: unread count per partner — one query total, not one per partner.
+        $unreadCounts = DB::table('messages')
+            ->select('sender_id', DB::raw('COUNT(*) as unread'))
+            ->where('receiver_id', $user->id)
+            ->where('is_read', false)
+            ->whereIn('sender_id', $partnerIds)
+            ->groupBy('sender_id')
+            ->pluck('unread', 'sender_id');
+
+        // Query 3: load all partner users + coach in one query.
         $partners = User::with('coach')
-            ->whereIn('id', array_keys($conversationMap))
-            ->get()->keyBy('id');
+            ->whereIn('id', $partnerIds)
+            ->get()
+            ->keyBy('id');
 
         $conversations = [];
-        foreach ($conversationMap as $partnerId => $data) {
-            $partner = $partners->get($partnerId);
+        foreach ($lastMessages as $msg) {
+            $partnerId = (int) $msg->partner_id;
+            $partner   = $partners->get($partnerId);
             if (!$partner) continue;
+
             $c         = $partner->coach ?? null;
             $avatarUrl = $c && $c->avatar_path ? '/storage/' . $c->avatar_path : null;
-            $lastMsg   = $data['last'];
+
             $conversations[] = [
                 'partner_id'        => $partnerId,
                 'partner_name'      => $partner->name,
@@ -116,12 +125,12 @@ class MessageController extends Controller
                 'partner_avatar'    => $avatarUrl,
                 'partner_is_online' => $partner->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
                 'last_message'      => [
-                    'content'      => $lastMsg->content,
-                    'created_at'   => $lastMsg->created_at,
-                    'is_mine'      => $lastMsg->sender_id === $user->id,
-                    'message_type' => $lastMsg->message_type ?? 'text',
+                    'content'      => $msg->content,
+                    'created_at'   => $msg->created_at,
+                    'is_mine'      => (int) $msg->sender_id === $user->id,
+                    'message_type' => $msg->message_type ?? 'text',
                 ],
-                'unread_count' => $data['unread'],
+                'unread_count' => (int) ($unreadCounts[$partnerId] ?? 0),
             ];
         }
 
