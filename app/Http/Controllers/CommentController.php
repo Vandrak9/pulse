@@ -138,7 +138,7 @@ class CommentController extends Controller
         $user = $request->user();
 
         $isOwn       = $comment->user_id === $user->id;
-        $isPostCoach = DB::table('coaches')
+        $isPostCoach = $comment->post !== null && DB::table('coaches')
             ->where('id', $comment->post->coach_id)
             ->where('user_id', $user->id)
             ->exists();

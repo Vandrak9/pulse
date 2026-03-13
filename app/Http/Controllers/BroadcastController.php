@@ -45,7 +45,7 @@ class BroadcastController extends Controller
         if ($coach) {
             $subscriberCount = DB::table('subscriptions')
                 ->where('coach_id', $coach->id)
-                ->where('stripe_status', 'active')
+                ->whereIn('stripe_status', ['active', 'trialing'])
                 ->count();
         }
 
