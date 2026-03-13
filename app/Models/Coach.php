@@ -15,6 +15,7 @@ class Coach extends Model
         'user_id',
         'bio',
         'specialization',
+        'categories',
         'monthly_price',
         'avatar_path',
         'stripe_account_id',
@@ -33,9 +34,10 @@ class Coach extends Model
     {
         return [
             'monthly_price' => 'decimal:2',
-            'rating' => 'decimal:1',
+            'rating'        => 'decimal:1',
             'is_verified'   => 'boolean',
             'is_suspended'  => 'boolean',
+            'categories'    => 'array',
         ];
     }
 

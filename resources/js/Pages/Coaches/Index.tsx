@@ -3,11 +3,19 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useState } from 'react';
 
+interface Category {
+    key: string;
+    label: string;
+    icon: string;
+    group: string;
+}
+
 interface Coach {
     id: number;
     user_id: number;
     name: string;
     specialization: string | null;
+    categories: string[];
     monthly_price: string;
     avatar_url: string | null;
     bio: string | null;
@@ -30,25 +38,15 @@ interface PaginatedCoaches {
 
 interface Props {
     coaches: PaginatedCoaches;
+    allCategories: Category[];
+    activeCategory: string | null;
 }
 
-const CATEGORIES = [
-    { label: 'Všetky',      keyword: null },
-    { label: '💪 Silové',   keyword: 'silov' },
-    { label: '🧘 Joga',     keyword: 'joga' },
-    { label: '🥗 Výživa',   keyword: 'výživ' },
-    { label: '🏃 Beh',      keyword: 'beh' },
-    { label: '🌿 Wellness', keyword: 'wellness' },
-];
-
-export default function CoachesIndex({ coaches }: Props) {
+export default function CoachesIndex({ coaches, allCategories, activeCategory }: Props) {
     const page = usePage();
     const { auth } = page.props as { auth: { user: { id: number } | null } };
     const isLoggedIn = !!auth?.user;
 
-    const [activeKeyword, setActiveKeyword] = useState<string | null>(null);
-
-    // Page-level follow state so Inertia re-renders don't reset per-card state
     const [followState, setFollowState] = useState<Record<number, boolean>>(
         () => Object.fromEntries(coaches.data.map(c => [c.user_id, c.is_following]))
     );
@@ -59,26 +57,23 @@ export default function CoachesIndex({ coaches }: Props) {
         if (!isLoggedIn) return;
 
         const current = followState[coachUserId] ?? false;
-        setFollowState(prev => ({ ...prev, [coachUserId]: !current })); // optimistic
+        setFollowState(prev => ({ ...prev, [coachUserId]: !current }));
 
         try {
             const res = await axios.post(`/follow/${coachUserId}`);
             setFollowState(prev => ({ ...prev, [coachUserId]: res.data.following }));
         } catch {
-            setFollowState(prev => ({ ...prev, [coachUserId]: current })); // revert
+            setFollowState(prev => ({ ...prev, [coachUserId]: current }));
         }
     }
 
-    const filtered = activeKeyword
-        ? coaches.data.filter((c) =>
-              c.specialization?.toLowerCase().includes(activeKeyword),
-          )
-        : coaches.data;
+    function setCategory(key: string | null) {
+        router.get('/coaches', key ? { category: key } : {}, { preserveState: false });
+    }
 
     return (
         <PulseLayout>
             <Head title="Nájdi svojho kouča" />
-
 
             <div className="min-h-screen" style={{ backgroundColor: '#faf6f0' }}>
 
@@ -107,23 +102,31 @@ export default function CoachesIndex({ coaches }: Props) {
                 >
                     <div className="relative mx-auto max-w-5xl">
                         <div className="no-scrollbar flex flex-nowrap gap-2 overflow-x-auto px-4 py-3 pr-10">
-                            {CATEGORIES.map((cat) => {
-                                const isActive = activeKeyword === cat.keyword;
-                                return (
-                                    <button
-                                        key={cat.label}
-                                        onClick={() => setActiveKeyword(cat.keyword)}
-                                        className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all"
-                                        style={
-                                            isActive
-                                                ? { backgroundColor: '#c4714a', color: '#fff' }
-                                                : { backgroundColor: '#fff', color: '#2d2118', border: '1px solid #e8d9c4' }
-                                        }
-                                    >
-                                        {cat.label}
-                                    </button>
-                                );
-                            })}
+                            <button
+                                onClick={() => setCategory(null)}
+                                className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all"
+                                style={
+                                    !activeCategory
+                                        ? { backgroundColor: '#c4714a', color: '#fff' }
+                                        : { backgroundColor: '#fff', color: '#2d2118', border: '1px solid #e8d9c4' }
+                                }
+                            >
+                                Všetky
+                            </button>
+                            {allCategories.map((cat) => (
+                                <button
+                                    key={cat.key}
+                                    onClick={() => setCategory(cat.key)}
+                                    className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all"
+                                    style={
+                                        activeCategory === cat.key
+                                            ? { backgroundColor: '#c4714a', color: '#fff' }
+                                            : { backgroundColor: '#fff', color: '#2d2118', border: '1px solid #e8d9c4' }
+                                    }
+                                >
+                                    {cat.icon} {cat.label}
+                                </button>
+                            ))}
                         </div>
                         <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-[#faf6f0] to-transparent" />
                     </div>
@@ -131,11 +134,11 @@ export default function CoachesIndex({ coaches }: Props) {
 
                 {/* ── Grid ── */}
                 <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-                    {filtered.length === 0 ? (
+                    {coaches.data.length === 0 ? (
                         <div className="py-20 text-center">
                             <p className="text-lg" style={{ color: '#9a8a7a' }}>Žiadni koučovia v tejto kategórii.</p>
                             <button
-                                onClick={() => setActiveKeyword(null)}
+                                onClick={() => setCategory(null)}
                                 className="mt-4 text-sm font-medium hover:underline"
                                 style={{ color: '#c4714a' }}
                             >
@@ -144,13 +147,14 @@ export default function CoachesIndex({ coaches }: Props) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                            {filtered.map((coach) => (
+                            {coaches.data.map((coach) => (
                                 <CoachCard
                                     key={coach.id}
                                     coach={coach}
                                     isLoggedIn={isLoggedIn}
                                     isFollowing={followState[coach.user_id] ?? coach.is_following}
                                     onFollow={handleFollow}
+                                    allCategories={allCategories}
                                 />
                             ))}
                         </div>
@@ -180,12 +184,13 @@ export default function CoachesIndex({ coaches }: Props) {
 }
 
 function CoachCard({
-    coach, isLoggedIn, isFollowing, onFollow,
+    coach, isLoggedIn, isFollowing, onFollow, allCategories,
 }: {
     coach: Coach;
     isLoggedIn: boolean;
     isFollowing: boolean;
     onFollow: (e: React.MouseEvent, userId: number) => void;
+    allCategories: Category[];
 }) {
     const price = parseFloat(coach.monthly_price);
     const rating = coach.rating_avg;
@@ -194,6 +199,12 @@ function CoachCard({
     const contentBadges: string[] = [];
     if (coach.video_count > 0) contentBadges.push(`🎬 ${coach.video_count} videí`);
     if (coach.image_count > 0) contentBadges.push(`📸 ${coach.image_count} fotiek`);
+
+    const categoryMap = Object.fromEntries(allCategories.map(c => [c.key, c]));
+    const displayCategories = (coach.categories ?? [])
+        .map(key => categoryMap[key])
+        .filter(Boolean)
+        .slice(0, 2);
 
     return (
         <div
@@ -230,12 +241,17 @@ function CoachCard({
                 {coach.name}
             </h3>
 
-            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap justify-center">
-                {coach.specialization && (
-                    <span className="rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: '#fce8de', color: '#c4714a' }}>
-                        {coach.specialization}
+            {/* Category badges */}
+            <div className="flex items-center gap-1 mt-1.5 flex-wrap justify-center">
+                {displayCategories.map(cat => (
+                    <span
+                        key={cat.key}
+                        className="rounded-full px-2 py-0.5 text-xs font-medium"
+                        style={{ backgroundColor: '#fce8de', color: '#c4714a' }}
+                    >
+                        {cat.icon} {cat.label}
                     </span>
-                )}
+                ))}
                 {coach.is_live && (
                     <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold text-white animate-pulse" style={{ background: '#dc2626' }}>
                         <span className="w-1.5 h-1.5 bg-white rounded-full inline-block" />

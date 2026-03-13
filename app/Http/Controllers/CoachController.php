@@ -13,14 +13,18 @@ use Inertia\Response;
 
 class CoachController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $category = $request->input('category');
+        $allCategories = config('coach_categories');
+
         $coaches = Coach::with('user')
             ->withCount([
                 'posts as video_count' => fn ($q) => $q->where('media_type', 'video'),
                 'posts as image_count' => fn ($q) => $q->where('media_type', 'image'),
             ])
             ->when(auth()->check(), fn ($q) => $q->where('user_id', '!=', auth()->id()))
+            ->when($category, fn ($q) => $q->whereJsonContains('categories', $category))
             ->orderByDesc('created_at')
             ->paginate(24)
             ->through(function ($coach) {
@@ -37,6 +41,7 @@ class CoachController extends Controller
                     'user_id'          => $coach->user_id,
                     'name'             => $coach->user->name,
                     'specialization'   => $coach->specialization,
+                    'categories'       => $coach->categories ?? [],
                     'monthly_price'    => $coach->monthly_price,
                     'bio'              => $coach->bio,
                     'rating_avg'       => (float) $coach->rating_avg,
@@ -55,7 +60,9 @@ class CoachController extends Controller
             });
 
         return Inertia::render('Coaches/Index', [
-            'coaches' => $coaches,
+            'coaches'       => $coaches,
+            'allCategories' => $allCategories,
+            'activeCategory' => $category,
         ]);
     }
 
@@ -127,6 +134,8 @@ class CoachController extends Controller
             ? Review::where('user_id', $authUserId)->where('coach_id', $coach->id)->first()
             : null;
 
+        $allCategories = collect(config('coach_categories'))->keyBy('key');
+
         return Inertia::render('Coaches/Show', [
             'coach' => [
                 'id'              => $coach->id,
@@ -134,6 +143,9 @@ class CoachController extends Controller
                 'name'            => $coach->user->name,
                 'bio'             => $coach->bio,
                 'specialization'  => $coach->specialization,
+                'categories'      => collect($coach->categories ?? [])->map(
+                    fn ($key) => $allCategories->get($key)
+                )->filter()->values(),
                 'monthly_price'   => $coach->monthly_price,
                 'rating_avg'      => (float) $coach->rating_avg,
                 'rating_count'    => (int) $coach->rating_count,
@@ -169,6 +181,7 @@ class CoachController extends Controller
                 'id'               => $coach->id,
                 'bio'              => $coach->bio,
                 'specialization'   => $coach->specialization,
+                'categories'       => $coach->categories ?? [],
                 'monthly_price'    => $coach->monthly_price,
                 'messages_access'  => $coach->messages_access ?? 'everyone',
                 'stripe_account_id' => $coach->stripe_account_id,
@@ -176,17 +189,22 @@ class CoachController extends Controller
                     ? Storage::url($coach->avatar_path)
                     : null,
             ] : null,
+            'allCategories' => config('coach_categories'),
         ]);
     }
 
     public function update(Request $request)
     {
+        $validKeys = collect(config('coach_categories'))->pluck('key')->toArray();
+
         $validated = $request->validate([
-            'bio'             => ['nullable', 'string', 'max:2000'],
-            'specialization'  => ['nullable', 'string', 'max:255'],
-            'monthly_price'   => ['required', 'numeric', 'min:0'],
-            'avatar'          => ['nullable', 'image', 'max:2048'],
-            'messages_access' => ['nullable', 'in:everyone,followers,subscribers,nobody'],
+            'bio'               => ['nullable', 'string', 'max:2000'],
+            'specialization'    => ['nullable', 'string', 'max:255'],
+            'categories'        => ['nullable', 'array', 'max:10'],
+            'categories.*'      => ['string', 'in:' . implode(',', $validKeys)],
+            'monthly_price'     => ['required', 'numeric', 'min:0'],
+            'avatar'            => ['nullable', 'image', 'max:2048'],
+            'messages_access'   => ['nullable', 'in:everyone,followers,subscribers,nobody'],
         ]);
 
         $user = $request->user();
@@ -194,6 +212,7 @@ class CoachController extends Controller
 
         $coach->bio             = $validated['bio'] ?? null;
         $coach->specialization  = $validated['specialization'] ?? null;
+        $coach->categories      = $validated['categories'] ?? [];
         $coach->monthly_price   = $validated['monthly_price'];
         $coach->messages_access = $validated['messages_access'] ?? 'everyone';
 
@@ -223,6 +242,7 @@ class CoachController extends Controller
                 'user_id'        => $c->user_id,
                 'name'           => $c->user->name,
                 'specialization' => $c->specialization,
+                'categories'     => $c->categories ?? [],
                 'avatar_url'     => $c->avatar_path
                     ? Storage::url($c->avatar_path)
                     : null,
