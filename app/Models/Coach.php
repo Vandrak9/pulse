@@ -23,6 +23,7 @@ class Coach extends Model
         'rating_avg',
         'rating_count',
         'is_verified',
+        'is_suspended',
         'rating',
         'subscriber_count',
         'messages_access',
@@ -33,7 +34,8 @@ class Coach extends Model
         return [
             'monthly_price' => 'decimal:2',
             'rating' => 'decimal:1',
-            'is_verified' => 'boolean',
+            'is_verified'   => 'boolean',
+            'is_suspended'  => 'boolean',
         ];
     }
 

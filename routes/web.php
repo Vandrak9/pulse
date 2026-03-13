@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BroadcastController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\StripeConnectController;
@@ -160,6 +161,14 @@ Route::get('/api/coaches/suggested', function () {
             'is_online'      => $c->user->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
         ]);
     return response()->json($coaches);
+});
+
+// ── Admin routes ───────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminController::class, 'index'])->name('index');
+    Route::post('/coaches/{coachId}/approve', [AdminController::class, 'approve'])->name('coaches.approve');
+    Route::post('/coaches/{coachId}/suspend', [AdminController::class, 'suspend'])->name('coaches.suspend');
+    Route::post('/coaches/{coachId}/revoke', [AdminController::class, 'revoke'])->name('coaches.revoke');
 });
 
 require __DIR__.'/auth.php';
