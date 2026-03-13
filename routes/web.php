@@ -81,7 +81,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
 
     // Media streaming
-    Route::get('/media/message/{message}', [MediaStreamController::class, 'stream'])->name('media.message');
+    Route::get('/media/message/{message}', [MediaStreamController::class, 'stream'])
+        ->middleware('throttle:media')
+        ->name('media.message');
 
     // Post creation (coach only — enforced in controller)
     Route::get('/dashboard/posts/create', [PostController::class, 'create'])->name('posts.create');
