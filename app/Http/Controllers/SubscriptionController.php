@@ -224,8 +224,11 @@ class SubscriptionController extends Controller
                     ->where('id', $sub->id)
                     ->update(['stripe_status' => 'canceled', 'updated_at' => now()]);
 
-                if ($coach && $coach->subscriber_count > 0) {
-                    $coach->decrement('subscriber_count');
+                if ($coach) {
+                    DB::statement(
+                        'UPDATE coaches SET subscriber_count = GREATEST(subscriber_count - 1, 0) WHERE id = ?',
+                        [$coach->id]
+                    );
                 }
             }
         } catch (ApiErrorException $e) {

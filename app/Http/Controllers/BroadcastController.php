@@ -7,6 +7,7 @@ use App\Models\Message;
 use App\Models\User;
 use App\Jobs\SendBroadcastJob;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class BroadcastController extends Controller
@@ -42,13 +43,10 @@ class BroadcastController extends Controller
         $coach = $user->coach;
         $subscriberCount = 0;
         if ($coach) {
-            $subscriberCount = \App\Models\User::whereHas('subscriptions', function ($q) use ($coach) {
-                $q->where('name', 'coach_' . $coach->id)->where('stripe_status', 'active');
-            })->count();
-            // For dev: fallback to subscriber_count field
-            if ($subscriberCount === 0) {
-                $subscriberCount = $coach->subscriber_count ?? 0;
-            }
+            $subscriberCount = DB::table('subscriptions')
+                ->where('coach_id', $coach->id)
+                ->where('stripe_status', 'active')
+                ->count();
         }
 
         return Inertia::render('Dashboard/Broadcast', [
