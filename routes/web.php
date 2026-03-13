@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BroadcastController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\LiveStreamController;
 use App\Http\Controllers\ReviewController;
@@ -128,6 +129,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/subscribe/{coachId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
     Route::get('/subscription/success', [SubscriptionController::class, 'success'])->name('subscription.success');
     Route::post('/subscription/cancel/{coachId}', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
+
+    // Stripe Connect — coach payout account onboarding
+    Route::get('/stripe/connect/onboard', [StripeConnectController::class, 'onboard'])->name('stripe.connect.onboard');
+    Route::get('/stripe/connect/callback', [StripeConnectController::class, 'callback'])->name('stripe.connect.callback');
+    Route::get('/stripe/connect/dashboard', [StripeConnectController::class, 'expressDashboard'])->name('stripe.connect.dashboard');
 });
 
 // ── Post detail API (auth optional) ───────────────────────────────────────────
