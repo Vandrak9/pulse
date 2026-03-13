@@ -165,10 +165,18 @@ Route::get('/api/coaches/suggested', function () {
 
 // ── Admin routes ───────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', [AdminController::class, 'index'])->name('index');
-    Route::post('/coaches/{coachId}/approve', [AdminController::class, 'approve'])->name('coaches.approve');
-    Route::post('/coaches/{coachId}/suspend', [AdminController::class, 'suspend'])->name('coaches.suspend');
-    Route::post('/coaches/{coachId}/revoke', [AdminController::class, 'revoke'])->name('coaches.revoke');
+    Route::get('/',                              [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/coaches',                       [AdminController::class, 'coaches'])->name('coaches.index');
+    Route::get('/coaches/{coachId}',             [AdminController::class, 'coachDetail'])->name('coaches.show');
+    Route::post('/coaches/{coachId}/approve',    [AdminController::class, 'approve'])->name('coaches.approve');
+    Route::post('/coaches/{coachId}/suspend',    [AdminController::class, 'suspend'])->name('coaches.suspend');
+    Route::post('/coaches/{coachId}/revoke',     [AdminController::class, 'revoke'])->name('coaches.revoke');
+    Route::get('/users',                         [AdminController::class, 'users'])->name('users.index');
+    Route::post('/users/{userId}/ban',           [AdminController::class, 'banUser'])->name('users.ban');
+    Route::post('/users/{userId}/unban',         [AdminController::class, 'unbanUser'])->name('users.unban');
+    Route::get('/transactions',                  [AdminController::class, 'transactions'])->name('transactions.index');
+    // Legacy redirect
+    Route::get('/index',                         [AdminController::class, 'index'])->name('index');
 });
 
 require __DIR__.'/auth.php';
