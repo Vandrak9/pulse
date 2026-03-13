@@ -58,6 +58,40 @@ export default function PulseLayout({ children, hideFooter = false, hideTopNav =
     const [addMenuOpen, setAddMenuOpen] = useState(false);
     const addMenuRef = useRef<HTMLDivElement>(null);
 
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<SuggestedCoach[]>([]);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
+    const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Close search dropdown when clicking outside
+    useEffect(() => {
+        if (!searchOpen) return;
+        function handleClick(e: MouseEvent) {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setSearchOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [searchOpen]);
+
+    function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const q = e.target.value;
+        setSearchQuery(q);
+        if (searchTimer.current) clearTimeout(searchTimer.current);
+        if (!q.trim()) { setSearchResults([]); setSearchOpen(false); return; }
+        searchTimer.current = setTimeout(() => {
+            fetch(`/coaches/search?q=${encodeURIComponent(q.trim())}`, {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            })
+                .then(r => r.ok ? r.json() : [])
+                .then(d => { if (Array.isArray(d)) { setSearchResults(d); setSearchOpen(d.length > 0); } })
+                .catch(() => {});
+        }, 300);
+    }
+
     // Close "Pridať obsah" menu when clicking outside
     useEffect(() => {
         if (!addMenuOpen) return;
@@ -509,12 +543,15 @@ export default function PulseLayout({ children, hideFooter = false, hideTopNav =
                     /* ── Default sidebar (fans / non-dashboard pages) ── */
                     <>
                         {/* Search */}
-                        <div style={{ marginBottom: 24 }}>
+                        <div style={{ marginBottom: 24, position: 'relative' }} ref={searchRef}>
                             <div style={{ position: 'relative' }}>
                                 <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9a8a7a', fontSize: 13 }}>🔍</span>
                                 <input
                                     type="text"
                                     placeholder="Hľadaj koučov..."
+                                    value={searchQuery}
+                                    onChange={handleSearchChange}
+                                    onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
                                     style={{
                                         width: '100%', padding: '10px 14px 10px 34px',
                                         borderRadius: 999, border: '1px solid #e8d9c4',
@@ -523,6 +560,41 @@ export default function PulseLayout({ children, hideFooter = false, hideTopNav =
                                     }}
                                 />
                             </div>
+                            {searchOpen && searchResults.length > 0 && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                                    background: 'white', borderRadius: 12, marginTop: 4,
+                                    border: '1px solid #e8d9c4', boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+                                    overflow: 'hidden',
+                                }}>
+                                    {searchResults.map(coach => (
+                                        <Link
+                                            key={coach.id}
+                                            href={`/coaches/${coach.id}`}
+                                            onClick={() => { setSearchOpen(false); setSearchQuery(''); setSearchResults([]); }}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: 10,
+                                                padding: '10px 14px', textDecoration: 'none',
+                                                borderBottom: '1px solid #f5ede4',
+                                            }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = '#faf6f0')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                                        >
+                                            <Avatar src={coach.avatar_url} name={coach.name} size={32} />
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: '#2d2118', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {coach.name}
+                                                </div>
+                                                {coach.specialization && (
+                                                    <div style={{ fontSize: 11, color: '#9a8a7a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {coach.specialization}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Suggested coaches */}
