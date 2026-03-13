@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\LiveStreamController;
 use App\Http\Controllers\ReviewController;
@@ -18,6 +19,10 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
+
+// ── Stripe webhook (no CSRF, no auth — verified via Stripe-Signature header) ───
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
+    ->name('stripe.webhook');
 
 // ── Public routes ──────────────────────────────────────────────────────────────
 
