@@ -61,6 +61,10 @@ class CoachController extends Controller
 
     public function show(Coach $coach): Response
     {
+        if ($coach->is_suspended) {
+            abort(404);
+        }
+
         $coach->load('user');
 
         $posts = $coach->posts()

@@ -107,7 +107,7 @@ class StripeConnectController extends Controller
         } catch (\Exception $e) {
             Log::error('Stripe Connect callback error.', ['error' => $e->getMessage()]);
             return redirect()->route('dashboard.profile.edit')
-                ->with('error', 'Prepojenie so Stripe zlyhalo: ' . $e->getMessage());
+                ->with('error', 'Prepojenie so Stripe zlyhalo. Skús to znova alebo kontaktuj podporu.');
         }
     }
 
@@ -133,7 +133,7 @@ class StripeConnectController extends Controller
         } catch (\Exception $e) {
             Log::error('Stripe Express dashboard error.', ['error' => $e->getMessage()]);
             return redirect()->route('dashboard.profile.edit')
-                ->with('error', 'Nepodarilo sa otvoriť Stripe dashboard: ' . $e->getMessage());
+                ->with('error', 'Nepodarilo sa otvoriť Stripe dashboard. Skús to znova alebo kontaktuj podporu.');
         }
     }
 }

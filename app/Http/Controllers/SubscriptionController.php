@@ -124,40 +124,31 @@ class SubscriptionController extends Controller
                     $stripeSubscriptionId = $checkoutSession->subscription;
                     $stripeSub            = $stripe->subscriptions->retrieve($stripeSubscriptionId);
 
-                    // Upsert subscription row
+                    // Upsert subscription row — track whether this is a new insert
+                    $existingRow = DB::table('subscriptions')
+                        ->where('user_id', $user->id)
+                        ->where('coach_id', $coach->id)
+                        ->whereIn('stripe_status', ['active', 'trialing'])
+                        ->exists();
+
                     DB::table('subscriptions')->updateOrInsert(
                         [
                             'user_id'  => $user->id,
                             'coach_id' => $coach->id,
                         ],
                         [
-                            'type'         => 'coach_' . $coach->id,
-                            'stripe_id'    => $stripeSubscriptionId,
+                            'type'          => 'coach_' . $coach->id,
+                            'stripe_id'     => $stripeSubscriptionId,
                             'stripe_status' => $stripeSub->status,
-                            'stripe_price' => $stripeSub->items->data[0]->price->id ?? null,
-                            'quantity'     => 1,
-                            'created_at'   => now(),
-                            'updated_at'   => now(),
+                            'stripe_price'  => $stripeSub->items->data[0]->price->id ?? null,
+                            'quantity'      => 1,
+                            'updated_at'    => now(),
                         ]
                     );
 
-                    // Increment subscriber_count once per subscription
-                    $alreadyCounted = DB::table('subscriptions')
-                        ->where('user_id', $user->id)
-                        ->where('coach_id', $coach->id)
-                        ->whereIn('stripe_status', ['active', 'trialing'])
-                        ->exists();
-
-                    if ($alreadyCounted) {
-                        // Only increment if this is a fresh subscription
-                        $rowAge = DB::table('subscriptions')
-                            ->where('user_id', $user->id)
-                            ->where('coach_id', $coach->id)
-                            ->value('created_at');
-
-                        if ($rowAge && now()->diffInMinutes($rowAge) < 5) {
-                            $coach->increment('subscriber_count');
-                        }
+                    // Only increment if there was no prior active/trialing subscription
+                    if (!$existingRow) {
+                        $coach->increment('subscriber_count');
                     }
 
                     // Email notification to coach
@@ -224,8 +215,11 @@ class SubscriptionController extends Controller
                     ->where('id', $sub->id)
                     ->update(['stripe_status' => 'canceled', 'updated_at' => now()]);
 
-                if ($coach && $coach->subscriber_count > 0) {
-                    $coach->decrement('subscriber_count');
+                if ($coach) {
+                    DB::statement(
+                        'UPDATE coaches SET subscriber_count = GREATEST(subscriber_count - 1, 0) WHERE id = ?',
+                        [$coach->id]
+                    );
                 }
             }
         } catch (ApiErrorException $e) {

@@ -280,9 +280,11 @@ class LiveStreamController extends Controller
         $stream = LiveStream::findOrFail($streamId);
         $user   = $request->user();
 
-        if ($stream->viewers_count > 0) {
-            $stream->decrement('viewers_count');
-        }
+        DB::statement(
+            'UPDATE live_streams SET viewers_count = GREATEST(viewers_count - 1, 0) WHERE id = ?',
+            [$stream->id]
+        );
+        $stream->refresh();
 
         cache()->forget("stream:{$streamId}:viewer:{$user->id}");
 
@@ -407,6 +409,7 @@ class LiveStreamController extends Controller
                 'type'       => 'live_stream',
                 'title'      => '🔴 ' . $coach->user->name . ' práve streamuje!',
                 'body'       => $stream->title,
+                'data'       => json_encode(['stream_id' => $stream->id]),
                 'related_id' => $stream->id,
                 'is_read'    => false,
                 'created_at' => $now,

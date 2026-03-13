@@ -175,7 +175,7 @@ class MessageController extends Controller
                 $isSubscribed = DB::table('subscriptions')
                     ->where('user_id', $senderId)
                     ->where('stripe_status', 'active')
-                    ->where('subscribable_id', $receiver->coach->id)
+                    ->where('coach_id', $receiver->coach->id)
                     ->exists();
                 if (!$isSubscribed) {
                     return $deny('Len predplatitelia môžu písať tomuto koučovi.');
