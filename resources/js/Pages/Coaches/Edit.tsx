@@ -2,10 +2,18 @@ import PulseLayout from '@/Layouts/PulseLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEvent, useRef, useState } from 'react';
 
+interface Category {
+    key: string;
+    label: string;
+    icon: string;
+    group: string;
+}
+
 interface CoachData {
     id: number;
     bio: string | null;
     specialization: string | null;
+    categories: string[];
     monthly_price: string;
     messages_access: 'everyone' | 'followers' | 'subscribers' | 'nobody';
     avatar_url: string | null;
@@ -14,13 +22,15 @@ interface CoachData {
 
 interface Props {
     coach: CoachData | null;
+    allCategories: Category[];
     flash?: { success?: string; error?: string };
 }
 
-export default function CoachEdit({ coach, flash }: Props) {
+export default function CoachEdit({ coach, allCategories, flash }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         bio: coach?.bio ?? '',
         specialization: coach?.specialization ?? '',
+        categories: (coach?.categories ?? []) as string[],
         monthly_price: coach?.monthly_price ?? '0',
         messages_access: (coach?.messages_access ?? 'everyone') as 'everyone' | 'followers' | 'subscribers' | 'nobody',
         avatar: null as File | null,
@@ -40,6 +50,15 @@ export default function CoachEdit({ coach, flash }: Props) {
         }
     }
 
+    function toggleCategory(key: string) {
+        const current = data.categories;
+        if (current.includes(key)) {
+            setData('categories', current.filter(k => k !== key));
+        } else {
+            setData('categories', [...current, key]);
+        }
+    }
+
     function submit(e: FormEvent) {
         e.preventDefault();
         post('/dashboard/profile', {
@@ -51,6 +70,13 @@ export default function CoachEdit({ coach, flash }: Props) {
         'w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition focus:ring-2';
     const inputStyle = { borderColor: '#e0d5ca', color: '#2d2118' };
     const focusStyle = { '--tw-ring-color': '#c4714a' } as React.CSSProperties;
+
+    // Group categories by their group label
+    const grouped = allCategories.reduce<Record<string, Category[]>>((acc, cat) => {
+        if (!acc[cat.group]) acc[cat.group] = [];
+        acc[cat.group].push(cat);
+        return acc;
+    }, {});
 
     return (
         <PulseLayout>
@@ -147,26 +173,76 @@ export default function CoachEdit({ coach, flash }: Props) {
                             )}
                         </div>
 
-                        {/* Specialization */}
+                        {/* Specialization — short tagline */}
                         <div className="mb-5">
                             <label
                                 className="mb-1.5 block text-sm font-medium"
                                 style={{ color: '#2d2118' }}
                             >
-                                Špecializácia
+                                Tagline
                             </label>
                             <input
                                 type="text"
                                 value={data.specialization}
                                 onChange={(e) => setData('specialization', e.target.value)}
-                                placeholder="napr. Silový tréning, Joga, HIIT..."
+                                placeholder="napr. Personal trainer s 10 rokmi skúseností..."
                                 className={inputClass}
                                 style={{ ...inputStyle, ...focusStyle }}
                             />
+                            <p className="mt-1 text-xs" style={{ color: '#9a8a7a' }}>
+                                Krátky popis zobrazený na tvojom profile (max 255 znakov)
+                            </p>
                             {errors.specialization && (
                                 <p className="mt-1 text-xs text-red-500">
                                     {errors.specialization}
                                 </p>
+                            )}
+                        </div>
+
+                        {/* Categories — multi-select */}
+                        <div className="mb-5">
+                            <label className="mb-1 block text-sm font-medium" style={{ color: '#2d2118' }}>
+                                Kategórie
+                            </label>
+                            <p className="mb-3 text-xs" style={{ color: '#9a8a7a' }}>
+                                Vyber oblasti, v ktorých pôsobíš (max 10). Podľa kategórií ťa budú klienti vyhľadávať.
+                            </p>
+
+                            {Object.entries(grouped).map(([group, cats]) => (
+                                <div key={group} className="mb-4">
+                                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: '#9a8a7a' }}>
+                                        {group}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {cats.map(cat => {
+                                            const active = data.categories.includes(cat.key);
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={cat.key}
+                                                    onClick={() => toggleCategory(cat.key)}
+                                                    className="rounded-full px-3 py-1.5 text-xs font-medium transition-all"
+                                                    style={{
+                                                        backgroundColor: active ? '#c4714a' : '#faf6f0',
+                                                        color: active ? '#fff' : '#2d2118',
+                                                        border: `1px solid ${active ? '#c4714a' : '#e8d9c4'}`,
+                                                    }}
+                                                >
+                                                    {cat.icon} {cat.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {data.categories.length > 0 && (
+                                <p className="mt-1 text-xs" style={{ color: '#c4714a' }}>
+                                    Vybraté: {data.categories.length} / 10
+                                </p>
+                            )}
+                            {errors.categories && (
+                                <p className="mt-1 text-xs text-red-500">{errors.categories}</p>
                             )}
                         </div>
 
