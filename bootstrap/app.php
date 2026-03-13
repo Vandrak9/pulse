@@ -18,7 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\UpdateLastSeen::class,
         ]);
 
-        //
+        // Stripe sends POST requests without a CSRF token — verified via signature instead
+        $middleware->validateCsrfTokens(except: [
+            'stripe/webhook',
+        ]);
+
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\RequireAdmin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

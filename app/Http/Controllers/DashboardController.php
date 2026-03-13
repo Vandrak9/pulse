@@ -56,8 +56,8 @@ class DashboardController extends Controller
             ->where('created_at', '>=', now()->startOfWeek())
             ->count();
 
-        // stripe_price stores a Stripe Price ID string — not a monetary amount.
-        // Until real payment tracking exists, estimate from subscriber count × price.
+        // Monthly earnings: count active subscriptions × price × 0.85 (platform fee).
+        // This is accurate for the current month since billing is monthly.
         $monthlyPrice    = floatval($coach->monthly_price);
         $monthlyEarnings = round($subscribersCount * $monthlyPrice * 0.85, 2);
 
@@ -125,13 +125,24 @@ class DashboardController extends Controller
                 ];
             })->all();
 
-        // Earnings chart — last 6 months
-        // Use same factor-based estimate as earnings() so all months show meaningful values.
-        // Real per-month breakdown requires a separate payment-amount column.
-        $earningsData = collect(range(5, 0))->map(function ($monthsAgo) use ($subscribersCount, $monthlyPrice) {
-            $date   = now()->subMonths($monthsAgo);
-            $factor = max(0.1, 1 - ($monthsAgo * 0.07));
-            $subs   = max(0, (int) round($subscribersCount * $factor));
+        // Earnings chart — last 6 months based on real subscription created_at dates.
+        // For each month, count subscriptions that were active during that month.
+        $earningsData = collect(range(5, 0))->map(function ($monthsAgo) use ($coach, $monthlyPrice) {
+            $date      = now()->subMonths($monthsAgo);
+            $monthStart = $date->copy()->startOfMonth();
+            $monthEnd   = $date->copy()->endOfMonth();
+
+            // Active subs: created on or before end of that month and not canceled before start
+            $subs = DB::table('subscriptions')
+                ->where('coach_id', $coach->id)
+                ->where('created_at', '<=', $monthEnd)
+                ->where(function ($q) use ($monthStart) {
+                    $q->whereNull('ends_at')
+                      ->orWhere('ends_at', '>=', $monthStart);
+                })
+                ->whereNotIn('stripe_status', ['canceled', 'incomplete_expired'])
+                ->count();
+
             return [
                 'month'          => $date->locale('sk')->isoFormat('MMM'),
                 'year'           => $date->year,
@@ -232,24 +243,33 @@ class DashboardController extends Controller
         $coach = $this->requireCoach();
         if ($coach instanceof \Illuminate\Http\RedirectResponse) return $coach;
 
-        $subscriberCount = $coach->subscriber_count ?? 0;
-        $monthlyPrice    = floatval($coach->monthly_price);
-        $netRate         = 0.85;
+        $monthlyPrice = floatval($coach->monthly_price);
+        $netRate      = 0.85;
 
-        // Monthly table — last 12 months
+        // Monthly table — last 12 months using real subscription data
         $months = [];
         for ($i = 11; $i >= 0; $i--) {
-            $month = Carbon::now()->subMonths($i);
-            // Simulate subscriber growth: fewer subscribers in earlier months
-            $factor  = 1 - ($i * 0.06); // ~6% growth per month
-            $subs    = max(1, (int) round($subscriberCount * $factor));
-            $gross   = round($subs * $monthlyPrice, 2);
-            $fee     = round($gross * 0.15, 2);
-            $net     = round($gross * $netRate, 2);
+            $date       = Carbon::now()->subMonths($i);
+            $monthStart = $date->copy()->startOfMonth();
+            $monthEnd   = $date->copy()->endOfMonth();
+
+            $subs = DB::table('subscriptions')
+                ->where('coach_id', $coach->id)
+                ->where('created_at', '<=', $monthEnd)
+                ->where(function ($q) use ($monthStart) {
+                    $q->whereNull('ends_at')
+                      ->orWhere('ends_at', '>=', $monthStart);
+                })
+                ->whereNotIn('stripe_status', ['canceled', 'incomplete_expired'])
+                ->count();
+
+            $gross    = round($subs * $monthlyPrice, 2);
+            $fee      = round($gross * 0.15, 2);
+            $net      = round($gross * $netRate, 2);
             $months[] = [
-                'month'       => $month->locale('sk')->isoFormat('MMMM YYYY'),
-                'month_short' => $month->locale('sk')->isoFormat('MMM'),
-                'year'        => $month->year,
+                'month'       => $date->locale('sk')->isoFormat('MMMM YYYY'),
+                'month_short' => $date->locale('sk')->isoFormat('MMM'),
+                'year'        => $date->year,
                 'gross'       => $gross,
                 'fee'         => $fee,
                 'net'         => $net,
@@ -262,7 +282,12 @@ class DashboardController extends Controller
         $pendingPayout  = collect($months)->where('status', 'pending')->sum('net');
         $nextPayoutDate = Carbon::now()->addMonthNoOverflow()->startOfMonth()->format('j. n. Y');
 
-        $transactions = $this->buildTransactions($subscriberCount, $monthlyPrice);
+        $activeCount   = DB::table('subscriptions')
+            ->where('coach_id', $coach->id)
+            ->whereIn('stripe_status', ['active', 'trialing'])
+            ->count();
+
+        $transactions = $this->buildTransactions($coach->id, $monthlyPrice);
 
         return Inertia::render('Dashboard/Earnings', [
             'coach' => [
@@ -273,7 +298,7 @@ class DashboardController extends Controller
                 'total_earned'     => round($totalEarned, 2),
                 'pending_payout'   => round($pendingPayout, 2),
                 'next_payout_date' => $nextPayoutDate,
-                'monthly_revenue'  => round($subscriberCount * $monthlyPrice * $netRate, 2),
+                'monthly_revenue'  => round($activeCount * $monthlyPrice * $netRate, 2),
             ],
             'monthly_table' => $months,
             'transactions'  => $transactions,
@@ -288,50 +313,45 @@ class DashboardController extends Controller
         $coach = $this->requireCoach();
         if ($coach instanceof \Illuminate\Http\RedirectResponse) return $coach;
 
-        $subscriberCount = $coach->subscriber_count ?? 0;
-        $monthlyPrice    = floatval($coach->monthly_price);
+        $monthlyPrice = floatval($coach->monthly_price);
 
-        $fans       = \App\Models\User::where('role', 'fan')->orderBy('created_at')->get();
-        $subscribers = [];
-        $names      = $fans->pluck('name')->all();
+        $rows = DB::table('subscriptions')
+            ->where('coach_id', $coach->id)
+            ->join('users', 'users.id', '=', 'subscriptions.user_id')
+            ->select(
+                'users.name',
+                'subscriptions.stripe_status',
+                'subscriptions.created_at as subscribed_at',
+                'subscriptions.ends_at'
+            )
+            ->orderBy('subscriptions.created_at', 'desc')
+            ->get();
 
-        $extraNames = ['Maroš B.', 'Katka S.', 'Tomáš H.', 'Jana K.', 'Martin P.',
-                       'Zuzana V.', 'Peter N.', 'Lucia M.', 'Radovan O.', 'Eva D.',
-                       'Michal F.', 'Simona R.', 'Jakub T.', 'Andrea W.', 'Rastislav C.',
-                       'Monika L.', 'Dušan B.', 'Veronika J.', 'Ondrej K.', 'Helena S.'];
+        $subscribers = $rows->values()->map(function ($row, $index) use ($monthlyPrice) {
+            $subscribedAt = Carbon::parse($row->subscribed_at);
+            $daysAgo      = (int) $subscribedAt->diffInDays(now());
+            $paidMonths   = max(1, (int) ceil($daysAgo / 30));
+            $isActive     = in_array($row->stripe_status, ['active', 'trialing']);
 
-        for ($i = 0; $i < min($subscriberCount, 50); $i++) {
-            $name       = $names[$i] ?? $extraNames[$i % count($extraNames)];
-            $parts      = explode(' ', $name);
-            $first      = $parts[0] ?? 'A';
-            $last       = $parts[1] ?? 'B';
-            $anon       = $first[0] . '*** ' . ($last[0] ?? '') . '***';
-            $daysAgo    = rand(1, 180);
-            $paidMonths = max(1, (int) floor($daysAgo / 30));
-            $status     = $daysAgo < 150 ? 'active' : 'cancelled';
+            // Anonymize: "J*** N***"
+            $parts = explode(' ', trim($row->name));
+            $anon  = collect($parts)->map(fn($p) => ($p[0] ?? '?') . '***')->implode(' ');
 
-            $subscribers[] = [
-                'index'               => $i + 1,
+            return [
+                'index'               => $index + 1,
                 'name_anon'           => $anon,
                 'subscribed_days_ago' => $daysAgo,
-                'subscribed_since'    => Carbon::now()->subDays($daysAgo)->format('d.m.Y'),
+                'subscribed_since'    => $subscribedAt->format('d.m.Y'),
                 'total_paid'          => round($paidMonths * $monthlyPrice * 0.85, 2),
-                'status'              => $status,
+                'status'              => $isActive ? 'active' : 'cancelled',
             ];
-        }
-
-        usort($subscribers, fn($a, $b) =>
-            $a['status'] === $b['status']
-                ? $b['subscribed_days_ago'] - $a['subscribed_days_ago']
-                : ($a['status'] === 'active' ? -1 : 1)
-        );
+        })->all();
 
         $activeCount    = count(array_filter($subscribers, fn($s) => $s['status'] === 'active'));
         $cancelledCount = count($subscribers) - $activeCount;
-        $churnRate      = $subscriberCount > 0 ? round(($cancelledCount / max(1, count($subscribers))) * 100) : 0;
-        $avgDays        = count($subscribers) > 0
-            ? round(collect($subscribers)->avg('subscribed_days_ago'))
-            : 0;
+        $total          = count($subscribers);
+        $churnRate      = $total > 0 ? round(($cancelledCount / $total) * 100) : 0;
+        $avgDays        = $total > 0 ? round(collect($subscribers)->avg('subscribed_days_ago')) : 0;
 
         return Inertia::render('Dashboard/Subscribers', [
             'coach' => [
@@ -339,7 +359,7 @@ class DashboardController extends Controller
                 'avatar_url' => $coach->avatar_path ? '/storage/' . $coach->avatar_path : null,
             ],
             'summary' => [
-                'total'         => $subscriberCount,
+                'total'         => $total,
                 'active'        => $activeCount,
                 'cancelled'     => $cancelledCount,
                 'churn_rate'    => $churnRate,
@@ -383,30 +403,30 @@ class DashboardController extends Controller
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private function buildTransactions(int $subscriberCount, float $monthlyPrice): array
+    private function buildTransactions(int $coachId, float $monthlyPrice): array
     {
-        $transactions = [];
-        $now = Carbon::now();
+        // Real subscription events (new subscriptions = payments received)
+        $subscriptions = DB::table('subscriptions')
+            ->where('coach_id', $coachId)
+            ->join('users', 'users.id', '=', 'subscriptions.user_id')
+            ->select('users.name', 'subscriptions.created_at', 'subscriptions.stripe_status')
+            ->orderBy('subscriptions.created_at', 'desc')
+            ->limit(20)
+            ->get();
 
-        for ($i = 0; $i < 20; $i++) {
-            $daysAgo = $i * 4 + rand(0, 3);
-            $type    = $i % 5 === 0 ? 'tip' : 'subscription';
-            $gross   = $type === 'tip' ? rand(2, 20) : $monthlyPrice;
-            $net     = round($gross * 0.85, 2);
+        return $subscriptions->map(function ($row) use ($monthlyPrice) {
+            $gross = $monthlyPrice;
+            $parts = explode(' ', trim($row->name));
+            $anon  = collect($parts)->map(fn($p) => ($p[0] ?? '?') . '***')->implode(' ');
 
-            $names = ['M*** K***', 'J*** N***', 'P*** H***', 'Z*** V***', 'L*** S***',
-                      'T*** B***', 'E*** D***', 'R*** O***', 'K*** M***', 'A*** F***'];
-
-            $transactions[] = [
-                'date'  => $now->copy()->subDays($daysAgo)->format('d.m.Y'),
-                'type'  => $type,
-                'fan'   => $names[$i % count($names)],
+            return [
+                'date'  => Carbon::parse($row->created_at)->format('d.m.Y'),
+                'type'  => 'subscription',
+                'fan'   => $anon,
                 'gross' => round($gross, 2),
                 'fee'   => round($gross * 0.15, 2),
-                'net'   => $net,
+                'net'   => round($gross * 0.85, 2),
             ];
-        }
-
-        return $transactions;
+        })->all();
     }
 }

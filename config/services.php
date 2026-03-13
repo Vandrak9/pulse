@@ -28,6 +28,10 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'stripe' => [
+        'connect_client_id' => env('STRIPE_CONNECT_CLIENT_ID'),
+    ],
+
     'mux' => [
         'token_id'       => env('MUX_TOKEN_ID'),
         'token_secret'   => env('MUX_TOKEN_SECRET'),

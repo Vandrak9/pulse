@@ -36,5 +36,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('broadcasts', function (Request $request) {
             return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Media streaming — 60 req/min per user.
+        // Allows video seeking (browsers issue multiple range requests per playback)
+        // while blocking bulk download scripts.
+        RateLimiter::for('media', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
     }
 }

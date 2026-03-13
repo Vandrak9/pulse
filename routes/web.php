@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\LiveStreamController;
 use App\Http\Controllers\ReviewController;
@@ -18,6 +21,10 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
+
+// ── Stripe webhook (no CSRF, no auth — verified via Stripe-Signature header) ───
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
+    ->name('stripe.webhook');
 
 // ── Public routes ──────────────────────────────────────────────────────────────
 
@@ -75,7 +82,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
 
     // Media streaming
-    Route::get('/media/message/{message}', [MediaStreamController::class, 'stream'])->name('media.message');
+    Route::get('/media/message/{message}', [MediaStreamController::class, 'stream'])
+        ->middleware('throttle:media')
+        ->name('media.message');
 
     // Post creation (coach only — enforced in controller)
     Route::get('/dashboard/posts/create', [PostController::class, 'create'])->name('posts.create');
@@ -123,6 +132,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/subscribe/{coachId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
     Route::get('/subscription/success', [SubscriptionController::class, 'success'])->name('subscription.success');
     Route::post('/subscription/cancel/{coachId}', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
+
+    // Stripe Connect — coach payout account onboarding
+    Route::get('/stripe/connect/onboard', [StripeConnectController::class, 'onboard'])->name('stripe.connect.onboard');
+    Route::get('/stripe/connect/callback', [StripeConnectController::class, 'callback'])->name('stripe.connect.callback');
+    Route::get('/stripe/connect/dashboard', [StripeConnectController::class, 'expressDashboard'])->name('stripe.connect.dashboard');
 });
 
 // ── Post detail API (auth optional) ───────────────────────────────────────────
@@ -147,6 +161,14 @@ Route::get('/api/coaches/suggested', function () {
             'is_online'      => $c->user->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
         ]);
     return response()->json($coaches);
+});
+
+// ── Admin routes ───────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminController::class, 'index'])->name('index');
+    Route::post('/coaches/{coachId}/approve', [AdminController::class, 'approve'])->name('coaches.approve');
+    Route::post('/coaches/{coachId}/suspend', [AdminController::class, 'suspend'])->name('coaches.suspend');
+    Route::post('/coaches/{coachId}/revoke', [AdminController::class, 'revoke'])->name('coaches.revoke');
 });
 
 require __DIR__.'/auth.php';

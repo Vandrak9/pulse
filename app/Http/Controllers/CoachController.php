@@ -162,12 +162,13 @@ class CoachController extends Controller
 
         return Inertia::render('Coaches/Edit', [
             'coach' => $coach ? [
-                'id'              => $coach->id,
-                'bio'             => $coach->bio,
-                'specialization'  => $coach->specialization,
-                'monthly_price'   => $coach->monthly_price,
-                'messages_access' => $coach->messages_access ?? 'everyone',
-                'avatar_url'      => $coach->avatar_path
+                'id'               => $coach->id,
+                'bio'              => $coach->bio,
+                'specialization'   => $coach->specialization,
+                'monthly_price'    => $coach->monthly_price,
+                'messages_access'  => $coach->messages_access ?? 'everyone',
+                'stripe_account_id' => $coach->stripe_account_id,
+                'avatar_url'       => $coach->avatar_path
                     ? Storage::url($coach->avatar_path)
                     : null,
             ] : null,
